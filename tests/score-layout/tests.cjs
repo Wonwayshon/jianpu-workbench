@@ -66,6 +66,7 @@ const numberMap=J.numberMeasures(numbered.lines),lastSystem=J.groupSystems(numbe
 assert.equal(numberMap.get(lastSystem.lines[0].tokens.find(t=>t.t==='note')),4);
 J.render(host,numbered.lines,{fit:false,measureEvery:2,measureNumbers:numberMap});
 assert.deepEqual(host.querySelectorAll('.jp-measure-number').map(e=>e.textContent),['1','3','5'],'total score marks top visible voice only');
+assert.ok(host.querySelectorAll('.jp-measure-numbers').every(e=>e.parentNode.classList.contains('jp-line')),'number overlays follow their own rows across PDF page breaks');
 J.render(host,lastSystem.lines,{fit:false,measureEvery:2,measureNumbers:numberMap});assert.deepEqual(host.querySelectorAll('.jp-measure-number').map(e=>e.textContent),['5'],'later pages do not reset to one');
 J.render(host,J.filterParts(numbered.lines,['B']),{fit:false,measureEvery:2,measureNumbers:numberMap});assert.deepEqual(host.querySelectorAll('.jp-measure-number').map(e=>e.textContent),['1','3','5']);
 J.render(host,J.parse('1 | 2 | 3 | 4 | 5 |').lines,{fit:false,measureEvery:4});assert.deepEqual(host.querySelectorAll('.jp-measure-number').map(e=>e.textContent),['1','5']);
@@ -119,4 +120,4 @@ vm.runInContext(view.slice(view.indexOf('async function showPage('),view.indexOf
  assert.deepEqual($('viewerBody').children.map(e=>e.attrs['aria-label']),['第 3 页','第 4 页']);assert.match($('viewerPage').textContent,/3–4/);
  console.log('PASS: measured two-page available area, full-score pagination retains all 36 rows in intact systems; rapid page turns do not append stale pages.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-08 20:45:58
+// Modified by AI on 2026-10-08 20:57:17

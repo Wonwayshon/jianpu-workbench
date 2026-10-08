@@ -215,12 +215,12 @@ function prepareMeasureLabels(host,lines,opts){
  }
 }
 function drawMeasureLabels(host){
- host.querySelector(':scope>.jp-measure-numbers')?.remove();if(!host._measureLabels?.length)return;
- const overlay=el('div','jp-measure-numbers'),box=host.getBoundingClientRect();overlay.setAttribute('aria-label','小节号');
+ for(const e of host.querySelectorAll('.jp-measure-numbers'))e.remove();if(!host._measureLabels?.length)return;
+ const overlays=new Map();
  for(const {number,row,anchor} of host._measureLabels){const a=anchor.getBoundingClientRect(),r=row.getBoundingClientRect(),label=el('span','jp-measure-number',String(number));
-  label.style.left=(a.left-box.left+host.scrollLeft)+'px';label.style.top=(r.top-box.top+host.scrollTop)+'px';label.title='第 '+number+' 小节';overlay.append(label);
+  let overlay=overlays.get(row);if(!overlay){overlay=el('div','jp-measure-numbers');overlay.setAttribute('aria-label','小节号');overlays.set(row,overlay);row.append(overlay)}
+  label.style.left=(a.left-r.left)+'px';label.style.top='0px';label.title='第 '+number+' 小节';overlay.append(label);
  }
- host.append(overlay);
 }
 function silentMeasure(m){return m.events.length>0&&m.events.every(e=>['rest','dash'].includes(e.token.t)&&!e.token.orns?.length)}
 function mainHeight(tokens){return Math.max(1.1,...tokens.filter(t=>t.t==='chord').map(t=>t.notes.reduce((h,n)=>h+1.1+(n.octave?Math.abs(n.octave)*.18+.04:0),0)))}
@@ -406,14 +406,14 @@ function justify(host,endsPiece=host._endsPiece!==false){
  for(const r of rows)r.classList.remove('jp-justify');
  const cs=getComputedStyle(host),avail=host.clientWidth-parseFloat(cs.paddingLeft||0)-parseFloat(cs.paddingRight||0);
  if(avail<=0)return;
- rows.forEach((r,i)=>{const kids=[...r.children];if(kids.length<3)return;
+ rows.forEach((r,i)=>{const kids=[...r.children].filter(c=>!c.classList.contains('jp-measure-numbers'));if(kids.length<3)return;
   const natural=kids[kids.length-1].getBoundingClientRect().right-kids[0].getBoundingClientRect().left;
   if(natural>avail+1)return;
   if(endsPiece&&i===rows.length-1&&natural<avail*0.25)return; // only a very short ending (about one bar) stays left
   r.classList.add('jp-justify')});
 }
 // Natural width of a full-score line (label + measures at their content width).
-function naturalWidth(row){let w=0;for(const c of row.children){const prev=c.style.flex;c.style.flex='0 0 auto';w+=c.getBoundingClientRect().width;c.style.flex=prev}return w+8}
+function naturalWidth(row){let w=0;for(const c of row.children){if(c.classList.contains('jp-measure-numbers'))continue;const prev=c.style.flex;c.style.flex='0 0 auto';w+=c.getBoundingClientRect().width;c.style.flex=prev}return w+8}
 // Full score: bar k gets the same width in every part of a system (the widest content decides), so bar lines align.
 function alignSystems(host){
  for(const sys of host.querySelectorAll('.jp-system')){
@@ -458,4 +458,4 @@ function drawOverlay(host){
 
 window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline,numberMeasures};
 })();
-// Modified by AI on 2026-10-08 20:41:46
+// Modified by AI on 2026-10-08 20:57:17
