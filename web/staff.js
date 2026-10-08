@@ -70,7 +70,7 @@ function toABC(lines,opts={}){
   if(line.kind!=='music')return;
   if(body)emit('\n');if(line.part){emit(`[V:${voiceOf(line.part)}] `);emit(pendingVoice[line.part]||'');pendingVoice[line.part]='';}emit(pending);pending='';if(percussionOnly||(line.part&&percussionPart(line.part)))emit('[K:C]');barAlt={};
   const toks=line.tokens;let lastNote=null,lastWasBar=false,slurDepth=0;
-  const noteOut=(t,dur,tieFrom,orig)=>{
+  const noteOut=(t,dur,tieFrom,orig,measureToken)=>{
    const start=body.length;
    if(!tieFrom&&t.graces?.length)emit('{'+t.graces.map(g=>accidentalFor(g.p)+pitchText(g.p)).join('')+'}');
    if(!tieFrom)for(const o of t.orns||[])emit(DECOR[o]||'');
@@ -79,7 +79,7 @@ function toABC(lines,opts={}){
    else if(t.t==='percussion')emit('!style=x!B'+durText(dur));
    else if(t.t==='chord')emit('['+t.ps.map(p=>accidentalFor(p)+pitchText(p)).join('')+']'+durText(dur));
    else emit(accidentalFor(t.p)+pitchText(t.p)+durText(dur));
-   ranges.push({start,end:body.length,token:orig});
+   ranges.push({start,end:body.length,token:orig,measureToken});
   };
   const accidentalFor=p=>{
    const k=p.letter+p.oct,current=k in barAlt?barAlt[k]:sig[p.letter];
@@ -97,7 +97,7 @@ function toABC(lines,opts={}){
    }
    if(t.t==='dash'){
     if(lastNote&&!lastWasBar){lastNote.dur+=8;continue}
-    if(lastNote){const cont={kind:'n',t:lastNote.t,dur:8,p:lastNote.p,ps:lastNote.ps,cont:true,graces:[]};if(lastNote.t.t!=='rest')lastNote.tie=true;items.push(cont);lastNote=cont;lastWasBar=false}
+    if(lastNote){const cont={kind:'n',t:lastNote.t,dur:8,p:lastNote.p,ps:lastNote.ps,cont:true,graces:[],measureToken:t};if(lastNote.t.t!=='rest')lastNote.tie=true;items.push(cont);lastNote=cont;lastWasBar=false}
     continue;
    }
    if(t.t==='bar')lastWasBar=true;
@@ -117,7 +117,7 @@ function toABC(lines,opts={}){
     continue;
    }
    const t={...it.t,p:it.p,ps:it.ps,graces:it.cont?[]:it.graces},parts=splitDur(it.dur);
-   parts.forEach((d,k)=>{noteOut(t,d,it.cont||k>0,it.t);if(t.t!=='rest'&&(k<parts.length-1||it.tie))emit('-')});
+   parts.forEach((d,k)=>{noteOut(t,d,it.cont||k>0,it.t,it.measureToken);if(t.t!=='rest'&&(k<parts.length-1||it.tie))emit('-')});
   }
  });
  // Ranges were measured in the body; abcjs reports positions in the whole text.
@@ -136,19 +136,20 @@ async function render(host,lines,opts={}){
  host.replaceChildren();const target=document.createElement('div');target.className='staff-inner';host.append(target);
  const width=Math.max(320,(opts.width||host.clientWidth||700)-10);
  const [tune]=ABCJS.renderAbc(target,abc,{add_classes:true,responsive:opts.responsive===false?undefined:'resize',staffwidth:width,paddingtop:opts.measureEvery?24:8,paddingbottom:8,paddingleft:4,paddingright:4,scale:opts.scale||1,format:{titlefont:'"PingFang SC",sans-serif 16',gchordfont:'sans-serif 12',vocalfont:'sans-serif 12'}});
- for(const r of ranges)r.token._staffEls=[];
+ for(const r of ranges){r.token._staffEls=[];r.token._measureStaffEls=[];if(r.measureToken)r.measureToken._measureStaffEls=[]}
  for(const line of tune?.lines||[])for(const staff of line.staff||[])for(const voice of staff.voices||[])for(const el of voice){
   if(el.el_type!=='note'||el.startChar==null)continue;
   // abcjs may start a note at a preceding '(' or space; match by overlap with the note's own text instead.
   const end=el.endChar??el.startChar+1,r=ranges.find(r=>r.start<end&&r.end>el.startChar&&!r.used);if(r)r.used=true;
-  if(r&&el.abselem?.elemset){r.token._staffEls.push(...el.abselem.elemset);for(const e of el.abselem.elemset)e._token=r.token}
+  if(r&&el.abselem?.elemset){r.token._staffEls.push(...el.abselem.elemset);if(!r.token._measureStaffEls.length)r.token._measureStaffEls.push(...el.abselem.elemset);for(const e of el.abselem.elemset)e._token=r.token}
+  if(r?.measureToken&&el.abselem?.elemset)r.measureToken._measureStaffEls.push(...el.abselem.elemset);
  }
  // Use the same written-measure map as numbered notation, including on filtered/paginated pages.
  if(opts.measureEvery){
   const every=Math.max(1,Math.floor(opts.measureEvery)),numbers=opts.measureNumbers||Jianpu.numberMeasures(lines),firstPart=lines.find(l=>l.kind==='music')?.part;
   for(const line of lines.filter(l=>l.kind==='music'&&l.part===firstPart))for(const m of Jianpu.measureTimeline(line.tokens)){
    const first=m.events[0]?.token,n=numbers.get(first);if(!n||(n-1)%every)continue;
-   const cells=first?._staffEls||[],anchor=cells.find(e=>e.ownerSVGElement);if(!anchor)continue;
+   const cells=first?._measureStaffEls||first?._staffEls||[],anchor=cells.find(e=>e.ownerSVGElement);if(!anchor)continue;
    const svg=anchor.ownerSVGElement,rects=cells.map(e=>e.getBoundingClientRect()),matrix=svg.getScreenCTM();if(!matrix)continue;
    const point=svg.createSVGPoint();point.x=Math.min(...rects.map(r=>r.left));point.y=Math.min(...rects.map(r=>r.top))-8;
    const at=point.matrixTransform(matrix.inverse()),label=document.createElementNS('http://www.w3.org/2000/svg','text');
@@ -160,4 +161,4 @@ async function render(host,lines,opts={}){
 
 window.Staff={toABC,render,loadAbcjs,abcKey,spell};
 })();
-// Modified by AI on 2026-10-08 20:41:46
+// Modified by AI on 2026-10-08 20:47:18

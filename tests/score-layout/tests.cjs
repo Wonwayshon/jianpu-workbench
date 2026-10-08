@@ -70,6 +70,7 @@ J.render(host,lastSystem.lines,{fit:false,measureEvery:2,measureNumbers:numberMa
 J.render(host,J.filterParts(numbered.lines,['B']),{fit:false,measureEvery:2,measureNumbers:numberMap});assert.deepEqual(host.querySelectorAll('.jp-measure-number').map(e=>e.textContent),['1','3','5']);
 J.render(host,J.parse('1 | 2 | 3 | 4 | 5 |').lines,{fit:false,measureEvery:4});assert.deepEqual(host.querySelectorAll('.jp-measure-number').map(e=>e.textContent),['1','5']);
 J.render(host,numbered.lines,{fit:false});assert.equal(host.querySelectorAll('.jp-measure-number').length,0,'unchecked removes numbering');
+const held=J.parse('1 - | - - | 2 - |');for(const t of held.notes)t.midi=60+t.degree;const heldRanges=S.toABC(held.lines).ranges;assert.ok(heldRanges.some(r=>r.measureToken===held.lines[0].tokens.find((t,i,ts)=>t.t==='dash'&&ts.slice(0,i).some(x=>x.t==='bar'))),'staff held-bar anchors retain the written dash token');
 console.log('PASS: small measure labels, configurable interval, full-score deduplication, repeat/page/filter continuity and disabled cleanup.');
 
 // Run actual numbered pagination against deterministic measured system heights.
@@ -118,4 +119,4 @@ vm.runInContext(view.slice(view.indexOf('async function showPage('),view.indexOf
  assert.deepEqual($('viewerBody').children.map(e=>e.attrs['aria-label']),['第 3 页','第 4 页']);assert.match($('viewerPage').textContent,/3–4/);
  console.log('PASS: measured two-page available area, full-score pagination retains all 36 rows in intact systems; rapid page turns do not append stale pages.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-08 20:41:46
+// Modified by AI on 2026-10-08 20:45:58
