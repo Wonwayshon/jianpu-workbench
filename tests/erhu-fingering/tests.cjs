@@ -55,12 +55,36 @@ const phrase=p.notes.slice(1);assert.deepEqual(Array.from(phrase,t=>r.map.get(t)
 assert.equal(r.map.get(phrase[0]).shift,'up');assert.equal(r.map.get(phrase.at(-1)).shift,undefined);
 assert.equal(phrase.filter(t=>r.map.get(t).extended).length,1,'one isolated peak may stretch; do not ban all extensions');
 assert.equal(r.map.get(phrase[3]).extended,true);
+// Rapid grace-to-main motion stays on one string/frame, including incoming and outgoing context.
+({p,r}=run("6//1'// 5/^4//5/ 3//5//6//1'//",2));
+const grace=p.notes.findIndex(t=>t.grace),g=r.map.get(p.notes[grace]),main=r.map.get(p.notes[grace+1]);
+assert.equal(g.finger,3);assert.equal(main.finger,4);assert.equal(main.string,g.string);assert.equal(main.anchor,g.anchor);assert.equal(main.shift,undefined);
+// One brief peak uses 4 once; approach and repeated return stay settled, then 7 shifts with 2.
+({p,r}=run("1'/.2'// 3'/5'/ 2'/2'//7// 6//5//6//1'// |",2));
+assert.deepEqual(Array.from(p.notes,t=>r.map.get(t).finger),[1,2,3,4,2,2,2,1,0,1,3]);
+assert.ok(p.notes.slice(0,6).every(t=>r.map.get(t).anchor===5));assert.equal(r.map.get(p.notes[6]).shift,'down');
+assert.equal(p.notes.filter(t=>r.map.get(t).extended).length,1);assert.equal(r.map.get(p.notes[3]).extended,true);
+// A same-pitch pair contrasts open/stopped timbres only for the outer-open sol in 1–5 tuning.
+for(const [key,tuning,octave] of [[2,[62,69],0],[0,[60,67],0],[7,[55,62],-1]]){
+ ({p,r}=run(`3/ 5${octave<0?',':''}/5${octave<0?',':''}/ 3/`,key,tuning));
+ const pair=p.notes.slice(1,3).map(t=>r.map.get(t));assert.deepEqual(Array.from(pair,x=>x.finger),[0,4]);assert.deepEqual(Array.from(pair,x=>x.string),[1,0]);
+ assert.equal(pair[1].technique,'unisonCrossing');assert.equal(pair[1].shift,undefined);assert.equal(p.notes[1].midi,p.notes[2].midi);
+}
+for(const text of ["5/5/5/","5/0/5/","(5/5/)","5/!tr5/","5/5'/","5/^5//5/","5 - 5","5/ <1 3>/ 5/"]){
+ ({p,r}=run(text,2));assert.ok(p.notes.every(t=>r.map.get(t)?.technique!=='unisonCrossing'),`do not impose timbral crossing: ${text}`);
+}
+({p,r}=run("1'/b3'/4'/",2));
+assert.deepEqual(Array.from(p.notes.slice(0,2),t=>r.map.get(t).finger),[1,1]);
+assert.equal(r.map.get(p.notes[0]).string,r.map.get(p.notes[1]).string);assert.equal(r.map.get(p.notes[1]).guideFinger,1);assert.equal(r.map.get(p.notes[1]).shift,'up');
+assert.deepEqual(Array.from(p.notes,t=>t.midi),[74,77,79],'guide fingering must preserve octave and flat third');
 // Changing the key in mid-piece must change the trill upper neighbour.
 p=J.parse('3!tr 3!tr');p.notes.forEach(t=>t.midi=64);
 r=E.annotate(p.lines,{keyOf:t=>t===p.notes[0]?0:2});assert.equal(r.map.get(p.notes[0]).trill.midi,65);assert.equal(r.map.get(p.notes[1]).trill.midi,67);
 // Inspect rendered annotation text and the actionable unavailable-trill tooltip without a browser.
 ctx.document={createElement:()=>({children:[],textContent:'',append(...xs){this.children.push(...xs)}})};
 const label=E.label(six);const all=n=>(n.textContent||'')+n.children.map(all).join('');assert.match(all(label),/二↔三/);
+const slide=E.label({finger:1,string:1,anchorMidi:77,shift:'up',guideFinger:1});assert.match(all(slide),/一滑/);
+const cross=E.label({finger:4,string:0,technique:'unisonCrossing'});assert.match(cross.children[1].children.at(-1).title,/同音换弦/);
 const bad=E.label({finger:null,reason:'trill'});assert.match(bad.children[1].children[0].title,/颤音手型/);
-console.log(`PASS: opening 1123, one prepared shift, stable following frame; repeated 5 stays on 3 / shift at 6 with 2↔3; ${count} trills across 12 keys and 3 tunings; upper-degree accidentals; impossible trills; ordinary fourth fingers; phrase restart; label and tooltip.`);
-// Modified by AI on 2026-10-08 14:21:25
+console.log(`PASS: opening 1123, one prepared shift, stable following frame; repeated 5 stays on 3 / shift at 6 with 2↔3; ${count} trills across 12 keys and 3 tunings; upper-degree accidentals; impossible trills; ordinary fourth fingers; phrase restart; grace fingering, isolated peak, exact-pair timbral crossing and index-guide shift; label and tooltip.`);
+// Modified by AI on 2026-10-08 21:31:16

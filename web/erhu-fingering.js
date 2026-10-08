@@ -71,6 +71,7 @@ function trillCandidates(t,tuning,key){
   return [{...c,cost:c.cost+(c.f===3?1.5:0)+0.25*u.cost+0.4*(u.f-c.f-1),trill:{midi:upper,finger:u.f,string:u.s,anchor:u.a}}];
  });
 }
+const sameHand=(p,c)=>p.s===c.s?p.a===c.a:p.a-p.nat===c.a-c.nat;
 function transition(p,c,info){
  let cost=0;const da=Math.abs(p.a-c.a);
  // Crossing strings in the same position keeps the hand frame even when the index notes differ by a semitone (index on
@@ -95,14 +96,17 @@ function transition(p,c,info){
   if(info.short)shift+=(c.s===p.s&&c.f===p.f&&c.f<=2&&da>=2)?0.35:0.8;
   cost+=shift;
  }
- if(p.s!==c.s)cost+=info.short?0.5:0.3;
+ if(p.s!==c.s)cost+=info.ornamentLink?4:info.short?0.5:0.3;
+ if(info.ornamentLink&&!sameHand(p,c))cost+=3;
+ if(info.indexSlide)cost+=(p.s===c.s&&p.f===1&&c.f===1)?-3:3;
  // Sliding one finger between different pitches without moving the hand.
  if(p.s===c.s&&p.f===c.f&&p.f>0&&da===0&&p.o!==c.o)cost+=3.2;
  // Rearticulating the same pitch should normally reuse the established finger and string.
  // Keep the hand frame through an open-string neighbour that returns immediately to that pitch.
  // These are preferences, not locks: a required trill or an otherwise unreachable phrase can override them.
- const sameFrame=p.s===c.s?p.a===c.a:p.a-p.nat===c.a-c.nat;
- if(info.repeatPitch&&(p.f!==c.f||p.s!==c.s||!sameFrame))cost+=4;
+ const sameFrame=sameHand(p,c);
+ const timbralPair=info.unisonRole==='stopped'&&p.s===1&&p.f===0&&c.s===0&&c.f===4&&sameFrame;
+ if(info.repeatPitch&&!timbralPair&&(p.f!==c.f||p.s!==c.s||!sameFrame))cost+=4;
  if(info.keepFrame&&!sameFrame)cost+=4;
  return cost;
 }
@@ -110,17 +114,18 @@ function transition(p,c,info){
 // lines: parsed score lines whose note tokens carry `midi`. keyOf(token) -> key pitch class.
 // Returns Map(token -> {finger, string, shift, anchorMidi, bow}) and a summary.
 function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
- const seq=[];let slur=0,pauseBeats=0,restActive=false;const tuplets=[];
+ const seq=[];let slur=0,pauseBeats=0,restActive=false,attackGroup=0;const tuplets=[];
  for(const l of lines){if(l.kind!=='music')continue;
   for(const t of l.tokens){
    if(t.t==='open')slur++;else if(t.t==='close')slur=Math.max(0,slur-1);
    else if(t.t==='tupOpen'){let q=1;while(q*2<t.n)q*=2;tuplets.push(q/t.n)}
    else if(t.t==='tupClose')tuplets.pop();
-   else if(t.t==='rest'){pauseBeats+=Math.pow(0.5,t.under||0)*(t.dot===1?1.5:t.dot===2?1.75:1)*tuplets.reduce((a,b)=>a*b,1);restActive=true}
-   else if(t.t==='dash'&&restActive)pauseBeats+=1;
+   else if(t.t==='chord'||t.t==='percussion')attackGroup++;
+   else if(t.t==='rest'){attackGroup++;pauseBeats+=Math.pow(0.5,t.under||0)*(t.dot===1?1.5:t.dot===2?1.75:1)*tuplets.reduce((a,b)=>a*b,1);restActive=true}
+   else if(t.t==='dash'){attackGroup++;if(restActive)pauseBeats+=1;}
    else if(t.t==='note'&&t.midi!=null){
     // Eighth rests separate attacks, not phrases: keep the hand frame through 3/0/ 5/0/ ... .
-    seq.push({t,inSlur:slur>0,afterRest:pauseBeats>=1-1e-9,short:(t.under||0)>=2});pauseBeats=0;restActive=false;
+    seq.push({t,attackGroup,inSlur:slur>0,afterRest:pauseBeats>=1-1e-9,short:(t.under||0)>=2});pauseBeats=0;restActive=false;
    }
   }
  }
@@ -128,6 +133,7 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
  // Use absolute pitch so notes in different octaves (or with different accidentals) are not conflated.
  for(let i=1;i<seq.length;i++){
   const prev=seq[i-1],now=seq[i];
+  now.ornamentLink=prev.attackGroup===now.attackGroup&&prev.t.grace;
   if(!now.afterRest&&prev.t.midi===now.t.midi)now.repeatPitch=true;
   const next=seq[i+1];
   // A short lower neighbour returning to the same stopped pitch also keeps the frame:
@@ -136,15 +142,48 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
   const returningNeighbour=tuning.includes(now.t.midi)||(now.t.under>0&&stepDown>0&&stepDown<=2);
   if(next&&!now.afterRest&&!next.afterRest&&returningNeighbour&&prev.t.midi===next.t.midi){now.keepFrame=true;next.keepFrame=true}
  }
- // An isolated short peak returning to the same pitch may justify one little-finger extension.
- // Sustained extensions and a run of changing stretched pitches keep the much higher default cost.
- const isolatedPeaks=new Set();
- for(let i=1;i<seq.length-1;i++)if(!seq[i].afterRest&&!seq[i+1].afterRest&&seq[i].t.under>0&&seq[i-1].t.midi===seq[i+1].t.midi&&seq[i].t.midi>seq[i-1].t.midi)isolatedPeaks.add(seq[i].t);
+ // Brief peaks can use one extension in a settled frame, including a lower return note.
+ // Keep the approach and return stable; sustained peaks and trill auxiliaries retain their higher cost.
+ const isolatedPeaks=new Set(),hasTrill=t=>(t.orns||[]).includes('tr');
+ for(let i=1;i<seq.length-1;i++){
+  const p=seq[i-1],x=seq[i],n=seq[i+1];
+  if(p.attackGroup===x.attackGroup&&x.attackGroup===n.attackGroup&&!x.t.grace&&!n.t.grace&&x.t.under>0&&!hasTrill(x.t)&&x.t.midi>p.t.midi&&x.t.midi>n.t.midi){
+   const equalReturn=p.t.midi===n.t.midi;
+   const key=keyOf(x.t),pc=candidates(p.t.midi,tuning,key),nc=candidates(n.t.midi,tuning,key);
+   const briefUpperReach=p.t.under>0&&n.t.under>0&&keyOf(p.t)===key&&keyOf(n.t)===key&&candidates(x.t.midi,tuning,key).some(c=>c.ext&&pc.some(v=>v.s===c.s&&v.a===c.a&&v.f===3)&&nc.some(v=>v.s===c.s&&v.a===c.a&&v.f===2));
+   if(equalReturn||briefUpperReach)isolatedPeaks.add(x.t);
+   if(!equalReturn&&briefUpperReach){p.keepFrame=true;n.keepFrame=true}
+  }
+ }
+ // Exactly two rearticulated outer-open sol notes in 1–5 tuning can contrast open/stopped timbres.
+ // Rests, ties/slurs, ornaments, other octaves and longer chains do not trigger this idiom.
+ for(let i=0;i<seq.length-1;i++){
+  const x=seq[i],n=seq[i+1],p=seq[i-1],after=seq[i+2],key=keyOf(x.t);
+  const plain=z=>z&&!z.inSlur&&!z.t.grace&&!(z.t.orns||[]).length;
+  if(plain(x)&&plain(n)&&x.attackGroup===n.attackGroup&&keyOf(n.t)===key&&x.t.degree===5&&n.t.degree===5&&x.t.midi===tuning[1]&&n.t.midi===x.t.midi&&tuning[1]-tuning[0]===7&&((tuning[0]-key)%12+12)%12===0&&
+   !(p&&p.attackGroup===x.attackGroup&&p.t.midi===x.t.midi)&&!(after&&after.attackGroup===n.attackGroup&&after.t.midi===n.t.midi)){
+   x.unisonRole='open';n.unisonRole='stopped';
+  }
+ }
+ // An ascending tonic–flattened-third–fourth gesture can use the index as a guide finger.
+ // This is a fingering preference, not a glissando added to the source or to audio playback.
+ for(let i=1;i<seq.length-1;i++){
+  const p=seq[i-1],x=seq[i],n=seq[i+1];
+  if(p.attackGroup===x.attackGroup&&x.attackGroup===n.attackGroup&&!p.t.grace&&!x.t.grace&&!n.t.grace&&!hasTrill(p.t)&&!hasTrill(x.t)&&keyOf(p.t)===keyOf(x.t)&&keyOf(x.t)===keyOf(n.t)&&p.t.degree===1&&x.t.degree===3&&x.t.acc===-1&&n.t.degree===4&&n.t.acc===0&&n.t.midi-x.t.midi===2&&p.t.octave===x.t.octave&&x.t.octave===n.t.octave&&x.t.midi-p.t.midi===3&&p.t.midi>tuning[1]){
+   x.indexSlide=true;p.guideStart=true;
+  }
+ }
  const result=new Map();let unplayable=0,trillUnavailable=0;
- const cache=new Map(),hasTrill=t=>(t.orns||[]).includes('tr');
- const fingerings=t=>{
-  const key=keyOf(t),trill=hasTrill(t),id=`${t.midi}|${key}|${trill?trillUpper(t,key):'plain'}|${isolatedPeaks.has(t)}`;
-  if(!cache.has(id))cache.set(id,trill?trillCandidates(t,tuning,key):candidates(t.midi,tuning,key).map(c=>c.ext&&isolatedPeaks.has(t)?{...c,cost:c.cost-5}:c));
+ const cache=new Map();
+ const fingerings=x=>{
+  const t=x.t,key=keyOf(t),trill=hasTrill(t),id=`${t.midi}|${key}|${trill?trillUpper(t,key):'plain'}|${isolatedPeaks.has(t)}|${x.unisonRole||''}|${!!x.guideStart}|${!!x.indexSlide}`;
+  if(!cache.has(id))cache.set(id,(trill?trillCandidates(t,tuning,key):candidates(t.midi,tuning,key)).map(c=>{
+   let cost=c.cost;
+   if(c.ext&&isolatedPeaks.has(t))cost-=5;
+   if(x.unisonRole){const preferred=x.unisonRole==='open'?c.s===1&&c.f===0:c.s===0&&c.f===4&&c.a===c.nat;if(!preferred)cost+=8}
+   if((x.guideStart||x.indexSlide)&&c.f!==1)cost+=8;
+   return {...c,cost};
+  }));
   return cache.get(id);
  };
  // Viterbi over runs of playable notes (a note outside the range splits the run).
@@ -153,7 +192,7 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
  const moved=(p,c)=>c.f>0&&p.f>0&&p.a!==c.a&&!(p.s!==c.s&&p.a-p.nat===c.a-c.nat);
  const flush=()=>{
   if(!run.length)return;
-  const cands=run.map(x=>fingerings(x.t));
+  const cands=run.map(x=>fingerings(x));
   // A phrase starts in first position when it can (no reason to begin high and stay there).
   let prev=[];cands[0].forEach(c=>{prev.push({cost:c.cost+(c.high?2:0),back:-1},{cost:Infinity,back:-1})});const backs=[prev];
   for(let i=1;i<run.length;i++){
@@ -172,7 +211,7 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
   chosen.forEach((c,i)=>result.set(run[i].t,{finger:c.f,string:c.s,anchor:c.a,anchorMidi:tuning[c.s]+c.a,extended:!!c.ext,...(c.trill?{trill:c.trill}:{})}));
   run=[];
  };
- for(const x of seq){if(!fingerings(x.t).length){
+ for(const x of seq){if(!fingerings(x).length){
   unplayable++;const trill=hasTrill(x.t)&&candidates(x.t.midi,tuning,keyOf(x.t)).length>0;if(trill)trillUnavailable++;
   flush();result.set(x.t,{finger:null,reason:trill?'trill':'range'});continue;
  }run.push(x)}
@@ -182,7 +221,8 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
  for(const x of seq){const r=result.get(x.t);if(!r||r.finger==null){last=null;continue}
   r.stringChange=!last||last.string!==r.string;
   const da=last?Math.abs(last.anchor-r.anchor):0;
-  if(last&&(da>=2||(da===1&&last.string===r.string))){r.shift=r.anchor>last.anchor?'up':'down';shifts++}
+  if(last&&(da>=2||(da===1&&last.string===r.string))){r.shift=r.anchor>last.anchor?'up':'down';if(last.string===r.string&&last.finger===r.finger&&r.finger>0)r.guideFinger=r.finger;shifts++}
+  if(x.unisonRole==='stopped'&&last?.finger===0&&last.string===1&&r.finger===4&&r.string===0)r.technique='unisonCrossing';
   last=r;
  }
  // Bowing: one bow per slur group, alternate, back to 拉弓 after a rest; mark phrase starts and slur starts.
@@ -222,7 +262,12 @@ function label(r){
  // Arrow follows the hand: to a higher position the hand slides down the neck (↓), back up for lower ones (↑).
  if(r.shift)add(row,'anno-shift',r.shift==='up'?'↓':'↑',`${r.shift==='up'?'往下换把（音变高）':'往上换把（音变低）'}：食指移到 ${NAMES[r.anchorMidi%12]}${Math.floor(r.anchorMidi/12)-1}`);
  if(r.stringChange)add(low,'anno-string',r.string===0?'内':'外');
- add(low,'anno-finger',FINGERS[r.finger]+(r.extended?'伸':'')+(r.trill?'↔'+FINGERS[r.trill.finger]:''),r.trill?`颤音：${FINGERS[r.finger]}指与${FINGERS[r.trill.finger]}指交替；上邻音 ${NAMES[r.trill.midi%12]}${Math.floor(r.trill.midi/12)-1}，同弦同把位（按当前调内上邻音推算）`:r.extended?'四指延伸：仅在避免额外换把更合适时采用，需按个人手型核对':undefined);
+ const hints=[];
+ if(r.technique==='unisonCrossing')hints.push('同音换弦：外弦空弦与内弦四指音高相同，用音色对比连接两个相邻音');
+ if(r.guideFinger)hints.push(`${FINGERS[r.guideFinger]}指带指换把，${r.shift==='up'?'手向下移、音高上升':'手向上移、音高下降'}，指法建议不改变原谱音高或播放`);
+ if(r.trill)hints.push(`颤音：${FINGERS[r.finger]}指与${FINGERS[r.trill.finger]}指交替；上邻音 ${NAMES[r.trill.midi%12]}${Math.floor(r.trill.midi/12)-1}，同弦同把位（按当前调内上邻音推算）`);
+ if(r.extended)hints.push('四指延伸：仅在避免额外换把更合适时采用，需按个人手型核对');
+ add(low,'anno-finger',FINGERS[r.finger]+(r.guideFinger?'滑':'')+(r.extended?'伸':'')+(r.trill?'↔'+FINGERS[r.trill.finger]:''),hints.join('；')||undefined);
  box.append(row,low);return box;
 }
 // Tuning for a key: the six common keys keep the standard D–A strings (named by scale degree); other keys use the
@@ -241,4 +286,4 @@ function stringsName(t,key){return `${degreeName(t[0]%12,key)}${degreeName(t[1]%
 function tuningLabel(t,key){const n=m=>NAMES[m%12]+(Math.floor(m/12)-1);return `${stringsName(t,key)}（${n(t[0])}–${n(t[1])}）`}
 window.ErhuFingering={annotate,label,autoTuning,tuningLabel,stringsName,TUNINGS:[['D–A（标准定弦）',[62,69]],['C–G',[60,67]],['E♭–B♭',[63,70]],['E–B',[64,71]],['F–C',[65,72]],['G–D（二泉调 / 中胡）',[55,62]]]};
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-08 21:32:37

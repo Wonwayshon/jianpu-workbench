@@ -1,8 +1,8 @@
 {
   "name": "flute-key-lab",
   "displayName": "笛调之间",
-  "version": "1.20.5",
-  "androidVersionCode": 68,
+  "version": "1.20.6",
+  "androidVersionCode": 69,
   "identifier": "wang.weixuan.flutekeylab",
   "minAndroidSdk": 26,
   "targetAndroidSdk": 35
