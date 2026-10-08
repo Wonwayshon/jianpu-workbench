@@ -60,7 +60,10 @@ vm.runInContext(pdf.slice(pdf.indexOf('  let archiveBrowser='),pdf.indexOf('  as
  assert.match(byId('archiveCount').textContent,/共 1 份/);assert.equal(byId('pdfRefresh').disabled,false);
  const row=c.archiveRow(valid);assert.equal(row.tag,'details');assert.equal(row.open,false);assert.equal(row.children[0].tag,'summary');
  const actions=row.children[1].children.filter(e=>e.tag==='button').map(e=>e.textContent);
- assert.deepEqual(actions,['打开','加载到转谱','分享','编辑','原文件','导出文字','删除']);
+ let fullOpen=null;c.loadToScore=async(r,opts)=>{fullOpen={id:r.id,fullscreen:!!opts?.fullscreen}};
+ await row.children[1].children.find(e=>e.textContent==='打开').onclick();assert.deepEqual(fullOpen,{id:valid.id,fullscreen:true});
+ await row.children[1].children.find(e=>e.textContent==='加载到转谱').onclick();assert.equal(fullOpen.fullscreen,false);
+ assert.deepEqual(actions,['打开','校对识别','加载到转谱','分享','编辑','原文件','导出文字','删除']);
  console.log('PASS: local inclusive date boundaries, calendar ranges/leap day, search/type/status/sort, immutable records, bounded pagination, empty/reset/invalid filters, collapse/expand, stale refresh guard, existing management actions.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-08 23:47:33

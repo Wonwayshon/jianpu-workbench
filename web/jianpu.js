@@ -358,6 +358,9 @@ function render(host,lines,opts={}){
   row.style.setProperty('--jp-main',chordHeight+'em');
   row.classList.toggle('jp-decorated',line.tokens.some(t=>t.t==='open'||t.t==='tupOpen'||t.orns?.some(o=>o!=='breath')));
   row.classList.toggle('jp-erhu-line',line.tokens.some(t=>t.t==='note'&&opts.annotations?.has(t)));
+  const hasSlur=line.tokens.some(t=>t.t==='open'||t.t==='close'),hasTuplet=line.tokens.some(t=>t.t==='tupOpen'||t.t==='tupClose');
+  row.style.setProperty('--jp-curve',(hasSlur&&hasTuplet?1.35:hasTuplet?.9:hasSlur?.75:0)+'em');
+  row.style.setProperty('--jp-anno',line.tokens.some(t=>opts.annotations?.has(t)&&t.orns?.some(o=>o!=='breath'))?'1.55em':'1.15em');
   let beam=null,prevUnder=false,glued=false,open=0,tupOpen=[],lastNote=null,graces=[];const starts=[],tupStarts=[];
   for(const t of line.tokens){
    if(t.t==='space'){glued=false;prevUnder=false;beam=null;continue}
@@ -441,16 +444,24 @@ function drawOverlay(host){
  svg.setAttribute('width',host.scrollWidth);svg.setAttribute('height',host.scrollHeight);
  const em=parseFloat(getComputedStyle(host).fontSize)||20;
  const X=r=>r.left+r.width/2-box.left+host.scrollLeft,Y=v=>v-box.top+host.scrollTop;
- const top=cell=>Y((cell.querySelector('.jp-orn')||cell.querySelector('.jp-up i')||cell.querySelector('.jp-digit')||cell).getBoundingClientRect().top)-0.12*em;
+ const top=cell=>{const heads=[...cell.querySelectorAll('.jp-orn'),...cell.querySelectorAll('.jp-up i'),...cell.querySelectorAll('.jp-digit')];return Y(Math.min(...(heads.length?heads:[cell]).map(e=>e.getBoundingClientRect().top)))-0.12*em};
+ // Account for the highest note in the entire span, not only its endpoints. Erhu rows reserve
+ // a separate lane below their annotations for these curves, so finger labels stay above them.
+ const spanTop=(a,b)=>{
+  if(!sameRow(a,b))return Math.min(top(a),top(b));
+  const lane=a.closest?.('.jp-voice-lane')||a.closest?.('.jp-line')||host,left=Math.min(X(a.getBoundingClientRect()),X(b.getBoundingClientRect())),right=Math.max(X(a.getBoundingClientRect()),X(b.getBoundingClientRect()));
+  const cells=[...lane.querySelectorAll('.jp-n')].filter(c=>sameRow(a,c)&&X(c.getBoundingClientRect())>=left&&X(c.getBoundingClientRect())<=right);
+  return Math.min(top(a),top(b),...cells.map(top));
+ };
  const sameRow=(a,b)=>Math.abs(a.getBoundingClientRect().top-b.getBoundingClientRect().top)<4;
  const arc=(x1,x2,y)=>{const p=document.createElementNS(ns,'path'),h=Math.min(0.45*em,0.12*Math.abs(x2-x1)+0.2*em);p.setAttribute('d',`M${x1} ${y} Q${(x1+x2)/2} ${y-h*2} ${x2} ${y}`);svg.append(p)};
  for(const [a,b] of arcs){
   const xa=X(a.querySelector('.jp-main').getBoundingClientRect()),xb=X(b.querySelector('.jp-main').getBoundingClientRect());
   let ta=top(a),tb=top(b);
-  if(sameRow(a,b)){const y=Math.min(ta,tb);arc(xa,xb,y)}else{arc(xa,host.clientWidth-4,ta);arc(4,xb,tb)}
+  if(sameRow(a,b)){const y=spanTop(a,b);arc(xa,xb,y)}else{arc(xa,host.clientWidth-4,ta);arc(4,xb,tb)}
  }
  for(const [a,b,n] of tuplets){
-  const xa=X(a.getBoundingClientRect()),xb=X(b.getBoundingClientRect()),y=Math.min(top(a),top(b))-(arcs.some(p=>p[0]===a||p[1]===b)?0.55*em:0.05*em);
+  const xa=X(a.getBoundingClientRect()),xb=X(b.getBoundingClientRect()),y=spanTop(a,b)-(arcs.some(p=>p[0]===a||p[1]===b)?0.55*em:0.05*em);
   const t=document.createElementNS(ns,'text');t.setAttribute('x',sameRow(a,b)?(xa+xb)/2:xa);t.setAttribute('y',y);t.setAttribute('text-anchor','middle');t.setAttribute('class','jp-tuplet');t.textContent=n;svg.append(t);
  }
  host.prepend(svg);
@@ -458,4 +469,4 @@ function drawOverlay(host){
 
 window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline,numberMeasures};
 })();
-// Modified by AI on 2026-10-08 20:57:17
+// Modified by AI on 2026-10-08 23:44:57

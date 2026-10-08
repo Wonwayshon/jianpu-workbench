@@ -15,7 +15,7 @@ const source=fs.readFileSync(root+'pdf-workbench.js','utf8'),els=new Map();c.byI
 c.ArchiveWorkspace=A;c.state={archiveId:null,results:[],dirty:false};let next=0,prompts=0,puts=0;const db=new Map([[record.id,structuredClone(record)]]);
 c.ScoreLibrary={getRecord:async id=>structuredClone(db.get(id)),putRecord:async r=>{puts++;db.set(r.id,structuredClone(r))}};
 c.checkedRecord=r=>structuredClone(r);c.newId=()=> 'score-new-'+(++next);c.getSettings=()=>({...record.settings});c.putSettings=s=>{c.loadedSettings=s};c.lastConverted=null;c.exportText=()=>'';c.Jianpu={parse:()=>({meta:{}})};
-c.prompt=()=>{throw new Error('prompt is unsupported in desktop WebView')};c.AppDialogs={askName:async()=>{prompts++;return '副本'}};c.confirm=()=>true;c.refreshArchives=async()=>{};c.renderResults=()=>{};c.setLibraryView=()=>{};c.showTab=()=>{};c.window.scrollTo=()=>{};
+c.prompt=()=>{throw new Error('prompt is unsupported in desktop WebView')};c.AppDialogs={confirm:async()=>true,askName:async()=>{prompts++;return '副本'}};c.confirm=()=>true;c.refreshArchives=async()=>{};c.renderResults=()=>{};c.setLibraryView=()=>{};c.showTab=()=>{};c.window.scrollTo=()=>{};
 vm.runInContext(source.slice(source.indexOf('  // Workbench association'),source.indexOf('  // Share-code import')),c);
 (async()=>{
  await c.loadToScore(record);assert.equal(c.loadedSettings.key,'5');assert.match(c.byId('archiveScore').textContent,/保存修改到原存档/);
@@ -30,6 +30,10 @@ vm.runInContext(source.slice(source.indexOf('  // Workbench association'),source
  const current=db.get(record.id);c.state.archiveId=record.id;c.state.results=structuredClone(current.results);c.state.results[1].text='6 7 |';c.state.dirty=true;c.byId('pdfTitle').value=current.title;c.bindScore(current,[5]);c.byId('scoreInput').value='6 7 |';await c.saveScoreArchive();assert.equal(c.state.dirty,false);assert.equal(db.get(record.id).results[1].text,'6 7 |');
  c.window.detachScoreArchive();const beforeCancel=puts;c.AppDialogs.askName=async()=>null;await c.saveScoreArchive();assert.equal(puts,beforeCancel);assert.equal(c.byId('archiveScore').disabled,false);assert.match(c.byId('copyStatus').textContent,/取消/);
  let finishName;c.AppDialogs.askName=()=>new Promise(resolve=>{finishName=resolve});const pendingSave=c.saveScoreArchive();await c.saveScoreArchive();assert.equal(puts,beforeCancel);finishName('单次保存');await pendingSave;assert.equal(puts,beforeCancel+1,'repeated clicks during naming create only one record');
+ let opened=0;c.window.openScoreViewer=async()=>{opened++};await c.loadToScore(record,{fullscreen:true});assert.equal(opened,1);
+ const oldText=c.byId('scoreInput').value;c.byId('scoreInput').value='未保存文字';c.AppDialogs.confirm=async()=>false;
+ await c.loadToScore(record,{fullscreen:true});assert.equal(opened,1);assert.equal(c.byId('scoreInput').value,'未保存文字','cancel preserves the current draft and does not open the viewer');
+ c.AppDialogs.confirm=async()=>true;c.byId('scoreInput').value=oldText;
  console.log('PASS: linked repeated save without duplicates/prompts, copy/detach, settings restoration, page mapping, attachment/note/date preservation, deletion/conflict/write-failure protection.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-08 20:21:31
+// Modified by AI on 2026-10-08 23:47:33

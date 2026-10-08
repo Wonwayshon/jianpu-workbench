@@ -289,11 +289,12 @@
   function bindScore(record,pages){scoreSource=ArchiveWorkspace.bind(record,pages);syncScoreSource()}
   window.detachScoreArchive=()=>{scoreSource=null;syncScoreSource()};
   byId('archiveDetach').onclick=()=>{window.detachScoreArchive();byId('copyStatus').textContent='已取消关联，当前文字保留；下次保存会新建存档。'};
-  async function loadToScore(record){
+  async function loadToScore(record,{fullscreen=false}={}){
     const fresh=await ScoreLibrary.getRecord(record.id);if(!fresh||fresh.deleted)throw new Error('这份存档已被删除。');
     const source=ArchiveWorkspace.bind(fresh),text=source.text;
-    const input=byId('scoreInput');if(input.value.trim()&&input.value.trim()!==text.trim()&&!confirm('用「'+fresh.title+'」替换转谱页当前的内容？'))return;
+    const input=byId('scoreInput');if(input.value.trim()&&input.value.trim()!==text.trim()&&!await AppDialogs.confirm({title:fullscreen?'打开简谱':'加载到转谱',message:'将「'+fresh.title+'」加载到转谱？当前文字会被替换；尚未保存的修改请先存档。',accept:fullscreen?'打开':'加载'}))return;
     scoreSource=source;input.value=text;putSettings(fresh.settings);syncScoreSource();setLibraryView(false);showTab('score');window.scrollTo({top:0,behavior:'smooth'});
+    if(fullscreen)await window.openScoreViewer();
   }
   async function saveScoreArchive(asNew=false){
     if(scoreSaving)return;
@@ -360,7 +361,9 @@
         const summary=document.createElement('summary'),date=document.createElement('span');date.className='archive-entry-date';date.textContent='更新 '+new Date(record.updatedAt).toLocaleDateString();summary.append(title,date);row.append(summary);
         const body=document.createElement('div');body.className='archive-entry-body';text.append(meta);
         const created=document.createElement('p');created.className='subtle';created.textContent='创建于 '+new Date(record.createdAt).toLocaleString();text.append(created);if(record.note){const n=document.createElement('p');n.className='archive-note';n.textContent=record.note;text.append(n)}body.append(text);
-        const actions=[[record.results.length?'打开':'识别',()=>openArchive(record)]];
+        const hasScore=record.results.some(r=>r.text.trim());
+        const actions=[[hasScore?'打开':record.results.length?'预览':'识别',()=>hasScore?loadToScore(record,{fullscreen:true}):openArchive(record)]];
+        if(hasScore&&record.fileId)actions.push(['校对识别',()=>openArchive(record)]);
         if(record.results.some(r=>r.text.trim()))actions.push(['加载到转谱',()=>loadToScore(record)],['分享',()=>ScoreShare.show(record)]);
         actions.push(['编辑',()=>editArchive(record)]);
         if(record.fileId)actions.push(['原文件',()=>downloadOriginal(record)]);
@@ -479,4 +482,4 @@
   window.PdfWorkbenchCore={parsePages,joinText,usableText,checkedRecord};
   syncControls();refreshArchives();
 })();
-// Modified by AI on 2026-10-08 20:21:31
+// Modified by AI on 2026-10-08 23:41:38

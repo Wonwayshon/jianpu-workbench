@@ -74,9 +74,30 @@ for(const text of ["5/5/5/","5/0/5/","(5/5/)","5/!tr5/","5/5'/","5/^5//5/","5 - 
  ({p,r}=run(text,2));assert.ok(p.notes.every(t=>r.map.get(t)?.technique!=='unisonCrossing'),`do not impose timbral crossing: ${text}`);
 }
 ({p,r}=run("1'/b3'/4'/",2));
-assert.deepEqual(Array.from(p.notes.slice(0,2),t=>r.map.get(t).finger),[1,1]);
-assert.equal(r.map.get(p.notes[0]).string,r.map.get(p.notes[1]).string);assert.equal(r.map.get(p.notes[1]).guideFinger,1);assert.equal(r.map.get(p.notes[1]).shift,'up');
+assert.deepEqual(Array.from(p.notes.slice(0,2),t=>r.map.get(t).finger),[1,3]);
+assert.equal(r.map.get(p.notes[0]).string,r.map.get(p.notes[1]).string);assert.equal(r.map.get(p.notes[1]).guideFinger,undefined);assert.equal(r.map.get(p.notes[1]).shift,undefined);
 assert.deepEqual(Array.from(p.notes,t=>t.midi),[74,77,79],'guide fingering must preserve octave and flat third');
+// Altered notes use the available finger in the established frame; shift on the tonic only.
+({p,r}=run("5/b7/ 1'/b3'/4'/",2));
+assert.deepEqual(Array.from(p.notes,t=>r.map.get(t).finger),[0,2,1,3,4]);
+assert.equal(r.map.get(p.notes[1]).shift,undefined);assert.equal(r.map.get(p.notes[2]).shift,'up');
+assert.ok(p.notes.slice(2).every(t=>r.map.get(t).anchor===5));
+// Approach a short high peak without moving early onto the inner string.
+({p,r}=run("5/6/ | 1'/(5'//3'//) 2'/!~(1'//6//) |",2));
+assert.equal(r.map.get(p.notes[1]).string,1);assert.equal(r.map.get(p.notes[1]).finger,2);
+assert.deepEqual(Array.from(p.notes.slice(2,5),t=>r.map.get(t).finger),[1,4,3]);
+assert.equal(r.map.get(p.notes[2]).shift,'up');assert.equal(r.map.get(p.notes[4]).shift,undefined);
+// The final tonic of a neighbour figure prepares 2/5/3; return only when reaching 6.
+({p,r}=run("1'. (6//1'//) | (2'/5'//3'//) (2'//1'//)6//(5//) |",2));
+assert.equal(r.map.get(p.notes[2]).finger,1);assert.equal(r.map.get(p.notes[2]).shift,'up');
+assert.deepEqual(Array.from(p.notes.slice(3,6),t=>r.map.get(t).finger),[2,4,3]);
+assert.ok(p.notes.slice(3,8).every(t=>r.map.get(t).shift===undefined));assert.equal(r.map.get(p.notes[8]).shift,'down');
+// A high index-led trill keeps its hand frame through repeated held notes and the inner-string exit.
+({p,r}=run("3//3///5///6///1'///2'///3'/// (5'!tr | 5' - | 5'/)6'/ 3'/2'/ |",2));
+assert.deepEqual(Array.from(p.notes.slice(4,7),t=>r.map.get(t).finger),[1,2,3]);
+const high=p.notes.slice(7);assert.deepEqual(Array.from(high,t=>r.map.get(t).finger),[1,1,1,2,3,2]);
+assert.ok(high.every(t=>r.map.get(t).anchor===12));assert.equal(r.map.get(high[0]).shift,'up');assert.ok(high.slice(1).every(t=>r.map.get(t).shift===undefined));
+assert.equal(r.map.get(high[4]).string,0);assert.equal(r.map.get(high[5]).string,0);checkTrill(high[0],r.map.get(high[0]),[62,69]);
 // Changing the key in mid-piece must change the trill upper neighbour.
 p=J.parse('3!tr 3!tr');p.notes.forEach(t=>t.midi=64);
 r=E.annotate(p.lines,{keyOf:t=>t===p.notes[0]?0:2});assert.equal(r.map.get(p.notes[0]).trill.midi,65);assert.equal(r.map.get(p.notes[1]).trill.midi,67);
@@ -87,4 +108,4 @@ const slide=E.label({finger:1,string:1,anchorMidi:77,shift:'up',guideFinger:1});
 const cross=E.label({finger:4,string:0,technique:'unisonCrossing'});assert.match(cross.children[1].children.at(-1).title,/同音换弦/);
 const bad=E.label({finger:null,reason:'trill'});assert.match(bad.children[1].children[0].title,/颤音手型/);
 console.log(`PASS: opening 1123, one prepared shift, stable following frame; repeated 5 stays on 3 / shift at 6 with 2↔3; ${count} trills across 12 keys and 3 tunings; upper-degree accidentals; impossible trills; ordinary fourth fingers; phrase restart; grace fingering, isolated peak, exact-pair timbral crossing and index-guide shift; label and tooltip.`);
-// Modified by AI on 2026-10-08 21:31:16
+// Modified by AI on 2026-10-08 23:49:10

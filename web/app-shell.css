@@ -385,10 +385,10 @@ body.viewer-open>main,body.viewer-open>header,body.viewer-open>nav{display:none!
 .perform-page{position:absolute;right:12px;bottom:6px;font-size:12px;color:var(--muted);opacity:.6;pointer-events:none;display:none}
 .viewer.perform .perform-page{display:block}
 #viewerPerform{min-height:34px;padding:0 10px;font-size:14px}
-/* Erhu annotations take part in layout (a first grid row) so wide labels like 内四 / 外四 widen their note
-   instead of overlapping the neighbour; every note in an annotated score reserves the same row height. */
-.jp-erhu-line .jp-n{grid-template-rows:1.75em var(--jp-up,.44em) var(--jp-main,1.1em) var(--jp-under,.26em) var(--jp-down,.28em);padding:0 .08em}
-.jp-erhu-line .jp-n>.jp-up{grid-row:2}.jp-erhu-line .jp-n>.jp-main{grid-row:3}.jp-erhu-line .jp-n>.jp-lines{grid-row:4}.jp-erhu-line .jp-n>.jp-down{grid-row:5}
+/* Erhu annotations occupy their own row; curves get a separate lane before octave dots.
+   Wide finger labels widen their note, and ornaments reserve additional annotation height. */
+.jp-erhu-line .jp-n{grid-template-rows:var(--jp-anno,1.15em) var(--jp-curve,0em) var(--jp-up,.44em) var(--jp-main,1.1em) var(--jp-under,.26em) var(--jp-down,.28em);padding:0 .08em}
+.jp-erhu-line .jp-n>.jp-up{grid-row:3}.jp-erhu-line .jp-n>.jp-main{grid-row:4}.jp-erhu-line .jp-n>.jp-lines{grid-row:5}.jp-erhu-line .jp-n>.jp-down{grid-row:6}
 .jp-erhu-line .jp-n>.jp-anno{grid-row:1;position:static;transform:none;align-self:end;justify-self:center;padding-bottom:.05em}
 .jp-erhu-line{padding-top:.4em!important}
 .jp-erhu-line .jp-beam>.jp-n{padding:0 .14em}
@@ -482,13 +482,29 @@ body.viewer-open>main,body.viewer-open>header,body.viewer-open>nav{display:none!
 /* Model profiles */
 .llm-bar{display:flex;gap:8px;align-items:center;margin:8px 0}.llm-bar select{flex:1;min-width:0}.llm-bar label{font-size:14px;white-space:nowrap;margin:0}
 .llm-extra-box{margin:6px 0}.llm-extra-box summary{font-size:14px;color:var(--muted,#64748b);cursor:pointer}
-.api-sheet{width:min(760px,94vw)}
-.api-layout{display:grid;gap:14px}@media (min-width:640px){.api-layout{grid-template-columns:200px minmax(0,1fr)}}
-.api-side{display:flex;flex-direction:column;gap:8px}.api-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto}
-.api-item{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:8px 10px;min-height:0;border-radius:10px}
-.api-item strong{font-size:14px;line-height:1.3;word-break:break-all}.api-item small{font-size:12px;color:var(--muted,#64748b)}
-.api-item.on{border-color:#1f6feb;background:#eef4ff}
-.api-form label{display:block;margin-top:8px}.api-form input,.api-form select{width:100%;box-sizing:border-box}.api-form .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.api-form .field{min-width:0}
+.api-sheet{width:min(820px,calc(100vw - 32px))}
+.api-sheet form{gap:20px;padding:28px}
+.api-intro{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+.api-layout{display:grid;gap:24px;min-width:0}
+.api-layout h3{font-size:14px;margin:0 0 12px;color:var(--muted);font-weight:650}
+.api-side{display:flex;flex-direction:column;gap:10px;min-width:0;padding:18px;background:#f5f7fb;border:1px solid var(--line);border-radius:14px}
+.api-side h3{margin:0}.api-list{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow:auto}
+.api-empty{margin:0;padding:14px 0;color:var(--muted);font-size:13px;line-height:1.7}
+.api-item{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:5px;padding:12px;min-height:0;border-radius:10px;background:white}
+.api-item strong{font-size:14px;line-height:1.3;overflow-wrap:anywhere}.api-item small{font-size:12px;color:var(--muted)}
+.api-item.on{border-color:var(--blue);background:#eef4ff}.api-side>button{margin-top:auto;background:white}
+.api-form{min-width:0}.api-form h3{color:var(--ink);font-size:17px;margin-bottom:16px}
+.api-form label{display:block;margin:14px 0 7px;font-size:14px;font-weight:600}
+.api-form input,.api-form select{width:100%;box-sizing:border-box;border:1px solid #cbd6e2;border-radius:10px;padding:11px 13px;background:#fff;color:var(--ink);font:inherit;font-size:16px;min-height:46px}
+.api-form input:focus,.api-form select:focus{outline:2px solid #8cb8f4;outline-offset:2px;border-color:var(--blue)}
+.api-form .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.api-form .field{min-width:0}
+.api-preset .api-provider-fields{grid-template-columns:1fr}
+.api-form .toolbar{margin-top:20px;display:flex;flex-wrap:wrap;gap:10px}.api-form .toolbar button{margin:0;min-width:0;flex:1}
+.api-form #apiDelete{flex:0 0 auto;color:#a52c32}.api-form .status-line:empty{display:none}.api-form .status-line{margin:12px 0 0;font-size:14px;line-height:1.5}
+.api-key-note{margin:12px 0 0;font-size:12px}.api-form #llmPresetNote{margin:10px 0 0;font-size:13px;line-height:1.6}
+@media(min-width:700px){.api-layout{grid-template-columns:210px minmax(0,1fr)}.api-side{align-self:stretch}}
+@media(max-width:699px){.api-sheet form{padding:22px;gap:18px}.api-side{padding:14px}.api-list{max-height:150px}.api-form .fields{grid-template-columns:1fr}.api-form #apiDelete{flex-basis:100%}}
+.confirm-sheet{width:min(440px,calc(100vw - 32px))}.confirm-sheet h2{margin:0;font-size:20px}.confirm-message{margin:0;line-height:1.7;overflow-wrap:anywhere}
 #copyPromptStaff,#copyPromptJianpu,#pasteDraft{white-space:nowrap}
 /* Edit mode (side-by-side score and text) */
 .viewer.editing .viewer-tabs,.viewer.editing #viewerLayout,.viewer.editing .viewer-reflow,.viewer.editing .viewer-nav,.viewer.editing #viewerPerform{display:none!important}
@@ -606,4 +622,28 @@ body.viewer-open:has(.viewer.editing) .float-player{display:none!important}
 .jp-measure-numbers{position:absolute;inset:0;pointer-events:none;overflow:visible}
 .jp-measure-number{position:absolute;font:500 max(.42em,8px)/1.2 -apple-system,"PingFang SC",sans-serif;color:#566979;white-space:nowrap}
 .staff-measure-number{font:10px sans-serif;fill:#566979}
-/* Modified by AI on 2026-10-08 20:57:17 */
+
+@media print{.jp-meta,.jp-title{break-after:avoid;page-break-after:avoid}}
+
+/* Full-screen toolbar: consistent controls, grouped options, always-visible navigation/actions. */
+.viewer-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 12px!important;overflow:visible;flex-wrap:wrap}
+.viewer-bar .app-segments{height:40px;box-sizing:border-box;padding:3px;gap:3px;border:1px solid var(--line);border-radius:10px;grid-template-columns:repeat(4,minmax(0,1fr))}
+.viewer-bar .app-segments button{height:32px;min-height:0;padding:0 12px;font-size:14px;line-height:1.2;border-radius:7px}
+.viewer-middle{min-width:0}.viewer-options,.viewer-group,.viewer-tools{display:flex;align-items:center;gap:8px;min-width:0}
+.viewer-options{flex-wrap:wrap;row-gap:8px}.viewer-group{flex-wrap:wrap}.viewer-tools{flex-wrap:nowrap}
+.viewer-bar select,.viewer-bar>button,.viewer-tools>button,.viewer-annotation-controls>button{height:40px;min-height:40px;padding:0 12px;border-radius:10px;font-size:14px;line-height:1.2;box-sizing:border-box;margin:0}
+.viewer-bar select{max-width:210px;width:auto;flex:none}
+.viewer-bar .viewer-reflow,.viewer-bar .viewer-measures{display:flex;align-items:center;gap:7px;height:40px;box-sizing:border-box;padding:0 10px;border:1px solid var(--line);background:#f8fafc;border-radius:10px;margin:0;font-size:14px;line-height:1.2;white-space:nowrap}
+.viewer-bar .viewer-reflow input,.viewer-bar .viewer-measures input[type=checkbox]{width:17px;height:17px;margin:0;accent-color:var(--blue);flex:none}
+.viewer-bar .viewer-measures input[type=number]{width:48px;height:30px;min-height:30px;margin:0;padding:3px 4px;border-radius:6px;font-size:14px;text-align:center;box-sizing:border-box}
+.viewer-bar .viewer-measures label{padding:0;border:0;background:transparent;height:auto}
+.viewer-bar .viewer-nav{margin:0;gap:2px;height:40px;border:1px solid var(--line);border-radius:10px;background:white;box-sizing:border-box}
+.viewer-bar .viewer-nav button{height:38px;min-height:38px;min-width:32px;width:32px;padding:0;border:0;background:transparent;font-size:21px;border-radius:8px}
+.viewer-bar #viewerPage{min-width:56px;text-align:center;font-size:13px;white-space:nowrap;color:var(--muted)}
+.viewer-bar #viewerPlay,.viewer-bar #viewerClose{height:40px;min-height:40px;min-width:40px;width:40px;padding:0;font-size:18px;border-radius:10px}
+.viewer-bar #viewerPlay{background:var(--blue);border-color:var(--blue);color:white}
+.viewer-middle .edit-status{white-space:normal;font-size:13px}.viewer-middle #viewerPlaybackWarning{font-size:12px;line-height:1.4;display:block;margin-top:5px}
+.viewer.editing .viewer-options{display:none}.viewer.editing .viewer-bar{grid-template-columns:minmax(0,1fr) auto}
+@media(max-width:1200px){.viewer-bar{grid-template-columns:minmax(0,1fr) auto}.viewer-middle{grid-column:1 / -1;grid-row:2}.viewer-tools{grid-column:2;grid-row:1}.viewer-tabs{justify-self:start}.viewer.editing .viewer-middle{grid-column:1;grid-row:1}}
+@media(max-width:680px){.viewer-bar{gap:8px;padding:8px!important}.viewer-bar .viewer-tabs{grid-column:1 / -1;justify-self:stretch}.viewer-bar .viewer-tools{grid-column:1 / -1;grid-row:3;justify-content:flex-end}.viewer-middle{grid-row:2}.viewer-bar .app-segments button{padding:0 6px;font-size:13px}.viewer-bar select{max-width:190px}.viewer.editing .viewer-tools{grid-row:1;grid-column:2}.viewer.editing .viewer-middle{grid-column:1}}
+/* Modified by AI on 2026-10-08 23:47:33 */

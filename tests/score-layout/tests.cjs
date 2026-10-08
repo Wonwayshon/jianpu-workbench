@@ -87,6 +87,16 @@ assert.equal(c.box().w,486);assert.equal(c.box().h,408);
 const paged=c.paginate();assert.equal(paged.length,4,'width-fitted font packs three systems per page, instead of two at fixed 18px');assert.ok(vm.runInContext('vFont',c)<12);assert.ok(paged.every(page=>page.filter(l=>l.kind==='music').length===9));assert.equal(paged.flat().filter(l=>l.kind==='music').length,36);assert.ok(paged.every(page=>page.filter(l=>l.kind==='music').length%3===0));
 const solo=J.parse(Array.from({length:60},()=> '1 2 3 4 |').join('\n'));c.vLines=()=>solo.lines;
 const soloPages=c.paginate();assert.ok(soloPages[0].filter(l=>l.kind==='music').length>24,'single-part pages also pack at the final font');assert.equal(soloPages.flat().filter(l=>l.kind==='music').length,60);
+// Tempo/time headings stay with the next musical system across measured and staff pages.
+const sectioned=J.parse('1 2 |\n3 4 |\n5 6 |\n@time 3/4\n@tempo 中板\n1 2 3 |');
+c.vLines=()=>sectioned.lines;$('viewerBody').clientHeight=58;
+const sections=c.paginate();assert.ok(sections.length>1);
+const marked=sections.find(page=>page.some(l=>l.kind==='meta'&&l.name==='tempo'));
+assert.ok(marked.indexOf(marked.find(l=>l.kind==='meta'&&l.name==='tempo'))<marked.findIndex(l=>l.kind==='music'));
+assert.ok(sections.every(page=>page.at(-1).kind==='music'),'no standalone section heading at page bottom');
+const staffSections=c.paginateStaffLines(sectioned.lines,3);assert.equal(staffSections.length,2);
+assert.equal(staffSections[0].at(-1).kind,'music');assert.equal(staffSections[1][0].kind,'meta');
+$('viewerBody').clientHeight=420;
 c.vLines=()=>long.lines;
 // Selected voices alone receive fingering, and full-part history survives page boundaries.
 vm.runInContext(fs.readFileSync(root+'erhu-fingering.js','utf8'),c);const E=c.window.ErhuFingering;let calls=0;
@@ -120,4 +130,4 @@ vm.runInContext(view.slice(view.indexOf('async function showPage('),view.indexOf
  assert.deepEqual($('viewerBody').children.map(e=>e.attrs['aria-label']),['第 3 页','第 4 页']);assert.match($('viewerPage').textContent,/3–4/);
  console.log('PASS: measured two-page available area, full-score pagination retains all 36 rows in intact systems; rapid page turns do not append stale pages.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-08 20:57:17
+// Modified by AI on 2026-10-08 23:50:50

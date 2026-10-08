@@ -6,7 +6,7 @@ const $=id=>document.getElementById(id);
 const VIEWS={flute:'scoreOutput',source:'scorePreview',staff:'staffOutput',trans:'transBox'};
 const TAB_BUTTONS={flute:'viewFlute',source:'viewSource',staff:'viewStaff',trans:'viewTrans'},VIEWER_BUTTONS={flute:'viewerFlute',source:'viewerSource',staff:'viewerStaff',trans:'viewerTrans'};
 const HINTS={trans:'选一个调重新记谱：「保持音高」按新调改写数字（原音高演奏）；「移到新调」数字不变、整曲升降到新调，试听也跟着变。',flute:'音名谱：固定 1=C（C=1、D=2…），中音 1 = C4，长笛等 C 调乐器直接照读；每个升降号只管当前一个音。',source:'按原谱写法排版，便于对照原图核对。',staff:'按实际音高记的五线谱（总谱低声部自动用低音谱号），调号沿用原谱；试听时同步高亮。'};
-let view=(()=>{try{return localStorage.getItem('flute.scoreView')||'flute'}catch{return 'flute'}})();if(!(view in VIEWS))view='flute';
+let view='source';
 let settings=ScorePlayer.loadSettings(),tempoFromScore=null,staffDirty=true;
 const save=()=>ScorePlayer.saveSettings(settings);
 
@@ -212,7 +212,7 @@ window.onScoreConverted=()=>{
 function setView(v){
  view=v;try{localStorage.setItem('flute.scoreView',v)}catch{}
  for(const [k,id] of Object.entries(VIEWS)){$(id).hidden=k!==v;$(TAB_BUTTONS[k]).setAttribute('aria-pressed',String(k===v))}
- $('viewHint').textContent=HINTS[v];$('printScore').textContent={flute:'音名谱存 PDF',source:'原谱存 PDF',staff:'五线谱存 PDF',trans:'转调谱存 PDF'}[v];if(ScorePlayer.isPlaying())ScorePlayer.stop();
+ $('viewHint').textContent=HINTS[v];$('printScore').textContent={flute:'音名谱存 PDF',source:'简谱存 PDF',staff:'五线谱存 PDF',trans:'转调谱存 PDF'}[v];if(ScorePlayer.isPlaying())ScorePlayer.stop();
  if(v==='staff')showStaff();
  syncErhuBar();if(v==='trans'||v==='source')renderMain();
 }
@@ -379,7 +379,7 @@ document.addEventListener('pointerdown',e=>{if(e.target!==$('startHere')&&!token
 // ---------- PDF of the visible tab ----------
 $('printScore').onclick=()=>{
  if(!lastConverted)return;const name=sheetTitle(lastConverted.source,'');
- if(view==='source')printScoreSheet(F(lastConverted.source.lines),`${name||'原谱'} · 原谱`,'按乐谱文本排版的原谱');
+ if(view==='source')printScoreSheet(F(lastConverted.source.lines),`${name||'简谱'} · 简谱`,'按乐谱文本排版的简谱');
  else if(view==='trans'){const k=KEY_NAMES[Number($('transKey').value)];printScoreSheet(transLines,`${name||'转调谱'} · 1=${k}`,$('transMode').value==='move'?`整曲移到 1=${k}`:`保持原音高，按 1=${k} 记谱`,transStaff()?'staff':'jianpu',k)}
  else if(view==='staff')printScoreSheet(F(lastConverted.lines),`${name||'乐谱'} · 五线谱`,$('conversionCaption').textContent,'staff',lastConverted.keyLabel);
  else printScoreSheet(F(lastConverted.lines),`${name||'音名谱'} · 音名谱（固定 1=C）`,$('conversionCaption').textContent);
@@ -493,7 +493,7 @@ function applyLayout(){vLayout=vLayoutPref==='auto'?(innerWidth>innerHeight?'two
 let vReflow=(()=>{try{return localStorage.getItem('flute.viewerReflow')!=='0'}catch{return true}})(),followHold=false;
 const vLines=()=>vView==='trans'?transLines:vView==='source'?F(lastConverted.source.lines):F(lastConverted.lines);
 function splitExplicit(lines){
- const pages=[[]];for(const l of lines){if(l.kind==='page'){if(pages[pages.length-1].some(x=>x.kind==='music'))pages.push([]);continue}pages[pages.length-1].push(l)}
+ const pages=[[]];for(const l of lines){if(l.kind==='page'){const current=pages[pages.length-1];if(current.some(x=>x.kind==='music')){let last=current.length-1;while(last>=0&&current[last].kind!=='music')last--;pages.push(current.splice(last+1))}continue}pages[pages.length-1].push(l)}
  return pages.filter(p=>p.some(l=>l.kind==='music'));
 }
 function box(){
@@ -506,12 +506,14 @@ function reflowLines(lines){
  return full?lines.map(l=>l.kind==='page'?{kind:'blank'}:l):lines.filter(l=>l.kind!=='page'&&l.kind!=='blank');
 }
 function paginateStaffLines(lines,per){
- const pages=[];let cur=[],count=0;
+ const pages=[];let cur=[],count=0,pending=[];
  for(const block of Jianpu.groupSystems(lines)){
   const music=block.lines.filter(l=>l.kind==='music').length;
+  if(!music){pending.push(...block.lines);continue}
   if(count&&count+music>per){pages.push(cur);cur=[];count=0}
-  cur.push(...block.lines);count+=music;
+  cur.push(...pending,...block.lines);pending=[];count+=music;
  }
+ cur.push(...pending);
  if(count||!pages.length)pages.push(cur);else if(cur.length)pages[pages.length-1].push(...cur);
  return pages;
 }
@@ -536,13 +538,14 @@ function paginate(){
   if(isStaff(vView)){const per=Math.max(2,Math.floor(h/Math.max(70,w*0.13)));out.push(...paginateStaffLines(part,per));continue}
   // Re-render at the final size: measure alignment, borders and minimum-width underlines are not purely scalable.
   const probe=numberedProbe(part,w,vFont);
-  let cur=[],used=0;
+  let cur=[],used=0,pending=[],pendingHeight=0;
   for(const row of [...probe.children].filter(c=>c._src)){
    const css=getComputedStyle(row),rh=row.getBoundingClientRect().height+(parseFloat(css.marginTop)||0)+(parseFloat(css.marginBottom)||0);
-   if(cur.some(l=>l.kind==='music')&&used+rh>h-4){out.push(cur);cur=[];used=0}
-   cur.push(...row._src);used+=rh;
+   if(!row._src.some(l=>l.kind==='music')){pending.push(...row._src);pendingHeight+=rh;continue}
+   if(cur.some(l=>l.kind==='music')&&used+pendingHeight+rh>h-4){out.push(cur);cur=[];used=0}
+   cur.push(...pending,...row._src);used+=pendingHeight+rh;pending=[];pendingHeight=0;
   }
-  if(cur.length)out.push(cur);probe.remove();
+  cur.push(...pending);if(cur.length)out.push(cur);probe.remove();
  }
  return out.length?out:[vLines()];
 }
@@ -623,6 +626,7 @@ $('viewerBody').addEventListener('click',e=>{
  if(!perform||vLayout==='width')return;
  (e.clientX<innerWidth/2?$('viewerPrev'):$('viewerNext')).click();
 });
+window.openScoreViewer=async()=>{setView('source');await openViewer()};
 $('fullView').onclick=openViewer;$('editView').onclick=openEditor;$('viewerClose').onclick=closeViewer;
 $('viewerTrans').onclick=()=>setViewerView('trans');$('viewerFlute').onclick=()=>setViewerView('flute');$('viewerSource').onclick=()=>setViewerView('source');$('viewerStaff').onclick=()=>setViewerView('staff');
 $('viewerLayout').onchange=()=>{vLayoutPref=$('viewerLayout').value;try{localStorage.setItem('flute.viewerLayout.v2',vLayoutPref)}catch{}applyLayout();rebuild(vIndex)};
@@ -634,8 +638,8 @@ $('viewerBody').addEventListener('touchend',e=>{if(!swipe||vLayout==='width'||vE
 // In edit mode only a width change re-lays out (the on-screen keyboard changes the height while typing).
 let resizeTimer=0,lastW=innerWidth;addEventListener('resize',()=>{if(!viewerOpen)return;if(vEdit&&innerWidth===lastW)return;lastW=innerWidth;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{applyLayout();rebuild(vIndex)},250)});
 // Android back button closes the viewer first.
-window.handleAppBack=()=>{if($('erhuPartDialog').open){$('erhuPartDialog').close();return true}if($('partDisplayDialog').open){$('partDisplayDialog').close();return true}if(dialog.open){dialog.close();return true}if(viewerOpen&&perform){setPerform(false);return true}if(viewerOpen){closeViewer();return true}if(!$('startHere').hidden){$('startHere').hidden=true;return true}return false};
+window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open]')].at(-1);if(modal){modal.close();return true}if($('erhuPartDialog').open){$('erhuPartDialog').close();return true}if($('partDisplayDialog').open){$('partDisplayDialog').close();return true}if(dialog.open){dialog.close();return true}if(viewerOpen&&perform){setPerform(false);return true}if(viewerOpen){closeViewer();return true}if(!$('startHere').hidden){$('startHere').hidden=true;return true}return false};
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-08 20:41:46
+// Modified by AI on 2026-10-08 23:44:57

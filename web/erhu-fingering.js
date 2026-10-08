@@ -41,7 +41,8 @@ function candidates(m,tuning,key){
    const open=tuning[c.s];
    if(!inScale(open+c.a,key))cost+=1.2;
    const steps=scaleSteps(open+c.a,open+c.a+c.o,key);
-   if(c.f>1&&steps!==c.f-1&&!(c.ext&&steps===c.f))cost+=1.6;
+   const altered=!inScale(m,key),adjacentSteps=altered?[scaleSteps(open+c.a,m-1,key),scaleSteps(open+c.a,m+1,key)]:[];
+   if(c.f>1&&steps!==c.f-1&&!adjacentSteps.includes(c.f-1)&&!(c.ext&&steps===c.f))cost+=1.6;
   }
   c.cost=cost;
  }
@@ -98,7 +99,6 @@ function transition(p,c,info){
  }
  if(p.s!==c.s)cost+=info.ornamentLink?4:info.short?0.5:0.3;
  if(info.ornamentLink&&!sameHand(p,c))cost+=3;
- if(info.indexSlide)cost+=(p.s===c.s&&p.f===1&&c.f===1)?-3:3;
  // Sliding one finger between different pitches without moving the hand.
  if(p.s===c.s&&p.f===c.f&&p.f>0&&da===0&&p.o!==c.o)cost+=3.2;
  // Rearticulating the same pitch should normally reuse the established finger and string.
@@ -151,7 +151,8 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
    const equalReturn=p.t.midi===n.t.midi;
    const key=keyOf(x.t),pc=candidates(p.t.midi,tuning,key),nc=candidates(n.t.midi,tuning,key);
    const briefUpperReach=p.t.under>0&&n.t.under>0&&keyOf(p.t)===key&&keyOf(n.t)===key&&candidates(x.t.midi,tuning,key).some(c=>c.ext&&pc.some(v=>v.s===c.s&&v.a===c.a&&v.f===3)&&nc.some(v=>v.s===c.s&&v.a===c.a&&v.f===2));
-   if(equalReturn||briefUpperReach)isolatedPeaks.add(x.t);
+   const tonicPeak=keyOf(p.t)===key&&keyOf(n.t)===key&&candidates(x.t.midi,tuning,key).some(c=>c.ext&&inScale(tuning[c.s]+c.a,key)&&((tuning[c.s]+c.a-key)%12+12)%12===0&&pc.some(v=>v.s===c.s&&v.a===c.a&&v.f>0&&v.f<4)&&nc.some(v=>v.s===c.s&&v.a===c.a&&v.f>0&&v.f<4));
+   if(equalReturn||briefUpperReach||tonicPeak)isolatedPeaks.add(x.t);
    if(!equalReturn&&briefUpperReach){p.keepFrame=true;n.keepFrame=true}
   }
  }
@@ -165,23 +166,42 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
    x.unisonRole='open';n.unisonRole='stopped';
   }
  }
- // An ascending tonic–flattened-third–fourth gesture can use the index as a guide finger.
- // This is a fingering preference, not a glissando added to the source or to audio playback.
- for(let i=1;i<seq.length-1;i++){
-  const p=seq[i-1],x=seq[i],n=seq[i+1];
-  if(p.attackGroup===x.attackGroup&&x.attackGroup===n.attackGroup&&!p.t.grace&&!x.t.grace&&!n.t.grace&&!hasTrill(p.t)&&!hasTrill(x.t)&&keyOf(p.t)===keyOf(x.t)&&keyOf(x.t)===keyOf(n.t)&&p.t.degree===1&&x.t.degree===3&&x.t.acc===-1&&n.t.degree===4&&n.t.acc===0&&n.t.midi-x.t.midi===2&&p.t.octave===x.t.octave&&x.t.octave===n.t.octave&&x.t.midi-p.t.midi===3&&p.t.midi>tuning[1]){
-   x.indexSlide=true;p.guideStart=true;
-  }
+ // Prepare an ascending phrase on the index when the following run outgrows the first frame.
+ // A chromatic neighbour is played with the available finger, rather than forcing another index slide.
+ for(let i=1;i<seq.length-2;i++){
+  const p=seq[i-1],x=seq[i],n=seq[i+1],after=seq[i+2],key=keyOf(x.t);
+  if(x.t.degree!==1||x.t.acc!==0||x.afterRest||n.afterRest||after.afterRest||x.t.grace||n.t.grace||after.t.grace||keyOf(n.t)!==key||keyOf(after.t)!==key||x.t.midi-p.t.midi<2||n.t.midi<=x.t.midi)continue;
+  const home=candidates(x.t.midi,tuning,key).filter(c=>c.a===c.nat&&c.f>=3),targets=[n,after];
+  const fits=(c,z)=>(hasTrill(z.t)?trillCandidates(z.t,tuning,key):candidates(z.t.midi,tuning,key)).some(v=>v.s===c.s&&v.a===c.a&&(!v.ext||isolatedPeaks.has(z.t)));
+  if(home.length&&!home.some(c=>targets.every(z=>fits(c,z)))&&candidates(x.t.midi,tuning,key).some(c=>c.f===1&&targets.every(z=>fits(c,z))))x.preparedEntry=true;
+ }
+ // Approach a tonic/high-peak gesture from an outer open-string neighbour with the middle finger.
+ // This avoids an early inner-string shift just to reach the impending peak.
+ for(let i=1;i<seq.length-2;i++){
+  const p=seq[i-1],x=seq[i],n=seq[i+1],peak=seq[i+2];
+  if(p.attackGroup===x.attackGroup&&x.attackGroup===n.attackGroup&&n.attackGroup===peak.attackGroup&&!p.t.grace&&!x.t.grace&&!n.t.grace&&keyOf(p.t)===keyOf(x.t)&&keyOf(x.t)===keyOf(n.t)&&keyOf(n.t)===keyOf(peak.t)&&p.t.midi===tuning[1]&&x.t.midi-p.t.midi===2&&n.t.degree===1&&n.t.acc===0&&isolatedPeaks.has(peak.t)&&n.t.midi>x.t.midi)x.outerApproach=true;
+ }
+ // A high trill followed by its upper neighbour and a lower pair can land on the index:
+ // the lower pair is then reached on the inner string in the same hand position.
+ for(let i=0;i<seq.length-3;i++){
+  const x=seq[i],key=keyOf(x.t);let exit=i+1;while(exit<seq.length&&exit<i+8&&seq[exit].t.midi===x.t.midi&&!seq[exit].afterRest&&!hasTrill(seq[exit].t))exit++;
+  const next=seq.slice(exit,exit+3);
+  if(!hasTrill(x.t)||next.length!==3||next.some(z=>z.afterRest||z.t.grace||keyOf(z.t)!==key)||next[0].t.midi!==trillUpper(x.t,key))continue;
+  const frames=trillCandidates(x.t,tuning,key).filter(c=>c.f===1&&c.s===1&&next.every(z=>candidates(z.t.midi,tuning,key).some(v=>sameHand(c,v)&&!v.ext))&&next.slice(1).every(z=>z.t.midi<x.t.midi));
+  if(frames.length){x.trillExitAnchors=frames.map(c=>c.a);for(const z of next.slice(1))z.settledPositions=frames.map(c=>c.a-c.nat)}
  }
  const result=new Map();let unplayable=0,trillUnavailable=0;
  const cache=new Map();
  const fingerings=x=>{
-  const t=x.t,key=keyOf(t),trill=hasTrill(t),id=`${t.midi}|${key}|${trill?trillUpper(t,key):'plain'}|${isolatedPeaks.has(t)}|${x.unisonRole||''}|${!!x.guideStart}|${!!x.indexSlide}`;
+  const t=x.t,key=keyOf(t),trill=hasTrill(t),id=`${t.midi}|${key}|${trill?trillUpper(t,key):'plain'}|${isolatedPeaks.has(t)}|${x.unisonRole||''}|${!!x.preparedEntry}|${!!x.outerApproach}|${x.trillExitAnchors?.join(",")||""}|${x.settledPositions?.join(",")||""}`;
   if(!cache.has(id))cache.set(id,(trill?trillCandidates(t,tuning,key):candidates(t.midi,tuning,key)).map(c=>{
    let cost=c.cost;
    if(c.ext&&isolatedPeaks.has(t))cost-=5;
    if(x.unisonRole){const preferred=x.unisonRole==='open'?c.s===1&&c.f===0:c.s===0&&c.f===4&&c.a===c.nat;if(!preferred)cost+=8}
-   if((x.guideStart||x.indexSlide)&&c.f!==1)cost+=8;
+   if(x.preparedEntry&&c.f!==1)cost+=3;
+   if(x.outerApproach&&!(c.s===1&&c.f===2))cost+=6;
+   if(x.trillExitAnchors&&!(c.s===1&&c.f===1&&x.trillExitAnchors.includes(c.a)))cost+=4;
+   if(x.settledPositions&&!x.settledPositions.includes(c.a-c.nat))cost+=4;
    return {...c,cost};
   }));
   return cache.get(id);
@@ -286,4 +306,4 @@ function stringsName(t,key){return `${degreeName(t[0]%12,key)}${degreeName(t[1]%
 function tuningLabel(t,key){const n=m=>NAMES[m%12]+(Math.floor(m/12)-1);return `${stringsName(t,key)}（${n(t[0])}–${n(t[1])}）`}
 window.ErhuFingering={annotate,label,autoTuning,tuningLabel,stringsName,TUNINGS:[['D–A（标准定弦）',[62,69]],['C–G',[60,67]],['E♭–B♭',[63,70]],['E–B',[64,71]],['F–C',[65,72]],['G–D（二泉调 / 中胡）',[55,62]]]};
 })();
-// Modified by AI on 2026-10-08 21:32:37
+// Modified by AI on 2026-10-08 23:54:40
