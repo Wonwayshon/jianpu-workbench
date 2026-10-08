@@ -298,13 +298,15 @@
   async function saveScoreArchive(asNew=false){
     if(scoreSaving)return;
     const text=byId('scoreInput').value;if(!text.trim()){byId('copyStatus').textContent='请先输入简谱。';return}
-    const source=scoreSource,settings=getSettings(),converted=lastConverted?exportText():'';
-    let title=null;
-    if(asNew||!source){let named='';try{named=Jianpu.parse(text).meta.title?.value||''}catch{}
-      title=prompt('存档名称：',asNew&&source?source.title+' · 副本':named||'简谱 '+new Date().toLocaleString());if(title===null)return;
-    }
+    const source=scoreSource;
     scoreSaving=true;syncScoreSource();
     try{
+      const settings=getSettings(),converted=lastConverted?exportText():'';let title=null;
+      if(asNew||!source){let named='';try{named=Jianpu.parse(text).meta.title?.value||''}catch{}
+        title=await AppDialogs.askName(asNew&&source?source.title+' · 副本':named||'简谱 '+new Date().toLocaleString());
+        if(title===null){byId('copyStatus').textContent='已取消存档。';return}
+      }
+      byId('copyStatus').textContent='正在保存到谱库…';
       const now=new Date().toISOString();let record;
       if(source&&!asNew){
         const fresh=await ScoreLibrary.getRecord(source.id);
@@ -477,4 +479,4 @@
   window.PdfWorkbenchCore={parsePages,joinText,usableText,checkedRecord};
   syncControls();refreshArchives();
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-08 20:21:31

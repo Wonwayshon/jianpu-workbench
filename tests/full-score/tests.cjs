@@ -68,6 +68,7 @@ vm.runInContext(view.slice(view.indexOf('function setPerform('),view.indexOf("$(
 u.setPlaying(true);assert.equal($('floatPlayer').hidden,false);u.setPerform(true);assert.equal($('floatPlayer').hidden,true);
 u.setPlaying(true);assert.equal($('floatPlayer').hidden,true);u.setPlaying(false);assert.equal($('floatPlayer').hidden,true);
 u.setPerform(false);assert.equal($('floatPlayer').hidden,false);u.floatDismissed=true;u.setPerform(true);u.setPerform(false);assert.equal($('floatPlayer').hidden,true);
+$('scoreViewer').classList.contains=x=>x==='editing';u.floatDismissed=false;u.setPlaying(true);assert.equal($('floatPlayer').hidden,true,'editor toolbar replaces floating controls');$('scoreViewer').classList.contains=()=>false;u.setPlaying(true);assert.equal($('floatPlayer').hidden,false);
 const all=[{part:'笛'},{part:'琴'}];u.lastConverted={notes:[60],lines:all};u.transAllLines=[{part:'笛',trans:true},{part:'琴',trans:true}];u.viewerOpen=false;u.view='source';u.F=lines=>lines.filter(l=>l.part==='笛');
 vm.runInContext(view.slice(view.indexOf('function startPlayback('),view.indexOf('const toggle=')),u);
 u.startPlayback();assert.equal(played,all);u.settings.partScope='visible';u.startPlayback();assert.equal(played.length,1);
@@ -100,4 +101,4 @@ assert.equal(hits.filter(h=>!h.node.buffer?.m).length,1,'no old percussion or cl
 const count=hits.length;raf();raf();assert.equal(hits.length,count,'visual frames never schedule sound');
 P.stop();assert.equal(timerActive,false);audioPump();assert.equal(hits.length,count,'stopped timer callback cannot revive audio');
 console.log('PASS: audio and metronome run with animation suspended; missed notes/clicks are not replayed in a burst; stop releases the audio timer.');
-// Modified by AI on 2026-10-08 14:30:01
+// Modified by AI on 2026-10-08 20:21:31

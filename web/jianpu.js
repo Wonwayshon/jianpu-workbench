@@ -177,6 +177,95 @@ function filterParts(lines,ids){
  }
  return out;
 }
+// Only explicit staff/voice names imply a shared staff. Similar instrument names alone do not.
+function staffIdentity(name){
+ const m=/^(.+?)(上|下)谱表\s*声部\s*([一二三四1234])$/.exec(name||'');
+ return m?{instrument:m[1],staff:m[2],voice:'一二三四'.includes(m[3])?'一二三四'.indexOf(m[3])+1:Number(m[3]),name:m[1]+m[2]+'谱表'}:null;
+}
+function measureTimeline(tokens){
+ const measures=[];let current={events:[],duration:0,bar:null},ratios=[];
+ for(const t of tokens){
+  if(t.t==='tupOpen'){ratios.push(2**Math.floor(Math.log2(t.n-1))/t.n);continue}
+  if(t.t==='tupClose'){ratios.pop();continue}
+  if(t.t==='bar'){if(current.events.length){current.bar=t;measures.push(current);current={events:[],duration:0,bar:null}}continue}
+  if(!['note','chord','rest','percussion','dash'].includes(t.t))continue;
+  if(t.grace)continue;
+  const duration=(t.t==='dash'?1:2**-(t.under||0)*(2-2**-(t.dot||0)))*ratios.reduce((a,b)=>a*b,1);
+  current.events.push({token:t,start:current.duration,duration});current.duration+=duration;
+ }
+ if(current.events.length)measures.push(current);return measures;
+}
+function silentMeasure(m){return m.events.length>0&&m.events.every(e=>['rest','dash'].includes(e.token.t)&&!e.token.orns?.length)}
+function mainHeight(tokens){return Math.max(1.1,...tokens.filter(t=>t.t==='chord').map(t=>t.notes.reduce((h,n)=>h+1.1+(n.octave?Math.abs(n.octave)*.18+.04:0),0)))}
+// Reuse the original cells/tokens, so editor navigation, playback cursors and per-voice sound stay intact.
+function compactStaves(host,partNames){
+ for(const sys of host.querySelectorAll('.jp-system')){
+  const rows=[...sys.querySelectorAll(':scope>.jp-line')],groups=new Map();
+  for(const row of rows){const id=staffIdentity(partNames.get(row._musicLine.part));if(!id)continue;row._staff=id;
+   const key=id.name;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row)}
+  let compact=false;
+  for(const members of groups.values()){
+   if(members.length<2||members.some(r=>r.classList.contains('jp-erhu-line')))continue;
+   // Nonmatching bars are intentionally left separate; never conceal a transcription timing error.
+   const timelines=members.map(r=>measureTimeline(r._musicLine.tokens)),base=timelines[0];
+   if(timelines.some(ms=>ms.length!==base.length||ms.some((m,i)=>Math.abs(m.duration-base[i].duration)>1e-7||m.bar?.text!==base[i].bar?.text)))continue;
+   if(members.some(r=>r.querySelectorAll(':scope>.jp-measure').length!==base.length))continue;
+   const ordered=members.slice().sort((a,b)=>a._staff.voice-b._staff.voice),first=members[0];
+   const measures=ordered.map(r=>[...r.querySelectorAll(':scope>.jp-measure')]);
+   const times=ordered.map(r=>measureTimeline(r._musicLine.tokens));
+   const label=first.querySelector('.jp-part-label');label.textContent=first._staff.name;label.title=ordered.map(r=>partNames.get(r._musicLine.part)).join(' / ');
+   first.classList.add('jp-staff-row');first._staffVoices=ordered.map(r=>r._musicLine.part);
+   const containers=[];
+   for(let k=0;k<base.length;k++){
+    const active=times.map((ms,v)=>!silentMeasure(ms[k])?v:-1).filter(v=>v>=0),visible=active.length?active:[0];
+    const measure=el('span','jp-measure jp-staff-measure');measure._lanes=[];
+    for(const v of visible){
+     const lane=measures[v][k];lane.classList.remove('jp-measure');lane.classList.add('jp-voice-lane');lane.style.cssText=ordered[v].style.cssText;
+     lane._timeline=times[v][k];lane.style.setProperty('--jp-main',mainHeight(times[v][k].events.map(e=>e.token))+'em');lane.setAttribute('aria-label',partNames.get(ordered[v]._musicLine.part));
+     for(const b of lane.querySelectorAll(':scope>.jp-bar-cell'))b.remove();
+     measure.append(lane);measure._lanes.push(lane);
+    }
+    if(visible.length>1)measure.classList.add('jp-polyphonic');
+    // One shared bar line spans the two voices; repeats keep their original symbol.
+    if(base[k].bar){const bar=noteCell(base[k].bar);bar.classList.add('jp-staff-bar');measure.append(bar)}
+    containers.push(measure);
+   }
+   const leading=[...first.children].filter(e=>e.classList.contains('jp-bar-cell'));
+   first.replaceChildren(label,...leading,...containers);for(const row of members)if(row!==first)row.remove();compact=true;
+  }
+  if(!compact)continue;
+  sys.classList.add('jp-compact-staves');
+  // A shared beat grid applies to all visible instruments in this system, not just to the keyboard voices.
+  const visibleRows=[...sys.querySelectorAll(':scope>.jp-line')];
+  const allMeasures=visibleRows.map(row=>{const ms=[...row.querySelectorAll(':scope>.jp-measure')],time=measureTimeline(row._musicLine.tokens);
+   ms.forEach((m,k)=>{if(!m._lanes){
+    const lane=el('span','jp-voice-lane'),bars=[...m.querySelectorAll(':scope>.jp-bar-cell')];
+    for(const child of [...m.children])if(!bars.includes(child))lane.append(child);
+    lane._timeline=time[k];m.classList.add('jp-staff-measure');m.replaceChildren(lane,...bars);for(const b of bars)b.classList.add('jp-staff-bar');m._lanes=[lane];
+   }});return ms});
+  const count=Math.max(...allMeasures.map(ms=>ms.length));
+  for(let k=0;k<count;k++){
+   const ms=allMeasures.map(ms=>ms[k]).filter(Boolean),lanes=ms.flatMap(m=>m._lanes),starts=[0];
+   for(const lane of lanes)for(const e of lane._timeline?.events||[])starts.push(e.start,e.start+e.duration);
+   const ticks=[...new Set(starts.map(t=>Math.round(t*1e7)/1e7))].sort((a,b)=>a-b);if(ticks.length<2)continue;
+   for(const lane of lanes)layoutBeatGrid(lane,ticks);
+   for(const m of ms)m.style.minWidth=(ticks.length-1)*.92+.8+'em';
+  }
+ }
+}
+function layoutBeatGrid(lane,ticks){
+ const timeline=lane._timeline;if(!timeline)return;
+ const events=new Map(timeline.events.map(e=>[e.token,e])),col=t=>ticks.findIndex(x=>Math.abs(x-t)<1e-6)+1;
+ lane.classList.add('jp-beat-grid');lane.style.gridTemplateColumns=`repeat(${ticks.length-1}, minmax(0, 1fr))`;
+ function place(item,parentStart=1){
+  const cells=item._token?[item]:[...item.querySelectorAll('.jp-n')],list=cells.map(c=>events.get(c._token)).filter(Boolean);
+  if(!list.length)return;
+  const start=Math.min(...list.map(e=>col(e.start))),end=Math.max(...list.map(e=>col(e.start+e.duration)));
+  item.style.gridColumn=`${start-parentStart+1} / ${end-parentStart+1}`;item.style.gridRow='1';
+  if(item.classList.contains('jp-beam')){item.classList.add('jp-beat-beam');item.style.gridTemplateColumns=`repeat(${end-start}, minmax(0, 1fr))`;for(const child of item.children)place(child,start)}
+ }
+ for(const item of lane.children){if(item.classList.contains('jp-bar-cell')){item.style.gridColumn=String(ticks.length);item.style.gridRow='1'}else place(item)}
+}
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e}
 function noteCell(t){
  const cell=el('span','jp-n');
@@ -188,12 +277,13 @@ function noteCell(t){
   for(let k=0;k<t.octave;k++)up.append(el('i'));for(let k=0;k<-t.octave;k++)down.append(el('i'));
   if(t.grace)cell.classList.add('jp-grace');
  }else if(t.t==='chord'){
+  cell.style.setProperty('--jp-own-main',mainHeight([t])+'em');
   // Stacked digits, highest pitch on top; each carries its own accidental and octave dots.
   const stack=el('span','jp-chord');
   const ordered=[...t.notes].sort((a,b)=>((b.midi??(b.octave*12+b.degree))-(a.midi??(a.octave*12+a.degree))));
   for(const n of ordered){const lab=n.label??((n.natural?'♮':n.acc>0?'♯':n.acc<0?'♭':'')+n.degree),one=el('span','jp-cnote');
    if(lab.length>1)one.append(el('span','jp-acc',lab.slice(0,-1)));const d=el('span','jp-digit',lab.slice(-1));
-   if(n.octave){const dots=el('span','jp-cdots '+(n.octave>0?'up':'down'));for(let k=0;k<Math.abs(n.octave);k++)dots.append(el('i'));d.append(dots)}
+   if(n.octave){one.style[n.octave>0?'paddingTop':'paddingBottom']=(Math.abs(n.octave)*.18+.04)+'em';const dots=el('span','jp-cdots '+(n.octave>0?'up':'down'));for(let k=0;k<Math.abs(n.octave);k++)dots.append(el('i'));d.append(dots)}
    one.append(d);stack.append(one);n._cell=cell}
   main.append(stack);
  }else if(t.t==='percussion'){main.append(el('span','jp-digit','X'));cell.classList.add('jp-percussion');cell.title='敲击音（无固定音高）'}
@@ -233,9 +323,12 @@ function render(host,lines,opts={}){
    metaRow.append(el('span','jp-meta-item',text));continue;
   }
   const row=el('div','jp-line');
+  row._musicLine=line;
   const pitched=line.tokens.flatMap(t=>t.t==='chord'?t.notes:[t]);
   const upper=Math.max(0,...pitched.map(t=>t.octave||0)),lower=Math.max(0,...pitched.map(t=>-(t.octave||0))),under=Math.max(0,...line.tokens.map(t=>t.under||0));
   row.style.setProperty('--jp-up',Math.max(.44,upper*.22+.06)+'em');row.style.setProperty('--jp-down',Math.max(.28,lower*.22+.04)+'em');row.style.setProperty('--jp-under',under?`max(.26em, calc(${under} * max(.07em, 1.5px) + ${Math.max(0,under-1)*.1+.06}em))`:'.26em');
+  const chordHeight=mainHeight(line.tokens);
+  row.style.setProperty('--jp-main',chordHeight+'em');
   row.classList.toggle('jp-decorated',line.tokens.some(t=>t.t==='open'||t.t==='tupOpen'||t.orns?.some(o=>o!=='breath')));
   row.classList.toggle('jp-erhu-line',line.tokens.some(t=>t.t==='note'&&opts.annotations?.has(t)));
   let beam=null,prevUnder=false,glued=false,open=0,tupOpen=[],lastNote=null,graces=[];const starts=[],tupStarts=[];
@@ -271,6 +364,7 @@ function render(host,lines,opts={}){
   }
   add(row);
  }
+ compactStaves(host,partNames);
  host._arcs=arcs;host._tuplets=tuplets;fitWidth(host);justify(host);drawOverlay(host);
  if(!host._observer&&'ResizeObserver' in window){let lastWidth=0;host._observer=new ResizeObserver(()=>{if(host.clientWidth!==lastWidth){lastWidth=host.clientWidth;fitWidth(host);justify(host)}drawOverlay(host)});host._observer.observe(host)}
 }
@@ -333,6 +427,6 @@ function drawOverlay(host){
  host.prepend(svg);
 }
 
-window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts};
+window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline};
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-08 20:21:31

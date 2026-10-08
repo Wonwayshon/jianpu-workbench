@@ -16,7 +16,8 @@ function release(raw,current,platform,arch){
 async function check(current,platform,arch){
  const response=await Platform.request('GET',API,{Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2026-03-10'},null,{timeout:20000,maxBytes:1024*1024,textLimit:1024*1024});
  if(response.status===404)throw Error('暂时无法读取更新：仓库可能仍为私有，或尚未发布正式版本。');
- if(response.status===403||response.status===429)throw Error('GitHub 请求暂时受限，请稍后重试。');
+ if(response.status===429)throw Error('GitHub 请求暂时受限，请稍后重试，或直接打开发布页。');
+ if(response.status===403)throw Error('GitHub 暂时拒绝了更新请求，可能是访问限制或请求次数过多。可稍后重试，或直接打开发布页。');
  if(response.status!==200)throw Error('检查更新失败，请检查网络后重试。');
  const text=await response.text();if(text.length>1024*1024)throw Error('更新信息过大。');
  return release(JSON.parse(text),current,platform,arch);
@@ -27,6 +28,7 @@ function mount(){
  const button=document.getElementById('appUpdate'),dialog=document.getElementById('updateDialog');if(!button||!dialog)return;
  const meta=name=>document.querySelector(`meta[name="${name}"]`)?.content||'',current=meta('app-version'),platform=meta('app-platform'),arch=meta('app-arch'),status=document.getElementById('updateStatus'),notes=document.getElementById('updateNotes'),download=document.getElementById('updateDownload'),retry=document.getElementById('updateRetry');let busy=false,target=null;
  document.getElementById('appVersion').textContent='v'+(version(current)?current:'开发版');document.getElementById('updateCurrent').textContent='当前版本：'+(version(current)?current:'开发版');
+ document.getElementById('appReleases').onclick=()=>Platform.openExternal(ROOT+'/releases').catch(()=>{status.textContent='无法打开浏览器，请手动访问项目发布页。'});
  async function run(){if(busy)return;busy=true;retry.disabled=true;download.hidden=true;target=null;notes.textContent='';status.textContent='正在检查 GitHub 最新版本…';
   try{const result=await check(current,platform,arch);notes.textContent=result.notes;status.textContent=result.newer?'有新版本：v'+result.version:'当前已是最新版本（v'+result.version+'）。';
    if(result.newer){target=result.download;download.textContent=result.hasInstaller?'下载新版安装包':'查看新版发布';download.hidden=false}
@@ -39,4 +41,4 @@ function mount(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
-// Modified by AI on 2026-10-08 14:35:52
+// Modified by AI on 2026-10-08 20:21:31

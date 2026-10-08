@@ -3,6 +3,7 @@
 // 乐谱文本格式 v1 (parsed by jianpu.js).
 (() => {
 const STORE='flute.scoreOcr.v1';
+const DEEPSEEK=Object.freeze({baseUrl:'https://api.deepseek.com',model:'deepseek-flash'});
 const DEFAULTS={mode:'manual',kind:'jianpu',scope:'part',baseUrl:'',apiKey:'',model:'',extraPrompt:''};
 // Several saved model profiles {id, name, baseUrl, apiKey, model}; `active` picks the one used. The top-level
 // baseUrl / apiKey / model mirror the active profile (older single-profile settings migrate into the list).
@@ -152,6 +153,7 @@ const FULL_SCORE_RULES=`【提取范围：总谱 · 所有声部】
 - 各声部从同一个时间起点开始，逐小节核对起止和拍数；弱起各声部按实际弱起长度对齐。完整保留休止、多小节休止、反复与结尾。未演奏的声部要写对应休止，不能直接省略时间。
 - 某系统省略休止声部且可以从原谱明确确定小节数量时，补足等长休止；裁切缺失、不可辨认的内容不得推测，用 % 注明缺失范围并写 ? 交人工确认。
 - 一个谱表内若有不同节奏或不同延音长度的独立声部，拆成不同 [简称]；只有同时起止且节奏相同的音才写 <…>。
+- 扬琴、钢琴等同一乐器有上下谱表时，独立声部全名使用“乐器名上谱表声部一 / 声部二”和“乐器名下谱表声部一 / 声部二”（如 @part 扬上二 · 扬琴上谱表声部二），跨页保持名称一致。只有原谱存在独立声部才拆分；不要为和弦另建空声部。程序会按谱表归组显示，静音和节奏仍按独立声部保留。
 - @key、@octave、@time、@tempo 是全局指令，不支持声部专用调号或速度。不能轮流写各乐器的 @key，避免影响其他声部；不同音区用音符后的 ' 与 , 明确表示。
 - X 打击声部也要保留并对齐。X 只代表通用无固定音高敲击，不区分鼓种。
 - 输出前检查：所有声明声部都有对应行、同一系统小节数一致、各声部累计时值一致；没有把同时发声排成顺序播放。`;
@@ -218,7 +220,7 @@ async function createScoreRecognizer(progress=()=>{}){
  return {mode:'manual',label:'待识别（复制提示词给 AI）',recognize:async()=>({data:{text:''},warnings:['未配置视觉大模型 API：请用「复制识别提示词」与「保存本页图片」交给 AI 应用，再把结果粘贴进草稿']}),terminate:async()=>{}};
 }
 
-window.ScoreOCR={loadConfig,saveConfig,saveConfigAsync,profileName,newProfileId,testConnection,createScoreRecognizer,promptFor,cleanReply,check,NOTATION_RULES};
+window.ScoreOCR={DEEPSEEK,loadConfig,saveConfig,saveConfigAsync,profileName,newProfileId,testConnection,createScoreRecognizer,promptFor,cleanReply,check,NOTATION_RULES};
 window.createScoreRecognizer=createScoreRecognizer;
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-08 20:21:31

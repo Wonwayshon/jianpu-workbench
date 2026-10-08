@@ -111,7 +111,7 @@ fn set_immersive(window:WebviewWindow,on:bool)->Result<(),String>{window.set_ful
 fn open_external(url:String)->Result<(),String>{endpoint(&url)?;webbrowser::open(&url).map_err(|_|"无法打开系统浏览器".into())}
 
 pub fn run(){
-    tauri::Builder::default().manage(State {credentials:Mutex::new(()),slots:tokio::sync::Semaphore::new(4),client:reqwest::Client::builder().redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(250)).connect_timeout(Duration::from_secs(20)).build().expect("HTTPS client")})
+    tauri::Builder::default().manage(State {credentials:Mutex::new(()),slots:tokio::sync::Semaphore::new(4),client:reqwest::Client::builder().user_agent(concat!("JianpuWorkbench/",env!("CARGO_PKG_VERSION"))).redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(250)).connect_timeout(Duration::from_secs(20)).build().expect("HTTPS client")})
     .setup(|app|{tauri::WebviewWindowBuilder::new(app,"main",tauri::WebviewUrl::App("index.html".into())).title("笛调之间").inner_size(1280.0,840.0).min_inner_size(760.0,540.0)
         .background_throttling(tauri::utils::config::BackgroundThrottlingPolicy::Disabled)
         .on_navigation(|url|url.scheme()=="tauri"||url.host_str()==Some("tauri.localhost")||(cfg!(debug_assertions)&&[Some("localhost"),Some("127.0.0.1")].contains(&url.host_str())&&url.port()==Some(1420)))

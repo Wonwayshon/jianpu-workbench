@@ -1,72 +1,82 @@
 # 笛调之间 · Jianpu Workbench
 
-面向简谱的识别、转调、排版与练习工具，支持分谱与总谱、独立声部播放、PDF 导入、谱库管理，以及竹笛、篠笛、长笛和二胡的换算与指法辅助。
+把图片和 PDF 里的乐谱转成可编辑、可试听的简谱，帮助民乐与管乐爱好者读谱、转调和练习。
 
-一个网页核心，浏览器、Android 和 macOS / Windows 外壳共用。版本与 Android 版本码以 `project.json` 为准。
+支持浏览器、Android、macOS 和 Windows，共用同一套乐谱处理核心。
 
-## 日常修改位置
+## 下载与使用
 
-| 目录 | 用途 |
-|---|---|
-| `web/` | 页面、换算、指法、乐谱排版、PDF、播放、谱库；只在这里改公共功能 |
-| `platform/` | 浏览器 / Android / Tauri 系统适配；公共代码通过 `Platform` 调用 |
-| `android/` | 原 Android 外壳、Keystore、文件选择器与资源；保留原包名和签名 |
-| `desktop/` | Tauri 桌面外壳、系统凭据、文件保存、网络、打印和全屏 |
-| `scripts/` | 构建、预览、测试与源码导出 |
-| `tests/` | 共用回归测试与程序生成的测试序列 |
-| `dist/` | 构建生成的资源，不手动编辑 |
-| `outputs/` | 安装包、独立网页和源码交付，不作为日常源码 |
-| `work/` | 当前机器的工具链、旧测试和签名材料，不纳入版本库或交付源码 |
+在 [GitHub Releases](https://github.com/Wonwayshon/jianpu-workbench/releases/latest) 下载适合设备的安装包。
 
-## 常用命令
+- **Android**：Android 8.0 及以上，下载安装 APK。
+- **macOS**：macOS 13 及以上，Apple Silicon 设备使用 arm64 DMG。打开后把 App 拖到“应用程序”。当前包尚未经过 Apple Developer ID 签名和公证，首次打开可能需要在系统“隐私与安全性”中确认来源。
+- **Windows**：使用 Release 提供的 Windows 安装程序；需要系统 WebView2 运行时。
+- **浏览器**：可自行部署静态网页，也可按下面的方法在本机运行。
 
-需 Node.js 18+；推荐 Node.js 22 LTS。首次执行 `npm ci`，以后按需使用：
+在“设置 → 应用更新”检查新版，也可直接打开发布页下载安装。覆盖更新前，建议在谱库导出备份。
 
-```sh
-npm run dev                 # http://127.0.0.1:4173；本机网页预览
-npm run check               # 平台边界、JS 语法、三端资源构建
-npm test                    # 乐谱、二胡、PDF、谱库、凭据和平台接口测试
-npm run build:web           # dist/web，完整静态网页资源
-npm run build:android       # 当前 macOS 工作区签名 APK，可覆盖安装
-npm run export:android      # outputs/android-source，独立 Android Studio 工程
-npm run dev:desktop         # Tauri 开发窗口
-npm run check:desktop       # Rust 编译及原生地址约束测试
-npm run build:desktop       # 当前系统的桌面安装包，Mac 校验完整应用签名
-npm run package:mac         # 将已构建的 Mac App 打包并验证 DMG
-npm run build:checker       # 从 web 核心生成供 AI 自检的检查器
-npm run release:source      # 不含签名和开发工具链的整个项目源码 ZIP
+## 能做什么
+
+- **识谱与校对**：导入图片、图片 PDF 或文字 PDF，选择页码预览；通过视觉模型提取简谱或五线谱，也可以复制提示词到其他 AI 应用，再粘贴结果。
+- **分谱与总谱**：分声部排版、筛选乐器、独立静音和音色设置。扬琴等乐器的上下谱表支持独立声部归组，无音的辅助声部自动收拢。
+- **转调与播放**：查看原谱、固定调音名谱和五线谱；保持音高改写数字，或把整曲移到新调。支持节奏、和弦、倚音、反复、装饰音和敲击符号。
+- **演奏与练习**：全屏单双页、连续排版、节拍器、调音器，以及二胡指法和弓法辅助。
+- **谱库管理**：保存校对结果、更新原存档、时间筛选、回收站、备份恢复、二维码传输和 WebDAV 同步。
+- **乐器工具**：竹笛、篠笛的调性换算与孔位选择，长笛指法参考，二胡各调空弦速查。
+
+## 开始转谱
+
+1. 在“转谱”粘贴乐谱文本，或导入谱面图片。多页 PDF 可先到“谱库”选择需要识别的页码。
+2. 选择分谱 / 总谱，以及简谱 / 五线谱。使用 API 时，在模型配置里选择 **DeepSeek** 并填写自己的 Key；其他服务选择“其他”并填写兼容接口与图片模型。
+3. 对照原谱核对音高、节奏、反复和声部。识别和二胡指法建议可能有误，请以原谱及实际演奏为准。
+4. 试听、转调、导出 PDF，或保存到谱库。从存档加载的谱子，保存会更新原存档，也可另存副本。
+
+DeepSeek 预设使用官方 `https://api.deepseek.com` 接口和支持图片的 `deepseek-flash` 模型，参见 [官方图像理解文档](https://api-docs.deepseek.com/zh-cn/guides/vision/)。识别图片会发送给所选服务商，费用由服务商收取。
+
+一个简单的乐谱文本：
+
+```text
+@title 练习
+@key 1=D
+@time 4/4
+@tempo 80
+1 2 3 4 | 5/6/ 5 - 0 |
 ```
 
-Android Studio 可以打开 `android/`；预构建自动调用 Node 同步最新网页资源。其他机器的 Android 构建需 JDK 17、SDK 35、Gradle 8.9，以及自己的发布签名；`build:android` 使用当前工作区私有工具与原签名，不是跨机器通用的签名服务。
+完整语法和提取提示词可在转谱工作台查看。节奏不同的声部应分别转写；同时起止的双音或和弦使用 `<1 3>`。例如 `扬琴上谱表声部一`、`扬琴上谱表声部二` 会归到同一谱表。
 
-桌面开发需 Rust stable 与系统构建工具；Windows 需要 MSVC / Windows SDK，Mac 需要 Xcode Command Line Tools。当前机器的 Rust 已放入 `work/rust/`，脚本自动识别，不修改系统 PATH。桌面外壳使用系统 WebView，无需随包携带 JVM 或 Chromium。Mac 包在 Mac 构建，Windows 包在 Windows 构建；工作流示例位于 `.github/workflows/check.yml`。
+## 数据与备份
 
-`project.json` 是版本发布入口。修改 `version` 和递增 `androidVersionCode` 后构建即可；网页缓存版本、APK、桌面配置与检查器自动同步。`desktop/src-tauri/tauri.conf.json` 是生成文件，桌面配置改 `desktop/tauri.template.json`。Cargo 包版本由构建同步。
+谱库保存在当前设备或浏览器的数据空间中，卸载、清除数据或更换浏览器不会自动迁移。请使用谱库备份或 WebDAV 同步保留资料。
 
-## 迁移与存档
+Android 使用系统密钥加密保存 API Key，桌面使用系统凭据存储；网页版 Key 仅在当前会话保留。图片识别、WebDAV 同步和检查更新需要网络；浏览器直接调用外部服务还受服务商的 CORS 配置限制。
 
-Android 包名、网页本地 HTTPS 地址、IndexedDB 名称和存档格式保持原有约定，覆盖更新沿用原发布证书。网页与桌面使用各自浏览器数据空间，初次迁移通过 JSON / ZIP 导入或 WebDAV，同一台机器也不会自动读取 Android 数据。
+## 本地运行与开发
 
-浏览器与 Android、桌面共享网页源码；浏览器凭据仅保留本次会话，Android 使用 Keystore，Mac / Windows 使用系统凭据存储。桌面外壳的凭据与网络通过原生接口处理，已保存密码不返回页面。
+需要 Node.js 18+（推荐 22 LTS）：
 
-本机 `npm run dev` 绑定回环地址。对外提供网页版需发布 `dist/web` 到 HTTPS 静态站点；纯网页的识别接口和 WebDAV 仍受服务端 CORS 限制。当前工程不含 PWA Service Worker / 离线安装配置。
+```sh
+npm ci
+npm run dev                 # 本机预览 http://127.0.0.1:4173
+npm test                    # 核心与平台回归测试
+npm run build:web           # 静态网页资源 dist/web
+npm run dev:desktop         # Tauri 桌面开发
+npm run build:desktop       # 当前平台的桌面构建
+npm run export:android      # 导出 Android Studio 工程
+npm run build:checker       # 供 AI 自检的简谱检查器
+```
 
-## 验证范围
+将 `dist/web` 部署到 HTTPS 静态站点即可使用网页版。Android 构建需要 JDK 17、Android SDK 35、Gradle 8.9 和自己的签名；桌面构建需要 Rust stable，以及 macOS 的 Xcode Command Line Tools 或 Windows 的 MSVC / Windows SDK。桌面使用系统 WebView。
 
-已有核心测试和平台接口测试通过；Android 构建与覆盖签名检查通过。桌面原生地址校验与 Rust 编译通过。桌面 PDF、实际麦克风 / 摄像头权限、打印、系统凭据弹窗与用户交互仍需设备验证；Windows 安装包需要 Windows 构建环境验证。具体交付状态见 `docs/迁移记录.md`。
+| 目录 | 内容 |
+|---|---|
+| `web/` | 公共界面和乐谱处理 |
+| `platform/` | 浏览器、Android、桌面适配 |
+| `android/`、`desktop/` | 原生应用外壳 |
+| `scripts/`、`tests/` | 构建与回归测试 |
 
-旧 Android 仓库历史仍保留在 `outputs/android-source/.git`，备份在 `work/pre-refactor-android.git`；导出不会覆盖 Git 元数据，交付 ZIP 不包含仓库元数据。
+版本统一在 `project.json` 管理。欢迎通过 Issues 反馈问题；复现时请提供应用版本、平台和最小乐谱示例。
 
 ## 许可证
 
-项目自有代码采用 **GPL-3.0-only**，完整条款见 [LICENSE](LICENSE)。第三方库与字体保留各自许可证，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。公开仓库不包含用户提供的完整曲谱；测试使用程序生成的序列和短小技术案例。指法参考资料的第三方权利仍单独适用。
-
-## 发布前隐私检查
-
-`npm ci` 自动安装本仓库的 Git 提交检查钩子；已有其他钩子配置会保留，可执行 `npm run security:install` 手动安装。`npm run security:check` 检查当前跟踪文件，`npm run security:history` 检查所有本地分支、标签和远程引用的历史。检查只报告文件名与类别，不打印命中的凭据。匹配常见密钥格式不能替代人工核对任意密码、截图和用户数据。
-
-桌面构建自动将编译路径映射到 `project`、`cargo`、`rustup` 等通用目录；Mac 打包前会拒绝仍含个人目录或已知密钥格式的可执行文件。源码导出排除 `.env`、私钥和密码文件，旧曲谱案例与历史备份仅保留在不提交的本地 `work/`。
-
-## 应用更新
-
-App 页脚提供“检查更新”，读取本项目的 GitHub 最新正式 Release，显示更新说明并打开对应平台的安装包。仅在仓库公开后可供未登录用户查询；请求不携带开发者的 GitHub 凭据。当前使用手动下载安装，没有后台自动替换程序。暂无对应架构安装包时打开官方发布页。
+自有代码使用 [GPL-3.0-only](LICENSE)。第三方库、字体和参考资料的权利见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。用户导入的乐谱不随软件许可证重新授权。

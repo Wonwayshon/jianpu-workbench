@@ -227,11 +227,11 @@ $('playScore').onclick=()=>{floatDismissed=false;toggle()};$('floatStop').onclic
 // Floating bar: appears when playback starts and stays (▶ / ■) until closed with ✕; drag it anywhere, it snaps to
 // the nearest side and remembers where it was.
 let floatDismissed=false,floatAvailable=false;
-function syncFloatPlayer(){$('floatPlayer').hidden=perform||floatDismissed||!floatAvailable}
+function syncFloatPlayer(){$('floatPlayer').hidden=perform||!!$('scoreViewer').classList.contains?.('editing')||floatDismissed||!floatAvailable}
 $('floatClose').onclick=()=>{floatDismissed=true;syncFloatPlayer();ScorePlayer.stop()};
 (()=>{
  const bar=$('floatPlayer');let drag=null;
- const place=(x,y)=>{const w=bar.offsetWidth,h=bar.offsetHeight;x=Math.min(innerWidth-w-8,Math.max(8,x));y=Math.min(innerHeight-h-8,Math.max(8,y));bar.style.left=x+'px';bar.style.top=y+'px';bar.style.right='auto';bar.style.bottom='auto'};
+ const place=(x,y)=>{const w=bar.offsetWidth,h=bar.offsetHeight;x=Math.min(Math.max(8,innerWidth-w-8),Math.max(8,Number.isFinite(x)?x:innerWidth-w-16));y=Math.min(Math.max(8,innerHeight-h-8),Math.max(8,Number.isFinite(y)?y:innerHeight-h-84));bar.style.left=x+'px';bar.style.top=y+'px';bar.style.right='auto';bar.style.bottom='auto'};
  // Dropped within EDGE px of a side it docks there (vertical, beat lights); dropped elsewhere it stays put.
  const EDGE=56,save=v=>{try{localStorage.setItem('flute.floatPos',JSON.stringify(v))}catch{}};
  const snap=()=>{
@@ -241,7 +241,7 @@ $('floatClose').onclick=()=>{floatDismissed=true;syncFloatPlayer();ScorePlayer.s
   place(nearLeft?8:innerWidth-r.width-8,r0.top);setTimeout(()=>bar.classList.remove('snapping'),220);
   save({mode:'dock',side:nearLeft?'left':'right',y:r0.top/innerHeight});
  };
- const restore=()=>{try{const p=JSON.parse(localStorage.getItem('flute.floatPos')||'null');if(!p)return;
+ const restore=()=>{try{const p=JSON.parse(localStorage.getItem('flute.floatPos')||'null');if(!p){const r=bar.getBoundingClientRect();place(r.left,r.top);return}
   if(p.mode==='free'){bar.classList.remove('docked');place(p.x*innerWidth,p.y*innerHeight);return}
   bar.classList.add('docked');const r=bar.getBoundingClientRect();place(p.side==='left'?8:innerWidth-r.width-8,p.y*innerHeight)}catch{}};
  new MutationObserver(()=>{if(!bar.hidden)requestAnimationFrame(restore)}).observe(bar,{attributes:true,attributeFilter:['hidden']});
@@ -250,6 +250,7 @@ $('floatClose').onclick=()=>{floatDismissed=true;syncFloatPlayer();ScorePlayer.s
  const end=()=>{if(!drag)return;drag=null;bar.classList.remove('dragging');snap()};
  bar.addEventListener('pointerup',end);bar.addEventListener('pointercancel',end);
  addEventListener('resize',()=>{if(!bar.hidden)restore()});
+ if('ResizeObserver' in window)new ResizeObserver(()=>{if(!bar.hidden&&!drag){const r=bar.getBoundingClientRect();place(r.left,r.top)}}).observe(bar);
 })();
 function restartIfPlaying(){if(ScorePlayer.isPlaying()){ScorePlayer.stop();startPlayback()}}
 
@@ -373,7 +374,7 @@ $('printScore').onclick=()=>{
 // right flashes the note on the left. Edits re-render the left side live; playback works as in the viewer.
 let vEdit=false,editTimer=0,editFocus=null;
 async function openEditor(){
- if(!lastConverted)return;vEdit=true;$('scoreViewer').classList.add('editing');
+ if(!lastConverted)return;vEdit=true;$('scoreViewer').classList.add('editing');syncFloatPlayer();
  await openViewer();vView='source';
 }
 const editLines=()=>$('scoreInput').value.replace(/\r\n?/g,'\n').split('\n');
@@ -571,6 +572,7 @@ function closeViewer(){
  if(perform)setPerform(false);
  if(vEdit){vEdit=false;$('scoreViewer').classList.remove('editing');clearTimeout(editTimer);flushEdit()}
  viewerOpen=false;$('scoreViewer').hidden=true;document.body.classList.remove('viewer-open');$('viewerBody').replaceChildren();clearViewerHighlight();
+ syncFloatPlayer();
  // The viewer re-rendered tokens into its own cells; draw the card again so highlights land there.
  renderMain();scrollTo(0,savedScroll);
 }
@@ -619,4 +621,4 @@ window.handleAppBack=()=>{if($('erhuPartDialog').open){$('erhuPartDialog').close
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-08 20:21:31

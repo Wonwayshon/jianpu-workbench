@@ -37,6 +37,29 @@ assert.match(S.toABC(systems[1].lines,{partNames:p.parts}).abc,/name="竹笛"/);
 J.render(host,J.parse('1 2 |\n3 4 |').lines,{fit:false});assert.equal(host.querySelectorAll('.jp-system').length,0);assert.ok(!host.classList.contains('jp-full-score'));
 console.log('PASS: automatic/explicit system boundaries, aligned measures, full names on later pages, multi-part filtering without merging groups, continuous layout, staff system-atomic pagination and valid ABC, single-part reset.');
 
+// Synthetic keyboard texture: two staves, each with independent rhythmic voices.
+const keyboard=J.parse("@part A · 笛\n@part U · 扬琴上谱表声部一\n@part V · 扬琴上谱表声部二\n@part L · 扬琴下谱表声部一\n@part W · 扬琴下谱表声部二\n[A] 1 2 3 4 | 5 6 7 1' |\n[U] <1 3> 2/3/ 4 5 | 1. 2/ 3 4 |\n[V] 0 - - - | 5/6/ 7 1 2 |\n[L] 1, - 5, - | 2, - 6, - |\n[W] 0 - - - | 0 - - - |");
+const original=J.serialize(keyboard.lines);J.render(host,keyboard.lines,{fit:false});
+const ks=host.querySelector('.jp-system');assert.equal(ks.querySelectorAll(':scope>.jp-line').length,3);
+assert.equal(ks._src.length,5,'pagination retains all source voices, including suppressed rests');
+assert.deepEqual(ks.querySelectorAll('.jp-part-label').map(e=>e.textContent),['笛','扬琴上谱表','扬琴下谱表']);
+assert.equal(ks.querySelectorAll('.jp-polyphonic').length,1,'secondary voice only expands the measure where it sounds');
+const upper=ks.querySelectorAll('.jp-staff-row')[0].querySelectorAll(':scope>.jp-measure');
+assert.equal(upper[0]._lanes.length,1);assert.equal(upper[1]._lanes.length,2);
+const lines=keyboard.lines.filter(l=>l.kind==='music'),u=lines[1],v=lines[2];
+assert.equal(u.tokens.find(t=>t.t==='note'&&t.degree===2)._cell.parentNode.style.gridColumn,'2 / 4');
+assert.equal(v.tokens.find(t=>t.t==='note'&&t.degree===5)._cell.style.gridColumn,'1 / 2');
+for(const n of keyboard.notes){let cell=n._cell;while(cell&&cell!==host)cell=cell.parentNode;assert.equal(cell,host,'every pitched token remains attached for editor/playback');}
+assert.equal(J.serialize(keyboard.lines),original,'visual compaction never rewrites music');
+J.render(host,J.filterParts(keyboard.lines,['V']),{fit:false,partNames:keyboard.parts});
+assert.equal(host.querySelectorAll('.jp-line').length,1);assert.equal(host.querySelector('.jp-part-label').textContent,'扬琴上谱表声部二');
+const mismatch=J.parse('@part U · 扬琴上谱表声部一\n@part V · 扬琴上谱表声部二\n[U] 1 2 |\n[V] 0 - - - |');
+J.render(host,mismatch.lines,{fit:false});assert.equal(host.querySelectorAll('.jp-line').length,2,'unequal bar durations must stay visible');
+assert.equal(J.staffIdentity('扬琴一'),null);assert.equal(J.staffIdentity('第一声部'),null);
+const timed=J.measureTimeline(J.parse('3{1/2/3/} ^5//6. 0/ |').lines[0].tokens)[0];
+assert.ok(Math.abs(timed.duration-3)<1e-8,'tuplets, dots and non-counted grace notes share playback beat units');
+console.log('PASS: named staff grouping, per-measure silent voice compaction, beat columns, original token/cursor identities, untouched serialization, part filtering and conservative mismatch fallback.');
+
 // Run actual numbered pagination against deterministic measured system heights.
 const controls=new Map(),$=id=>{if(!controls.has(id))controls.set(id,new El('div'));return controls.get(id)};
 c.$=$;c.document.body=new El('body');$('viewerBody').clientWidth=1000;$('viewerBody').clientHeight=420;
@@ -83,4 +106,4 @@ vm.runInContext(view.slice(view.indexOf('async function showPage('),view.indexOf
  assert.deepEqual($('viewerBody').children.map(e=>e.attrs['aria-label']),['第 3 页','第 4 页']);assert.match($('viewerPage').textContent,/3–4/);
  console.log('PASS: measured two-page available area, full-score pagination retains all 36 rows in intact systems; rapid page turns do not append stale pages.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-08 20:21:31

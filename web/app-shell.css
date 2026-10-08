@@ -115,14 +115,16 @@ nav[aria-label="工具"]{grid-template-columns:repeat(7,1fr)}
 .jp-score .jp-line+.jp-line{margin-top:.1em}
 .jp-empty{height:2.6em}
 .jp-beam{display:inline-flex;margin:0 .22em}
-.jp-n{display:inline-grid;grid-template-rows:var(--jp-up,.44em) 1.1em var(--jp-under,.26em) var(--jp-down,.28em);justify-items:center;margin:0 .22em;min-width:.62em}
+.jp-n{display:inline-grid;grid-template-rows:var(--jp-up,.44em) var(--jp-main,1.1em) var(--jp-under,.26em) var(--jp-down,.28em);justify-items:center;margin:0 .22em;min-width:.62em}
 .jp-beam>.jp-n{margin:0;padding:0 .12em}
 .jp-beam>.jp-n>.jp-lines{width:calc(100% + .24em)}
 .jp-up,.jp-down{display:flex;flex-direction:column;align-items:center;gap:.06em}
 .jp-up{justify-content:flex-end;padding-bottom:.05em}
+.jp-n>.jp-up{transform:translateY(calc(var(--jp-main,1.1em) - var(--jp-own-main,1.1em)))}
+.jp-grace{--jp-main:1.1em}
 .jp-down{justify-content:flex-start;padding-top:.02em}
 .jp-up i,.jp-down i{display:block;width:.16em;height:.16em;border-radius:50%;background:currentColor}
-.jp-main{display:flex;align-items:baseline;line-height:1.1}
+.jp-main{display:flex;align-items:baseline;line-height:1.1;align-self:end}
 .jp-acc{font-size:.62em;margin-right:.04em;align-self:flex-start;margin-top:.1em}
 .jp-aug{margin-left:.06em;font-weight:700}
 .jp-dash{padding:0 .1em}
@@ -385,7 +387,7 @@ body.viewer-open>main,body.viewer-open>header,body.viewer-open>nav{display:none!
 #viewerPerform{min-height:34px;padding:0 10px;font-size:14px}
 /* Erhu annotations take part in layout (a first grid row) so wide labels like 内四 / 外四 widen their note
    instead of overlapping the neighbour; every note in an annotated score reserves the same row height. */
-.jp-erhu-line .jp-n{grid-template-rows:1.75em var(--jp-up,.44em) 1.1em var(--jp-under,.26em) var(--jp-down,.28em);padding:0 .08em}
+.jp-erhu-line .jp-n{grid-template-rows:1.75em var(--jp-up,.44em) var(--jp-main,1.1em) var(--jp-under,.26em) var(--jp-down,.28em);padding:0 .08em}
 .jp-erhu-line .jp-n>.jp-up{grid-row:2}.jp-erhu-line .jp-n>.jp-main{grid-row:3}.jp-erhu-line .jp-n>.jp-lines{grid-row:4}.jp-erhu-line .jp-n>.jp-down{grid-row:5}
 .jp-erhu-line .jp-n>.jp-anno{grid-row:1;position:static;transform:none;align-self:end;justify-self:center;padding-bottom:.05em}
 .jp-erhu-line{padding-top:.4em!important}
@@ -426,7 +428,7 @@ body.viewer-open>main,body.viewer-open>header,body.viewer-open>nav{display:none!
 .jp-system>.jp-line{width:100%;min-width:0!important;padding-top:.35em;padding-bottom:.05em}
 .jp-system>.jp-line+.jp-line{margin-top:0}
 .jp-part-label{flex:0 0 auto;min-width:2.2em;font:600 .45em/1 -apple-system,"PingFang SC",sans-serif;color:var(--muted);align-self:center;text-align:right;padding-right:.7em;white-space:nowrap}
-.jp-measure{display:flex;align-items:flex-start;justify-content:space-between;padding-left:.2em;min-width:0}
+.jp-measure{display:flex;align-items:flex-start;justify-content:space-between;padding-left:.2em;min-width:0;box-sizing:border-box}
 .jp-measure>.jp-bar-cell:last-child{margin-left:.25em}
 .jp-chord{display:flex;flex-direction:column;align-items:center;line-height:.95}
 .jp-cnote{display:flex;align-items:baseline}.jp-cnote .jp-acc{font-size:.62em}
@@ -548,6 +550,22 @@ body.viewer-open>main,body.viewer-open>header,body.viewer-open>nav{display:none!
 .jp-full-score>.jp-gap{height:.15em}
 .jp-score .jp-line.jp-decorated{padding-top:.6em}
 .jp-full-score .jp-system .jp-part-label{font-weight:650}
+.jp-staff-measure{position:relative;display:flex;flex-direction:column;justify-content:center;align-self:stretch;padding:0 .65em 0 .2em;gap:.35em}
+.jp-voice-lane{width:100%;min-width:0;position:relative}
+.jp-polyphonic:before{content:"";position:absolute;left:0;top:.25em;bottom:.25em;width:.14em;border:1px solid #7893a6;border-right:0;border-radius:.1em 0 0 .1em}
+.jp-staff-measure>.jp-staff-bar{position:absolute;right:0;top:0;bottom:0;margin:0;display:flex;align-items:center}
+.jp-staff-bar>.jp-up,.jp-staff-bar>.jp-down,.jp-staff-bar>.jp-lines{display:none}
+.jp-staff-bar>.jp-main{height:calc(100% - .65em);align-items:center}
+.jp-staff-bar .jp-bar{height:100%}
+.jp-beat-grid,.jp-beat-beam{display:grid;align-items:start;justify-content:normal}
+.jp-beat-grid>.jp-n,.jp-beat-beam>.jp-n{justify-self:start;margin:0;padding:0 .12em}
+.jp-beat-grid>.jp-beam{margin:0;min-width:0}
+.jp-beat-beam>.jp-n{width:100%;box-sizing:border-box;justify-items:start}
+.jp-beat-beam>.jp-n>.jp-up,.jp-beat-beam>.jp-n>.jp-down{width:.62em}
+.jp-beat-beam>.jp-n>.jp-lines{width:calc(100% + .24em)}
+.jp-beat-beam>.jp-n:last-child>.jp-lines{width:100%}
+.jp-compact-staves>.jp-staff-row{background:#f6f9fc!important}
+.jp-compact-staves>.jp-staff-row+.jp-staff-row{border-top:1px dashed #b5c5d1!important}
 @media print{.jp-full-score .jp-system{border-color:#999;border-left-color:#555}.jp-full-score .jp-system>.jp-line:nth-child(even){background:transparent}.jp-part-label{color:#222}}
 .part-display-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:18px 0;max-height:55vh;overflow:auto}
 .part-display-choices label{padding:12px;border:1px solid var(--line);border-radius:9px;overflow-wrap:anywhere;align-items:center;margin:0}
@@ -555,4 +573,28 @@ body.viewer-open>main,body.viewer-open>header,body.viewer-open>nav{display:none!
 /* Fixed page boxes may shrink inside the viewer; unusual oversized systems remain scrollable. */
 .viewer-body{min-height:0;min-width:0}
 .viewer-page{flex:0 0 auto;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain}
-/* Modified by AI on 2026-10-08 10:06:28 */
+/* Settings live on their own tab; dialogs keep readable widths on tablets and desktops. */
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:20px;max-width:1000px}
+.settings-version{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:14px}
+.settings-version strong{font-size:21px}.settings-version p{margin:4px 0}
+.sheet{max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain}
+.sheet form,.sheet-body{padding:24px;display:grid;gap:14px}
+.sheet-head{gap:20px}.sheet-head h2{font-size:21px}.sheet-head button{flex:0 0 auto}
+.update-sheet,.name-sheet,.archive-sheet{width:min(520px,calc(100vw - 32px))}
+.sheet-body p{margin:0}.sheet-body pre:empty{display:none}
+#updateNotes{background:var(--bg);border-radius:10px;padding:16px;margin:0;font-size:14px!important}
+.update-sheet .toolbar{justify-content:flex-end}.update-sheet .toolbar button{flex:0 1 auto}
+.name-sheet input{width:100%;min-height:46px;border:1px solid #bdcddb;border-radius:9px;padding:10px 12px}
+.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}
+.export-text{margin:0 0 14px;padding:12px 14px}.export-text #letterOutput{max-height:260px;overflow:auto}
+#transControls{padding:12px 14px;margin:0 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);gap:10px}
+#transControls select{width:auto;max-width:100%}
+@media screen and (max-width:899px){nav[aria-label="工具"]{grid-template-columns:repeat(8,minmax(0,1fr))}.app-nav-icon{width:100%;max-width:44px}nav[aria-label="工具"] button{font-size:11px}}
+@media screen and (min-width:900px){nav[aria-label="工具"]{overflow-y:auto;grid-auto-rows:64px;gap:8px;padding-top:14px}nav[aria-label="工具"] button{min-height:60px}}
+@media(max-width:560px){.sheet form,.sheet-body{padding:20px}.dialog-actions button{flex:1}.settings-version{align-items:flex-start}}
+@media print{.jp-compact-staves>.jp-staff-row{background:transparent!important}}
+/* Floating controls remain in the viewport; editing and modal forms already have their own controls. */
+.float-player{max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow:auto;z-index:70;-webkit-user-select:none}
+body:has(dialog[open]) .float-player{visibility:hidden}
+body.viewer-open:has(.viewer.editing) .float-player{display:none!important}
+/* Modified by AI on 2026-10-08 20:21:31 */
