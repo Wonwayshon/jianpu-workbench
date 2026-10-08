@@ -27,7 +27,7 @@ class Audio{
  createBufferSource(){return {connect(t){this.target=t},start(time,offset=0){hits.push({node:this,time,offset})},stop(){}}}
  close(){this.closed=true}
 }
-c.window.AudioContext=Audio;c.Synth={MODELS:{flute:{gain:1,reverb:0},piano:{gain:1,reverb:0}},impulse:()=>null,note:(t,m)=>({t,m})};
+c.window.AudioContext=Audio;c.Synth={MODELS:{flute:{gain:1,reverb:0},piano:{gain:1,reverb:0}},impulse:()=>null,note:(t,m,dur,sr,prev,options)=>({t,m,dur,grace:!!options?.grace})};
 c.setInterval=f=>(audioPump=f,timerActive=true,2);c.clearInterval=()=>{timerActive=false};
 c.requestAnimationFrame=f=>(raf=f,1);c.cancelAnimationFrame=()=>{};c.document={dispatchEvent(){}};c.CustomEvent=class{};
 assert.equal(P.play(p.lines,{tempo:120,partTimbres:{琴:'piano'},partMute:{琴:true}},()=>{}),true);
@@ -44,7 +44,29 @@ P.setPartMute('不存在',true);P.stop();assert.ok(contexts[0].closed);P.setPart
 const gracePiece=J.parse("2'/^6'//3'/ |");for(const t of gracePiece.notes)t.midi=60+[0,2,4,5,7,9,11][t.degree-1]+12*t.octave;
 hits=[];P.play(gracePiece.lines,{tempo:120,startToken:gracePiece.notes[2]},()=>{});
 assert.deepEqual(hits.filter(h=>h.node.buffer?.m).map(h=>h.node.buffer.m),[81,76]);
-assert.equal(hits[0].time,.12);assert.ok(Math.abs(hits[1].time-.1825)<1e-8);P.stop();
+assert.equal(hits[0].time,.12);assert.ok(Math.abs(hits[1].time-.18)<1e-8);assert.equal(hits[0].node.buffer.grace,true);assert.ok(hits[0].node.buffer.dur<=.060001);P.stop();
+
+// Automatic meter changes affect both audible clicks and light counts, including repeats and mid-piece starts.
+const changing=J.parse('@time 3/4\n1 2 3 |\n@time 4/4\n4 5 6 7 | 1 - - - |');
+for(const t of changing.notes)t.midi=60+[0,2,4,5,7,9,11][t.degree-1];
+const changingSchedule=P.schedule(changing.lines),autoGrid=P.metronomeGrid(changingSchedule,{time:'auto',pattern:'quarter',accent:true});
+assert.deepEqual(Array.from(autoGrid.slice(0,3),e=>[e.index,e.count]),[[0,3],[1,3],[2,3]]);
+assert.deepEqual(Array.from(autoGrid.slice(3,7),e=>[e.index,e.count]),[[0,4],[1,4],[2,4],[3,4]]);
+assert.deepEqual(Array.from(autoGrid.filter(e=>e.kind==='accent'),e=>e.beat),[0,3,7],'exactly one accent per written bar');
+const manualGrid=P.metronomeGrid(changingSchedule,{time:'3/4',pattern:'quarter',accent:true});
+assert.deepEqual(Array.from(manualGrid.slice(0,7),e=>e.index),[0,1,2,0,1,2,0],'manual meter runs continuously, without a boundary double-hit');
+const repeatedMeters=J.parse('@time 3/4\n|: 1 2 3 |\n@time 4/4\n4 5 6 7 :|');
+const rpt=P.schedule(repeatedMeters.lines);assert.deepEqual(Array.from(rpt.timeChanges,c=>[c.at,c.time]),[[0,'3/4'],[3,'4/4'],[7,'3/4'],[10,'4/4']]);
+assert.deepEqual(Array.from(P.metronomeGrid(rpt,{time:'auto',pattern:'quarter',accent:true}).filter(e=>e.index===0),e=>e.beat),[0,3,7,10]);
+const subdivided=P.metronomeGrid(changingSchedule,{time:'auto',pattern:'eighths',accent:true});assert.equal(new Set(subdivided.map(e=>e.beat)).size,subdivided.length);
+let beatReports=[];hits=[];P.play(changing.lines,{tempo:60,metronome:true,onBeat:(i,n,time)=>beatReports.push([i,n,time])},()=>{});
+for(let t=.12;t<7.2;t+=1){contexts.at(-1).currentTime=t+.001;audioPump();raf()}
+assert.deepEqual(beatReports.slice(3,7),[[0,4,'4/4'],[1,4,'4/4'],[2,4,'4/4'],[3,4,'4/4']]);P.stop();
+// Count-in from a later section uses that section's meter for the entire count-in.
+beatReports=[];hits=[];P.play(changing.lines,{tempo:60,metronome:true,countIn:true,startToken:changing.notes[3],onBeat:(i,n,time)=>beatReports.push([i,n,time])},()=>{});
+for(let t=.12;t<4.2;t+=1){contexts.at(-1).currentTime=t+.001;audioPump();raf()}
+assert.ok(beatReports.every(r=>r[1]===4&&r[2]==='4/4'));assert.deepEqual(beatReports.map(r=>r[0]),[0,1,2,3,0]);P.stop();
+console.log('PASS: 3/4 → 4/4 changes audible grid and light counts; no duplicate accent/click at boundaries; repeat meter restoration; continuous explicit meter; section-aware count-in.');
 
 // Execute the actual UI functions and handlers with simple controls; no browser layout claims.
 class El{
@@ -101,4 +123,4 @@ assert.equal(hits.filter(h=>!h.node.buffer?.m).length,1,'no old percussion or cl
 const count=hits.length;raf();raf();assert.equal(hits.length,count,'visual frames never schedule sound');
 P.stop();assert.equal(timerActive,false);audioPump();assert.equal(hits.length,count,'stopped timer callback cannot revive audio');
 console.log('PASS: audio and metronome run with animation suspended; missed notes/clicks are not replayed in a burst; stop releases the audio timer.');
-// Modified by AI on 2026-10-08 20:21:31
+// Modified by AI on 2026-10-09 00:37:16

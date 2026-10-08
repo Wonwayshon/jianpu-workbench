@@ -93,9 +93,10 @@ function peakNormalize(buf,target=.9){let p=0;for(let i=0;i<buf.length;i++)p=Mat
 
 const cache=new Map();
 // Returns an AudioBuffer for the note (cached unless it glides from a previous pitch).
-function note(timbre,midi,dur,sr,fromMidi){
- const m=MODELS[timbre]||MODELS.flute,glide=m.glide&&fromMidi!=null&&fromMidi!==midi?fromMidi:null;
- const q=Math.max(.05,Math.round(dur*16)/16),key=`${timbre}|${midi}|${q}|${sr}|${glide??''}`;
+function note(timbre,midi,dur,sr,fromMidi,{grace=false}={}){
+ const base=MODELS[timbre]||MODELS.flute,q=grace?Math.max(.002,Math.round(dur*1000)/1000):Math.max(.05,Math.round(dur*16)/16);
+ const m=grace?{...base,attack:Math.min(base.attack||.006,.006,q/4),release:Math.min(base.release,.008,q/4),ring:0,glide:0,scoop:0}:base,glide=m.glide&&fromMidi!=null&&fromMidi!==midi?fromMidi:null;
+ const key=`${timbre}|${midi}|${q}|${sr}|${glide??''}|${grace?'grace':'normal'}`;
  let buf=cache.get(key);if(buf){cache.delete(key);cache.set(key,buf);return buf}
  const f=440*Math.pow(2,(midi-69)/12),from=glide!=null?440*Math.pow(2,(glide-69)/12):null;
  const data=peakNormalize(m.kind==='strike'?renderStrike(m,f,q,sr):renderWind(m,f,q,sr,from));
@@ -112,4 +113,4 @@ function impulse(ctx,seconds=1.8){
 }
 window.Synth={note,impulse,MODELS};
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-09 00:29:15

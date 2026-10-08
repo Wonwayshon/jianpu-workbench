@@ -282,7 +282,7 @@ body.viewer-open>main,body.viewer-open>header,body.viewer-open>nav{display:none!
 .anno-shift{color:#fff;background:#e07b24;border-radius:.25em;padding:0 .15em}
 .anno-string{color:#145baf}
 .anno-bad{color:#a52c32}
-.float-player.dragging{cursor:grabbing;opacity:.9}.float-player.snapping{transition:left .2s ease,top .2s ease}
+.float-player.dragging{cursor:grabbing;opacity:.9}
 .float-grip{font-size:14px;letter-spacing:-2px;opacity:.6;padding:0 2px}
 .float-player .float-close{min-width:34px;min-height:34px;font-size:14px;background:#ffffff26;color:#fff}
 .balance-row{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px}.balance-row input{flex:1}
@@ -610,7 +610,7 @@ body.viewer-open>main,body.viewer-open>header,body.viewer-open>nav{display:none!
 @media(max-width:560px){.sheet form,.sheet-body{padding:20px}.dialog-actions button{flex:1}.settings-version{align-items:flex-start}}
 @media print{.jp-compact-staves>.jp-staff-row{background:transparent!important}}
 /* Floating controls remain in the viewport; editing and modal forms already have their own controls. */
-.float-player{max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow:auto;z-index:70;-webkit-user-select:none}
+.float-player{width:max-content;box-sizing:border-box;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow:auto;z-index:70;-webkit-user-select:none}
 body:has(dialog[open]) .float-player{visibility:hidden}
 body.viewer-open:has(.viewer.editing) .float-player{display:none!important}
 .measure-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:4px 0 14px;font-size:14px;color:var(--muted)}
@@ -646,4 +646,4 @@ body.viewer-open:has(.viewer.editing) .float-player{display:none!important}
 .viewer.editing .viewer-options{display:none}.viewer.editing .viewer-bar{grid-template-columns:minmax(0,1fr) auto}
 @media(max-width:1200px){.viewer-bar{grid-template-columns:minmax(0,1fr) auto}.viewer-middle{grid-column:1 / -1;grid-row:2}.viewer-tools{grid-column:2;grid-row:1}.viewer-tabs{justify-self:start}.viewer.editing .viewer-middle{grid-column:1;grid-row:1}}
 @media(max-width:680px){.viewer-bar{gap:8px;padding:8px!important}.viewer-bar .viewer-tabs{grid-column:1 / -1;justify-self:stretch}.viewer-bar .viewer-tools{grid-column:1 / -1;grid-row:3;justify-content:flex-end}.viewer-middle{grid-row:2}.viewer-bar .app-segments button{padding:0 6px;font-size:13px}.viewer-bar select{max-width:190px}.viewer.editing .viewer-tools{grid-row:1;grid-column:2}.viewer.editing .viewer-middle{grid-column:1}}
-/* Modified by AI on 2026-10-08 23:47:33 */
+/* Modified by AI on 2026-10-09 00:13:28 */

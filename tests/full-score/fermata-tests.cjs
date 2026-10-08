@@ -13,7 +13,7 @@ s=make('1!fermata | 2 |','0!fermata | 2 |');close(s.total,2.6);assert.equal(s.ho
 // A held note crossing another part's fermata also lengthens, without a reattack.
 s=make('1!fermata 2 | 3 |','5 - | 3 |');const held=s.events.find(e=>e.part==='B');close(held.beats,2.6);assert.equal(s.events.filter(e=>e.part==='B').length,2);
 // Tied fermata + grace notes preserve written length and the next attack.
-s=make('(1 1!fermata) | ^6//2 3 |','5 - | 2 3 |');close(s.events.find(e=>e.part==='A'&&e.grace).start,3.2);close(s.events.find(e=>e.part==='B'&&e.token.degree===2).start,3.2);close(s.total,5.2);
+s=make('(1 1!fermata) | ^6//2 3 |','5 - | 2 3 |');close(s.events.find(e=>e.part==='A'&&e.grace).start,3.2);close(s.events.find(e=>e.part==='B'&&e.token.degree===2).start,3.28);close(s.events.find(e=>e.part==='A'&&!e.grace&&e.token.degree===2).start,3.28);close(s.total,5.2);
 const solo=J.parse('1!fermata 2 |');for(const n of solo.notes)n.midi=60+n.degree;close(P.schedule(solo.lines).total,2.6);
 console.log('PASS: unequal fermata subdivisions, shared holds, repeats, rests/chords, held notes, ties/graces, written beat mapping and solo compatibility.');
 
@@ -39,4 +39,4 @@ const complete=pitch(J.parse(crossText+'\n'+systems.join('\n')+'\n'+hold)),sched
 assert.equal(P.timingWarnings(complete.lines).length,0);close(scheduled.total,236.6);
 for(const id of scheduled.parts){const seq=scheduled.events.filter(e=>e.part===id);close(seq.at(-1).start+seq.at(-1).beats,236.6)}
 console.log('PASS: synthetic 10/14-beat mismatch, cross-system four-bar repeat, 12 systems over three pages and post-fermata part synchronization.');
-// Modified by AI on 2026-10-08 14:21:25
+// Modified by AI on 2026-10-09 00:32:21

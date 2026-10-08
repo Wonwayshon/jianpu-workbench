@@ -21,11 +21,11 @@ const host=new El('div');J.render(host,p.lines,{fit:false});
 const order=host.querySelectorAll('.jp-n').filter(e=>e._token?.t==='note').map(e=>e._token);
 assert.deepEqual(order,Array.from(p.notes),'DOM reading order matches source: 2, grace 6, 3, grace 3, 5, 2');
 for(const t of p.notes.filter(t=>t.grace)){assert.ok(t._cell.parentNode.classList.contains('jp-graces'));const main=p.notes[p.notes.indexOf(t)+1];assert.equal(t._cell.parentNode.parentNode,main._cell.parentNode,'grace and main note stay together while justifying')}
-const plan=P.schedule(p.lines);assert.deepEqual(Array.from(plan.events,e=>e.token),Array.from(p.notes));assert.equal(plan.total,2);assert.deepEqual(Array.from(plan.events,e=>e.start),[0,.5,.625,1,1.125,1.5]);assert.deepEqual(Array.from(plan.bars),[2]);
+const plan=P.schedule(p.lines);assert.deepEqual(Array.from(plan.events,e=>e.token),Array.from(p.notes));assert.equal(plan.total,2);assert.deepEqual(Array.from(plan.events,e=>e.start),[0,.5,.58,1,1.08,1.5]);assert.deepEqual(Array.from(plan.bars),[2]);
 assert.deepEqual(Array.from(plan.events,e=>e.midi),[74,81,76,76,79,74]);
 const full=J.parse('[笛一] '+phrase+'\n[笛二] 1 2 |');for(const t of full.notes)t.midi=60+[0,2,4,5,7,9,11][t.degree-1]+12*t.octave;
 J.render(host,full.lines,{fit:false});assert.deepEqual(host.querySelectorAll('.jp-n').filter(e=>e._token?.t==='note').map(e=>e._token),Array.from(full.notes));assert.equal(P.schedule(full.lines).total,2);
 for(const text of ['2/ ^6// 3/ |','2/^5//^6//3/ |']){const q=J.parse(text);J.render(host,q.lines,{fit:false});assert.deepEqual(host.querySelectorAll('.jp-n').filter(e=>e._token?.t==='note').map(e=>e._token),Array.from(q.notes))}
-const repeated=J.parse('(2/^6//2/)');for(const t of repeated.notes)t.midi=60+[0,2,4,5,7,9,11][t.degree-1];const r=P.schedule(repeated.lines);assert.equal(r.events.length,3,'intervening grace means the second 2 must be rearticulated');assert.equal(r.total,1);assert.deepEqual(Array.from(r.events,e=>e.start),[0,.5,.625]);
+const repeated=J.parse('(2/^6//2/)');for(const t of repeated.notes)t.midi=60+[0,2,4,5,7,9,11][t.degree-1];const r=P.schedule(repeated.lines);assert.equal(r.events.length,3,'intervening grace means the second 2 must be rearticulated');assert.equal(r.total,1);assert.deepEqual(Array.from(r.events,e=>e.start),[0,.5,.58]);
 console.log('PASS: screenshot grace-note sequence, grouped layout in single/full scores, spaces/multiple graces, pitch and beat order, same-pitch slurs do not move grace notes.');
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-09 00:29:15

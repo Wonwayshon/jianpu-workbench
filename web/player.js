@@ -33,17 +33,31 @@ function saveSettings(s){try{localStorage.setItem(STORE,JSON.stringify(s))}catch
 
 // Build written rhythm first; all parts then share the same fermata holds.
 // A hold belongs to a musical boundary, never to a private clock for one part.
-function schedule(lines){
+function schedule(lines,{tempo=80}={}){
  const ids=[];for(const l of lines)if(l.kind==='music'&&!ids.includes(l.part??''))ids.push(l.part??'');
- const events=[];let writtenTotal=0,writtenBars=[];
- for(const id of ids){const r=scheduleStream(lines.filter(l=>l.kind==='music'&&(l.part??'')===id).flatMap(l=>l.tokens));for(const e of r.events)e.part=id;events.push(...r.events);writtenTotal=Math.max(writtenTotal,r.total);if(id===ids[0])writtenBars=r.bars}
+ const events=[];let writtenTotal=0,writtenBars=[],timeChanges=[];
+ for(const id of ids){const stream=lines.flatMap(l=>l.kind==='meta'&&l.name==='time'?[{t:'time',value:l.value}]:l.kind==='music'&&(l.part??'')===id?l.tokens:[]),r=scheduleStream(stream);for(const e of r.events)e.part=id;events.push(...r.events);writtenTotal=Math.max(writtenTotal,r.total);if(id===ids[0]){writtenBars=r.bars;timeChanges=r.timeChanges}}
  const boundaries=new Map();
  for(const e of events)if(e.fermata){const end=Math.round((e.start+e.beats)*1e8)/1e8;boundaries.set(end,Math.max(boundaries.get(end)||0,e.beats*.6))}
  const holds=[...boundaries].sort((a,b)=>a[0]-b[0]);
  const warpBeat=beat=>beat+holds.reduce((extra,[at,length])=>extra+(at<=beat+1e-8?length:0),0);
+ const sourceBeats=new Map(events.map(e=>[e,e.beats]));
  for(const e of events){e.scoreStart=e.start;const end=warpBeat(e.start+e.beats);e.start=warpBeat(e.start);e.beats=end-e.start}
+ // Grace notes borrow a brief opening slice from the main beat, never add written time.
+ // At a shared attack, all pitched voices land together after that slice; rests and percussion
+ // keep their own attack. Source duration is retained for fermata calculation above.
+ const atKey=beat=>Math.round(beat*1e8),mains=new Map(),groups=new Map(),delays=new Map();
+ for(const e of events)if(!e.grace){const k=atKey(e.scoreStart);if(!mains.has(k))mains.set(k,new Map());mains.get(k).set(e.token,e)}
+ for(const e of events)if(e.grace){const main=mains.get(atKey(e.scoreStart))?.get(e.mainToken);if(main){if(!groups.has(main))groups.set(main,[]);groups.get(main).push(e)}}
+ for(const [main] of groups){
+  const k=atKey(main.scoreStart),attacks=[...mains.get(k).values()].filter(e=>e.midi!=null||e===main);
+  const duration=Math.min(Math.min(...attacks.map(e=>sourceBeats.get(e)))/4,0.06*(Number(tempo)||80)/60);
+  delays.set(k,Math.max(delays.get(k)||0,duration));
+ }
+ for(const [main,graces] of groups){const duration=delays.get(atKey(main.scoreStart)),start=main.start;graces.forEach((e,i)=>{e.start=start+duration*i/graces.length;e.beats=duration/graces.length})}
+ for(const e of events)if(!e.grace&&(e.midi!=null||groups.has(e))){const delay=delays.get(atKey(e.scoreStart))||0;e.start+=delay;e.beats-=delay}
  events.sort((a,b)=>a.start-b.start||Number(b.grace||false)-Number(a.grace||false));
- return {events,total:warpBeat(writtenTotal),parts:ids,bars:writtenBars.map(warpBeat),writtenBars,writtenTotal,warpBeat,holds};
+ return {events,total:warpBeat(writtenTotal),parts:ids,bars:writtenBars.map(warpBeat),writtenBars,writtenTotal,warpBeat,holds,timeChanges};
 }
 // Diagnose transcription differences without inserting invented notes or rests.
 function timingWarnings(lines){
@@ -59,11 +73,13 @@ function timingWarnings(lines){
 }
 function scheduleStream(stream){
  const events=[],bars=[];let last=null,repeatStart=0,pos=0;const repeated=new Set();
- const slurStack=[],tup=[];let pendingGrace=[];
+ const slurStack=[],tup=[],timeChanges=[{at:0,time:'4/4'}];let pendingGrace=[],time='4/4',repeatTime=time;
+ const changeTime=value=>{time=value;const last=timeChanges.at(-1);if(last.at===pos)last.time=time;else if(last.time!==time)timeChanges.push({at:pos,time})};
  for(let i=0;i<stream.length;i++){
   const t=stream[i];
-  if(t.t==='bar'){bars.push(pos);if(t.text.endsWith(':'))repeatStart=i+1;
-   if(t.text.startsWith(':')&&!repeated.has(i)){repeated.add(i);i=repeatStart-1;last=null;continue}
+  if(t.t==='time'){changeTime(t.value);continue}
+  if(t.t==='bar'){bars.push(pos);if(t.text.endsWith(':')){repeatStart=i+1;repeatTime=time;}
+   if(t.text.startsWith(':')&&!repeated.has(i)){repeated.add(i);changeTime(repeatTime);i=repeatStart-1;last=null;continue}
    continue}
   if(t.t==='tupOpen'){let p=1;while(p*2<t.n)p*=2;tup.push(p/t.n);continue}
   if(t.t==='tupClose'){tup.pop();continue}
@@ -77,17 +93,36 @@ function scheduleStream(stream){
   if(t.t!=='note'&&t.t!=='rest'&&t.t!=='chord'&&t.t!=='percussion')continue;
   if(t.grace){pendingGrace.push(t);continue}
   let beats=Math.pow(0.5,t.under||0)*(t.dot===1?1.5:t.dot===2?1.75:1);for(const f of tup)beats*=f;
-  const graceBeats=Math.min(0.25,beats/4);
-  for(const g of pendingGrace)events.push({midi:g.midi,beats:graceBeats/pendingGrace.length,token:g,grace:true,mainToken:t});
-  if(pendingGrace.length)beats-=graceBeats;pos+=beats+(pendingGrace.length?graceBeats:0);pendingGrace=[];
-  last={percussion:t.t==='percussion',midi:t.t==='note'?t.midi:t.t==='chord'?t.notes[0]?.midi??null:null,midis:t.t==='chord'?t.notes.map(n=>n.midi).filter(m=>m!=null):null,beats,token:t,fermata:(t.orns||[]).includes('fermata'),stacc:(t.orns||[]).includes('stacc')};events.push(last);
+  const graces=pendingGrace.map(g=>({midi:g.midi,beats:0,token:g,grace:true,mainToken:t}));pendingGrace=[];pos+=beats;
+  last={percussion:t.t==='percussion',midi:t.t==='note'?t.midi:t.t==='chord'?t.notes[0]?.midi??null:null,midis:t.t==='chord'?t.notes.map(n=>n.midi).filter(m=>m!=null):null,beats,token:t,fermata:(t.orns||[]).includes('fermata'),stacc:(t.orns||[]).includes('stacc')};events.push(...graces,last);
  }
- let at=0;for(const e of events){if(e.tied)continue;e.start=at;at+=e.beats}
- return {events:events.filter(e=>!e.tied),total:at,bars};
+ let at=0;for(const e of events){if(e.tied)continue;e.start=at;if(!e.grace)at+=e.beats}
+ return {events:events.filter(e=>!e.tied),total:at,bars,timeChanges};
 }
 // "3/4" -> {beats:3, unit:1 quarter}; "6/8" -> {beats:6, unit:0.5}
 function meter(value){const m=/^(\d+)\/(\d+)$/.exec(value||'');if(!m)return {beats:4,unit:1};return {beats:Math.max(1,Number(m[1])),unit:4/Number(m[2])}}
-function timeOf(lines){for(const l of lines)if(l.kind==='meta'&&l.name==='time')return l.value;return null}
+function timeAt(all,beat){let time='4/4';for(const change of all.timeChanges||[]){if(change.at>beat+1e-8)break;time=change.time}return time}
+// Written-beat grid shared by clicks and beat lights. Automatic mode uses each section's meter;
+// an explicit meter runs continuously instead of resetting a three-beat cycle at four-beat bar lines.
+function metronomeGrid(all,s,from=0,until=all.writtenTotal){
+ const automatic=s.time==='auto'||!s.time,pattern=PATTERNS.find(p=>p.id===s.pattern)||PATTERNS[1];
+ const points=automatic?[...all.writtenBars,...(all.timeChanges||[]).map(c=>c.at)]:[];
+ const pts=[...new Set(points.filter(b=>b>1e-6&&b<all.writtenTotal-1e-6).map(b=>Math.round(b*1e8)/1e8))].sort((a,b)=>a-b);
+ const segments=[];let previous=0;for(const b of pts){segments.push([previous,b]);previous=b}segments.push([previous,Infinity]);
+ const grid=[];
+ segments.forEach(([a,b],i)=>{
+  const signature=automatic?timeAt(all,a):s.time,m=meter(signature),barBeats=m.beats*m.unit,unit=m.unit*pattern.span;
+  const anchor=automatic&&i===0&&pts.length&&b-a<barBeats-1e-6?b-barBeats:a,lo=i===0?-Infinity:a;
+  for(let at=anchor+Math.floor((Math.max(lo,from)-anchor)/unit-1e-9)*unit;at<Math.min(b,until)-1e-6;at+=unit)for(const off of pattern.clicks){
+   const pos=at+off*m.unit;if(pos<from-1e-6||pos>=until-1e-6||pos<lo-1e-6||pos>=b-1e-6)continue;
+   const inBar=(((pos-anchor)%barBeats)+barBeats)%barBeats,onBeat=Math.abs(inBar/m.unit-Math.round(inBar/m.unit))<1e-6;
+   // A malformed overlong written bar must not create an additional downbeat accent inside it.
+   const cycleStart=inBar<1e-6||barBeats-inBar<1e-6,downbeat=automatic?Math.abs(pos-anchor)<1e-6||(pos<0&&cycleStart):cycleStart;
+   grid.push({beat:pos,kind:onBeat&&downbeat&&s.accent?'accent':onBeat?'beat':'sub',index:onBeat?Math.round(inBar/m.unit)%m.beats:null,count:m.beats,signature});
+  }
+ });
+ return grid.sort((a,b)=>a.beat-b.beat);
+}
 
 // Timbre names shown in the settings; the sound models live in synth.js.
 const TIMBRES={flute:{label:'长笛'},dizi:{label:'竹笛'},erhu:{label:'二胡'},clarinet:{label:'单簧管'},piano:{label:'钢琴'},guzheng:{label:'古筝'},ocarina:{label:'陶笛'},organ:{label:'风琴'}};
@@ -105,11 +140,11 @@ function setupMix(){
  // The room reverb is fed from the melody bus, so the balance scales it too.
  const send=ctx.createGain();send.gain.value=(Synth.MODELS[timbreName]||Synth.MODELS.flute).reverb;melodyBus.connect(send);send.connect(wet);
 }
-function tone(time,midi,dur,legato,stacc,vol,prevMidi,timbre=timbreName,bus=null,resumeOffset=0){
+function tone(time,midi,dur,legato,stacc,vol,prevMidi,timbre=timbreName,bus=null,resumeOffset=0,grace=false){
  if(!dry)setupMix();
- const model=Synth.MODELS[timbre]||Synth.MODELS.flute,len=Math.max(0.06,stacc?dur*0.45:legato?dur:dur*0.93);
+ const model=Synth.MODELS[timbre]||Synth.MODELS.flute,len=grace?Math.max(.002,dur):Math.max(0.06,stacc?dur*0.45:legato?dur:dur*0.93);
  if(resumeOffset>=len)return;
- const src=ctx.createBufferSource();src.buffer=Synth.note(timbre,midi,len,ctx.sampleRate,prevMidi);
+ const src=ctx.createBufferSource();src.buffer=Synth.note(timbre,midi,len,ctx.sampleRate,prevMidi,{grace});
  const g=ctx.createGain();g.gain.value=model.gain*vol;src.connect(g);g.connect(bus||melodyBus);
  src.start(Math.max(time,ctx.currentTime),resumeOffset);
 }
@@ -153,15 +188,15 @@ function stop(){
 // Returns false when there is nothing to play. opts: settings (see DEFAULTS) + onBeat(index, beatsPerBar).
 function play(lines,opts,onEnd){
  stop();
- const s={...DEFAULTS,...opts,...mix(opts.balance??DEFAULTS.balance)},all=schedule(lines),total=all.total;
+ const s={...DEFAULTS,...opts,...mix(opts.balance??DEFAULTS.balance)},all=schedule(lines,{tempo:s.tempo}),total=all.total;
  // Optional start point: a token of the converted score or of the original (source) score.
- let offset=0,writtenOffset=0;if(s.startToken){const hit=all.events.find(e=>e.token===s.startToken||e.token.src===s.startToken);if(hit){const first=all.events.find(e=>e.grace&&e.mainToken===hit.token)||hit;offset=first.start;writtenOffset=first.scoreStart}}
+ let offset=0,writtenOffset=0;if(s.startToken){const hit=all.events.find(e=>e.token===s.startToken||e.token.src===s.startToken);if(hit){const first=all.events.find(e=>e.grace&&(e.mainToken===hit.token||Math.abs(e.scoreStart-hit.scoreStart)<1e-8))||hit;offset=first.start;writtenOffset=first.scoreStart}}
  const events=all.events.filter(e=>e.start>=offset-1e-9);
  if(!events.length)return false; // silent cursor-only playback is allowed (melody and metronome both off)
  if(ctx){ctx.close();}ctx=new (window.AudioContext||window.webkitAudioContext)();dry=wet=melodyBus=clickBus=null;
  if(ctx.state==='suspended')ctx.resume().catch(()=>{});
  const audioContext=ctx;
- const spb=60/s.tempo,m=meter(s.time==='auto'?timeOf(lines):s.time),barBeats=m.beats*m.unit;
+ const spb=60/s.tempo,m=meter(s.time==='auto'?timeAt(all,writtenOffset):s.time),barBeats=m.beats*m.unit;
  // Playback starts right at the chosen note; clicks keep the piece's bar phase, so the accented click still falls
  // on each bar's first beat (count-in, when on, adds one bar before the start).
  const lead=s.countIn&&s.metronome?barBeats:0,t0=ctx.currentTime+0.12,start=t0+(lead-offset)*spb,cells=new Set();
@@ -177,26 +212,24 @@ function play(lines,opts,onEnd){
   if(late&&(e.percussion||when+e.beats*spb<=now)){prevByPart.set(e.part,e.midi!=null?e:null);continue}
   if(e.percussion){percussion(when,(e.token.orns||[]).includes('accent'),e.stacc,bus);prevByPart.set(e.part,null)}
   else if(e.midis){for(const mm of e.midis)tone(when,mm,e.beats*spb,e.legato,e.stacc,0.75,null,timbreOf(e.part),bus,resumeOffset);prevByPart.set(e.part,null)}
-  else if(e.midi!=null){tone(when,e.midi,e.beats*spb,e.legato,e.stacc,1,prev&&prev.legato?prev.midi:null,timbreOf(e.part),bus,resumeOffset);prevByPart.set(e.part,e)}
+  else if(e.midi!=null){tone(when,e.midi,e.beats*spb,e.legato,e.stacc,1,prev&&prev.legato?prev.midi:null,timbreOf(e.part),bus,resumeOffset,!!e.grace);prevByPart.set(e.part,e)}
   else prevByPart.set(e.part,null)}};
  ahead();
  const beats=[],clicks=[];let ci=0;
  if(s.metronome){
-  // Clicks follow the written bar lines: each bar's grid starts at its bar line (accent there), a short first bar
-  // (pickup) is counted back from the first bar line. Starting mid-bar keeps this phase; the count-in extends it.
-  const pattern=PATTERNS.find(p=>p.id===s.pattern)||PATTERNS[1],unit=m.unit*pattern.span,from=writtenOffset-lead,until=Math.max(all.writtenTotal,writtenOffset+barBeats);
-  const pts=[...new Set(all.writtenBars.filter(b=>b>1e-6&&b<all.writtenTotal-1e-6).map(b=>Math.round(b*1e4)/1e4))].sort((a,b)=>a-b);
-  const segs=[];let prev=0;for(const b of pts){segs.push([prev,b]);prev=b}segs.push([prev,Infinity]);
-  segs.forEach(([a,b],i)=>{
-   const anchor=i===0&&pts.length&&b-a<barBeats-1e-6?b-barBeats:a;
-   const lo=i===0?-Infinity:a,hi=b;
-   for(let at=anchor+Math.floor((Math.max(lo,from)-anchor)/unit-1e-9)*unit;at<Math.min(hi,until)-1e-6;at+=unit)for(const off of pattern.clicks){
-    const pos=at+off*m.unit;if(pos<from-1e-6||pos>=until-1e-6||pos<lo-1e-6||pos>=hi-1e-6)continue;
-    const inBar=(((pos-anchor)%barBeats)+barBeats)%barBeats,onBeat=Math.abs(inBar/m.unit-Math.round(inBar/m.unit))<1e-6;
-    const kind=onBeat&&(inBar<1e-6||barBeats-inBar<1e-6)&&s.accent?'accent':onBeat?'beat':'sub';
-    const when=start+(pos<writtenOffset?offset+pos-writtenOffset:all.warpBeat(pos))*spb;clicks.push({when,kind});if(onBeat)beats.push({time:when,index:Math.round(inBar/m.unit)%m.beats});
-   }
-  });
+  const until=Math.max(all.writtenTotal,writtenOffset+barBeats),grid=metronomeGrid(all,s,writtenOffset,until);
+  if(lead){
+   const signature=s.time==='auto'?timeAt(all,writtenOffset):s.time;
+   const boundaries=[0,...all.writtenBars,...all.timeChanges.map(c=>c.at)].filter(b=>b<=writtenOffset+1e-8);
+   let anchor=s.time==='auto'?Math.max(...boundaries):0;
+   const firstBar=all.writtenBars.find(b=>b>1e-6);if(s.time==='auto'&&anchor===0&&firstBar<barBeats-1e-6)anchor=firstBar-barBeats;
+   const phase=writtenOffset-anchor;
+   for(const item of metronomeGrid(all,{...s,time:signature},phase-lead,phase))grid.push({...item,beat:item.beat+anchor});
+  }
+  for(const item of grid){
+   const when=start+(item.beat<writtenOffset?offset+item.beat-writtenOffset:all.warpBeat(item.beat))*spb;
+   clicks.push({when,kind:item.kind});if(item.index!=null)beats.push({time:when,index:item.index,count:item.count,signature:item.signature});
+  }
   beats.sort((a,b)=>a.time-b.time);clicks.sort((a,b)=>a.when-b.when);
  }
  // Clicks are created just ahead of time too (about 1.2 s), never all at once.
@@ -216,7 +249,7 @@ function play(lines,opts,onEnd){
    for(const c of els){c.classList.add('jp-playing');cells.add(c)}
    if(!ev.grace&&(ev.part??'')===leadPart)document.dispatchEvent(new CustomEvent('scoreplay',{detail:{token:ev.token,el:els[0]||null}}));
   }
-  let beat=null;while(bi<beats.length&&beats[bi].time<=now)beat=beats[bi++];if(beat)s.onBeat?.(beat.index,m.beats);
+  let beat=null;while(bi<beats.length&&beats[bi].time<=now)beat=beats[bi++];if(beat)s.onBeat?.(beat.index,beat.count,beat.signature);
   if(now>=end+0.05){stop();return}
   session.raf=requestAnimationFrame(tick);
  };
@@ -276,6 +309,6 @@ function setPartMute(id,muted){
  const bus=partBuses.get(id);if(!playing||!ctx||!bus)return;
  bus.gain.setTargetAtTime(muted?0:1,ctx.currentTime,0.008);
 }
-window.ScorePlayer={timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,TIMBRE_LIST,play,stop,schedule,isPlaying:()=>!!playing,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
+window.ScorePlayer={metronomeGrid,timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,TIMBRE_LIST,play,stop,schedule,isPlaying:()=>!!playing,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
 })();
-// Modified by AI on 2026-10-08 14:27:11
+// Modified by AI on 2026-10-09 00:29:29

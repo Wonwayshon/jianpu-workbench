@@ -220,8 +220,8 @@ $('viewTrans').onclick=()=>setView('trans');$('viewFlute').onclick=()=>setView('
 
 // ---------- playback ----------
 function syncTempoLabel(){const t=ScorePlayer.TIMBRE_LIST.find(x=>x[0]===settings.timbre);$('playTempoLabel').textContent=`♩=${settings.tempo}${settings.muteMelody?' · 无旋律':t&&settings.timbre!=='flute'?' · '+t[1]:''}${settings.metronome?' · 节拍器':''}`}
-function showBeat(index,count){
- for(const id of ['beatDots','floatBeats']){const box=$(id);if(box.childElementCount!==count){box.replaceChildren(...Array.from({length:count},()=>document.createElement('i')))}
+function showBeat(index,count,signature){
+ for(const id of ['beatDots','floatBeats']){const box=$(id);if(signature)box.title=`节拍器 ${signature}${settings.time==='auto'?' · 跟随谱面':' · 手动拍号'}`;if(box.childElementCount!==count){box.replaceChildren(...Array.from({length:count},()=>document.createElement('i')))}
   [...box.children].forEach((d,i)=>{d.classList.toggle('on',i===index);d.classList.toggle('first',i===0)})}
 }
 function setPlaying(on){
@@ -247,27 +247,38 @@ let floatDismissed=false,floatAvailable=false;
 function syncFloatPlayer(){$('floatPlayer').hidden=perform||!!$('scoreViewer').classList.contains?.('editing')||floatDismissed||!floatAvailable}
 $('floatClose').onclick=()=>{floatDismissed=true;syncFloatPlayer();ScorePlayer.stop()};
 (()=>{
- const bar=$('floatPlayer');let drag=null;
- const place=(x,y)=>{const w=bar.offsetWidth,h=bar.offsetHeight;x=Math.min(Math.max(8,innerWidth-w-8),Math.max(8,Number.isFinite(x)?x:innerWidth-w-16));y=Math.min(Math.max(8,innerHeight-h-8),Math.max(8,Number.isFinite(y)?y:innerHeight-h-84));bar.style.left=x+'px';bar.style.top=y+'px';bar.style.right='auto';bar.style.bottom='auto'};
- // Dropped within EDGE px of a side it docks there (vertical, beat lights); dropped elsewhere it stays put.
- const EDGE=56,save=v=>{try{localStorage.setItem('flute.floatPos',JSON.stringify(v))}catch{}};
- const snap=()=>{
-  const r0=bar.getBoundingClientRect(),nearLeft=r0.left<=EDGE,nearRight=innerWidth-r0.right<=EDGE;
-  if(!nearLeft&&!nearRight){bar.classList.remove('docked');save({mode:'free',x:r0.left/innerWidth,y:r0.top/innerHeight});return}
-  bar.classList.add('docked');const r=bar.getBoundingClientRect();bar.classList.add('snapping');
-  place(nearLeft?8:innerWidth-r.width-8,r0.top);setTimeout(()=>bar.classList.remove('snapping'),220);
-  save({mode:'dock',side:nearLeft?'left':'right',y:r0.top/innerHeight});
+ const bar=$('floatPlayer'),EDGE=56,PAD=8;let drag=null,position=null;
+ const save=()=>{try{localStorage.setItem('flute.floatPos',JSON.stringify(position))}catch{}};
+ try{const p=JSON.parse(localStorage.getItem('flute.floatPos')||'null');if(p&&['free','dock'].includes(p.mode)&&Number.isFinite(p.y))position=p}catch{}
+ const place=(x,y)=>{
+  const maxX=Math.max(PAD,innerWidth-bar.offsetWidth-PAD),maxY=Math.max(PAD,innerHeight-bar.offsetHeight-PAD);
+  x=Math.min(maxX,Math.max(PAD,Number.isFinite(x)?x:maxX));y=Math.min(maxY,Math.max(PAD,Number.isFinite(y)?y:maxY));
+  bar.style.left=x+'px';bar.style.top=y+'px';bar.style.right='auto';bar.style.bottom='auto';return {x,y,maxX,maxY};
  };
- const restore=()=>{try{const p=JSON.parse(localStorage.getItem('flute.floatPos')||'null');if(!p){const r=bar.getBoundingClientRect();place(r.left,r.top);return}
-  if(p.mode==='free'){bar.classList.remove('docked');place(p.x*innerWidth,p.y*innerHeight);return}
-  bar.classList.add('docked');const r=bar.getBoundingClientRect();place(p.side==='left'?8:innerWidth-r.width-8,p.y*innerHeight)}catch{}};
+ const remember=(mode,side,placed)=>{position={version:2,mode,...(side?{side}:{}),x:(placed.x-PAD)/Math.max(1,placed.maxX-PAD),y:(placed.y-PAD)/Math.max(1,placed.maxY-PAD)};save()};
+ const restore=()=>{
+  if(bar.hidden||drag)return;
+  if(!position){const r=bar.getBoundingClientRect();const p=place(r.left,r.top);remember('free',null,p);return}
+  bar.classList.toggle('docked',position.mode==='dock');
+  const maxX=Math.max(PAD,innerWidth-bar.offsetWidth-PAD),maxY=Math.max(PAD,innerHeight-bar.offsetHeight-PAD),modern=position.version===2;
+  const x=position.mode==='dock'?(position.side==='left'?PAD:maxX):modern?PAD+position.x*(maxX-PAD):position.x*innerWidth;
+  const y=modern?PAD+position.y*(maxY-PAD):position.y*innerHeight;place(x,y);
+ };
+ const snap=point=>{
+  const r=bar.getBoundingClientRect(),left=point.x<=EDGE||r.left<=EDGE,right=point.x>=innerWidth-EDGE||innerWidth-r.right<=EDGE;
+  const side=left||right?(point.x<=EDGE?'left':point.x>=innerWidth-EDGE?'right':r.left+r.width/2<innerWidth/2?'left':'right'):null;
+  bar.classList.toggle('docked',!!side);
+  const p=place(side==='left'?PAD:side==='right'?innerWidth-bar.offsetWidth-PAD:r.left,r.top);remember(side?'dock':'free',side,p);
+ };
  new MutationObserver(()=>{if(!bar.hidden)requestAnimationFrame(restore)}).observe(bar,{attributes:true,attributeFilter:['hidden']});
- bar.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const r=bar.getBoundingClientRect();drag={dx:e.clientX-r.left,dy:e.clientY-r.top,moved:false};bar.setPointerCapture(e.pointerId);bar.classList.add('dragging')});
- bar.addEventListener('pointermove',e=>{if(!drag)return;if(!drag.moved&&bar.classList.contains('docked')){bar.classList.remove('docked');const r=bar.getBoundingClientRect();drag.dx=Math.min(drag.dx,r.width-10);drag.dy=Math.min(drag.dy,r.height-10)}drag.moved=true;place(e.clientX-drag.dx,e.clientY-drag.dy)});
- const end=()=>{if(!drag)return;drag=null;bar.classList.remove('dragging');snap()};
- bar.addEventListener('pointerup',end);bar.addEventListener('pointercancel',end);
- addEventListener('resize',()=>{if(!bar.hidden)restore()});
- if('ResizeObserver' in window)new ResizeObserver(()=>{if(!bar.hidden&&!drag){const r=bar.getBoundingClientRect();place(r.left,r.top)}}).observe(bar);
+ bar.addEventListener('pointerdown',e=>{
+  if(e.target.closest('button'))return;const r=bar.getBoundingClientRect();drag={pointer:e.pointerId,x:e.clientX,y:e.clientY,dx:e.clientX-r.left,dy:e.clientY-r.top,moved:false};bar.setPointerCapture(e.pointerId);bar.classList.add('dragging');
+ });
+ bar.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.pointer)return;if(!drag.moved&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<6)return;drag.moved=true;place(e.clientX-drag.dx,e.clientY-drag.dy)});
+ const end=(e,cancelled=false)=>{if(!drag||e.pointerId!==drag.pointer)return;const moved=drag.moved;drag=null;bar.classList.remove('dragging');if(bar.hasPointerCapture(e.pointerId))bar.releasePointerCapture(e.pointerId);if(cancelled)restore();else if(moved)snap({x:e.clientX,y:e.clientY})};
+ bar.addEventListener('pointerup',e=>end(e));bar.addEventListener('pointercancel',e=>end(e,true));
+ addEventListener('resize',restore);
+ if('ResizeObserver' in window)new ResizeObserver(restore).observe(bar);
 })();
 function restartIfPlaying(){if(ScorePlayer.isPlaying()){ScorePlayer.stop();startPlayback()}}
 
@@ -642,4 +653,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-08 23:44:57
+// Modified by AI on 2026-10-09 00:13:28
