@@ -14,6 +14,23 @@ const save=()=>ScorePlayer.saveSettings(settings);
 let partSel=(()=>{try{return localStorage.getItem('flute.partSel')||'all'}catch{return 'all'}})();
 let selectedParts=(()=>{try{const ids=JSON.parse(localStorage.getItem('flute.visibleParts')||'[]');return Array.isArray(ids)?ids.filter(x=>typeof x==='string'):[]}catch{return []}})();
 const scoreParts=()=>lastConverted?.source?.parts||[];
+let measureOn=false,measureEvery=4;
+try{measureOn=localStorage.getItem('flute.measureNumbers')==='1';measureEvery=Math.max(1,Math.min(100,Math.floor(Number(localStorage.getItem('flute.measureEvery'))||4)))}catch{}
+const measureCache=new WeakMap();
+function scoreDisplayOptions(lines,v=view){
+ if(!measureOn)return {measureEvery:0};
+ const whole=v==='source'?lastConverted?.source?.lines:v==='trans'?(transAllLines||lines):lastConverted?.lines;
+ const source=whole||lines;let numbers=measureCache.get(source);if(!numbers){numbers=Jianpu.numberMeasures(source);measureCache.set(source,numbers)}
+ return {measureEvery,measureNumbers:numbers};
+}
+window.scoreDisplayOptions=scoreDisplayOptions;
+function syncMeasureControls(){for(const prefix of ['score','viewer']){$(prefix+'MeasureNumbers').checked=measureOn;$(prefix+'MeasureEvery').value=measureEvery;$(prefix+'MeasureEvery').disabled=!measureOn}}
+function changeMeasureControls(prefix){measureOn=$(prefix+'MeasureNumbers').checked;measureEvery=Math.max(1,Math.min(100,Math.floor(Number($(prefix+'MeasureEvery').value)||4)));
+ try{localStorage.setItem('flute.measureNumbers',measureOn?'1':'0');localStorage.setItem('flute.measureEvery',String(measureEvery))}catch{}
+ syncMeasureControls();renderMain();if(viewerOpen)rebuild(vIndex);
+}
+for(const prefix of ['score','viewer'])for(const suffix of ['MeasureNumbers','MeasureEvery'])$(prefix+suffix).onchange=()=>changeMeasureControls(prefix);
+syncMeasureControls();
 const visiblePartIds=()=>partSel==='all'?scoreParts().map(p=>p.id):partSel==='__custom'?selectedParts:[partSel];
 const F=lines=>!lines||partSel==='all'?lines:Jianpu.filterParts(lines,visiblePartIds());
 function syncPartBar(){
@@ -90,7 +107,7 @@ function renderTrans(){
  transAllLines=buildTransposed();transLines=F(transAllLines);
  if(!transLines.some(l=>l.kind==='meta'&&l.name==='note'))transLines.unshift({kind:'meta',name:'note',value:`原谱 1=${lastConverted.keyLabel} → 1=${KEY_NAMES[Number($('transKey').value)]}${$('transMode').value==='move'?'（整曲移调）':''}`});
  $('transOutput').hidden=transStaff();$('transStaff').hidden=!transStaff();
- if(transStaff())Staff.render($('transStaff'),transLines,{keyLabel:staffKey('trans'),partNames:scoreParts()}).catch(e=>{$('transStaff').textContent='五线谱无法显示：'+e.message});
+ if(transStaff())Staff.render($('transStaff'),transLines,{keyLabel:staffKey('trans'),partNames:scoreParts(),...scoreDisplayOptions(transLines,'trans')}).catch(e=>{$('transStaff').textContent='五线谱无法显示：'+e.message});
  else Jianpu.render($('transOutput'),transLines,erhuOpts(transLines,'trans'));
 }
 $('transKey').onchange=$('transMode').onchange=$('transShow').onchange=()=>{fillTunings();syncErhuBar();try{localStorage.setItem('flute.transKey',$('transKey').value);localStorage.setItem('flute.transMode',$('transMode').value);localStorage.setItem('flute.transShow',$('transShow').value)}catch{}if(ScorePlayer.isPlaying())ScorePlayer.stop();renderTrans()};
@@ -138,7 +155,7 @@ function erhuFor(lines,v){
  }
  return res.map.size?res:null;
 }
-function erhuOpts(lines,v,base={}){base={...base,partNames:scoreParts()};const res=erhuFor(lines,v);if(!res)return base;return {...base,annotations:res.map,label:ErhuFingering.label,summary:res}}
+function erhuOpts(lines,v,base={}){base={...base,partNames:scoreParts(),...scoreDisplayOptions(lines,v)};const res=erhuFor(lines,v);if(!res)return base;return {...base,annotations:res.map,label:ErhuFingering.label,summary:res}}
 function fillErhuParts(){
  const parts=scoreParts(),button=$('erhuPart'),ids=erhuPartIds();button.hidden=parts.length<2||!$('erhuFinger').checked;
  button.textContent=ids.length?`二胡声部 · 已选 ${ids.length} 个`:'选择二胡声部（未选择）';
@@ -172,12 +189,12 @@ $('erhuFinger').onchange=$('erhuTuning').onchange=()=>{try{localStorage.setItem(
 
 // ---------- rendering ----------
 async function renderStaff(host,lines){
- try{await Staff.render(host,lines,{keyLabel:lastConverted.keyLabel,partNames:scoreParts()})}catch(error){host.textContent='五线谱无法显示：'+error.message}
+ try{await Staff.render(host,lines,{keyLabel:lastConverted.keyLabel,partNames:scoreParts(),...scoreDisplayOptions(lines,'staff')})}catch(error){host.textContent='五线谱无法显示：'+error.message}
 }
 function renderMain(){
  if(!lastConverted||!(lastConverted.notes.length||lastConverted.percussionCount)){$('scoreOutput').replaceChildren('输入音符后在这里显示');$('scorePreview').replaceChildren();$('staffOutput').replaceChildren();return}
  syncPartBar();fillErhuParts();
- Jianpu.render($('scoreOutput'),F(lastConverted.lines));const so=erhuOpts(F(lastConverted.source.lines),'source');Jianpu.render($('scorePreview'),F(lastConverted.source.lines),so);renderTrans();
+ const flute=F(lastConverted.lines);Jianpu.render($('scoreOutput'),flute,scoreDisplayOptions(flute,'flute'));const so=erhuOpts(F(lastConverted.source.lines),'source');Jianpu.render($('scorePreview'),F(lastConverted.source.lines),so);renderTrans();
  const summary=(view==='trans'?erhuFor(transLines,'trans'):so.summary);$('erhuSummary').textContent=summary?`推算：换把 ${summary.shifts} 次${summary.unplayable?`，${summary.unplayable} 个音无法推算（音域或颤音手型，标 ?）`:''}；仅供参考`:'';
  staffDirty=true;if(view==='staff')showStaff();
 }
@@ -533,7 +550,7 @@ function paginate(){
 function computeFont(){if(isStaff(vView)||vLayout==='width')vFont=null}
 async function drawPage(host,lines,endsPiece=true){
  const {w,h}=box();host.replaceChildren();host.style.width=w+'px';host.style.height=h+'px';
- if(isStaff(vView)){const inner=document.createElement('div');host.append(inner);await Staff.render(inner,lines,{keyLabel:staffKey(vView),partNames:scoreParts(),width:w,responsive:false});const sw=Math.max(inner.scrollWidth,inner.getBoundingClientRect().width,1),sh=Math.max(inner.scrollHeight,inner.getBoundingClientRect().height,1),k=Math.min((w-4)/sw,(h-4)/sh,1.6);const frame=document.createElement('div');frame.style.cssText=`position:relative;width:${sw*k}px;height:${sh*k}px`;host.append(frame);frame.append(inner);inner.style.cssText=`position:absolute;left:0;top:0;width:${sw}px;transform-origin:top left;transform:scale(${k})`;return}
+ if(isStaff(vView)){const inner=document.createElement('div');host.append(inner);await Staff.render(inner,lines,{keyLabel:staffKey(vView),partNames:scoreParts(),...scoreDisplayOptions(lines,vView),width:w,responsive:false});const sw=Math.max(inner.scrollWidth,inner.getBoundingClientRect().width,1),sh=Math.max(inner.scrollHeight,inner.getBoundingClientRect().height,1),k=Math.min((w-4)/sw,(h-4)/sh,1.6);const frame=document.createElement('div');frame.style.cssText=`position:relative;width:${sw*k}px;height:${sh*k}px`;host.append(frame);frame.append(inner);inner.style.cssText=`position:absolute;left:0;top:0;width:${sw}px;transform-origin:top left;transform:scale(${k})`;return}
  const sheet=document.createElement('div');sheet.className='jp-score viewer-sheet';host.append(sheet);sheet.style.fontSize='22px';
  Jianpu.render(sheet,lines,erhuOpts(lines,vView,{fit:false}));
  sheet.style.width='max-content';for(const r of sheet.querySelectorAll(':scope>.jp-line'))r.style.minWidth='0';
@@ -548,7 +565,7 @@ async function showPage(i){
  const body=$('viewerBody');body.replaceChildren();body.className='viewer-body layout-'+vLayout;
  if(vLayout==='width'){
   const sheet=document.createElement('div');body.append(sheet);
-  if(isStaff(vView))await Staff.render(sheet,vLines(),{keyLabel:staffKey(vView),partNames:scoreParts(),width:body.clientWidth-24});
+  if(isStaff(vView))await Staff.render(sheet,vLines(),{keyLabel:staffKey(vView),partNames:scoreParts(),...scoreDisplayOptions(vLines(),vView),width:body.clientWidth-24});
   else{sheet.className='jp-score viewer-sheet';sheet.style.fontSize='30px';Jianpu.render(sheet,vLines(),erhuOpts(vLines(),vView))}
   if(renderId!==viewerRenderId)return;
   $('viewerPage').textContent='';$('viewerPrev').disabled=$('viewerNext').disabled=true;return;
@@ -621,4 +638,4 @@ window.handleAppBack=()=>{if($('erhuPartDialog').open){$('erhuPartDialog').close
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-08 20:21:31
+// Modified by AI on 2026-10-08 20:41:46

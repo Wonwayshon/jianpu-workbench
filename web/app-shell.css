@@ -597,4 +597,13 @@ body.viewer-open>main,body.viewer-open>header,body.viewer-open>nav{display:none!
 .float-player{max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow:auto;z-index:70;-webkit-user-select:none}
 body:has(dialog[open]) .float-player{visibility:hidden}
 body.viewer-open:has(.viewer.editing) .float-player{display:none!important}
-/* Modified by AI on 2026-10-08 20:21:31 */
+.measure-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:4px 0 14px;font-size:14px;color:var(--muted)}
+.measure-controls label{margin:0;font-size:inherit}.measure-controls input[type=number]{width:65px;min-height:34px;padding:4px 8px}
+.viewer-measures{flex-wrap:nowrap;margin:0;white-space:nowrap;font-size:13px}.viewer-measures input[type=number]{width:54px}
+.jp-score .jp-line.jp-numbered-line{position:relative;padding-top:.9em!important}
+.jp-score .jp-line.jp-numbered-line.jp-decorated{padding-top:1.4em!important}
+.jp-score .jp-line.jp-numbered-line.jp-erhu-line{padding-top:.8em!important}
+.jp-measure-numbers{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.jp-measure-number{position:absolute;font:500 max(.42em,8px)/1.2 -apple-system,"PingFang SC",sans-serif;color:#566979;white-space:nowrap}
+.staff-measure-number{font:10px sans-serif;fill:#566979}
+/* Modified by AI on 2026-10-08 20:43:02 */

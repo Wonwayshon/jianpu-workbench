@@ -195,6 +195,33 @@ function measureTimeline(tokens){
  }
  if(current.events.length)measures.push(current);return measures;
 }
+// Written measures count once, independently in each voice. Pages, tempo changes and repeats do not reset them.
+function numberMeasures(lines){
+ const numbers=new Map(),next=new Map();
+ for(const line of lines){if(line.kind!=='music')continue;const part=line.part||'';let n=next.get(part)||1;
+  for(const measure of measureTimeline(line.tokens)){for(const e of measure.events)numbers.set(e.token,n);n++}
+  next.set(part,n);
+ }
+ return numbers;
+}
+function prepareMeasureLabels(host,lines,opts){
+ host._measureLabels=[];
+ const every=Math.floor(Number(opts.measureEvery)||0);if(every<1)return;
+ const numbers=opts.measureNumbers||numberMeasures(lines),rows=[...host.querySelectorAll(':scope>.jp-line'),...[...host.querySelectorAll('.jp-system')].map(s=>s.querySelector('.jp-line')).filter(Boolean)];
+ for(const row of rows){const measures=measureTimeline(row._musicLine.tokens),containers=[...row.querySelectorAll(':scope>.jp-measure')];
+  measures.forEach((m,i)=>{const n=numbers.get(m.events[0]?.token);if(!n||(n-1)%every)return;
+   host._measureLabels.push({number:n,row,anchor:containers[i]||m.events[0].token._cell});row.classList.add('jp-numbered-line');
+  });
+ }
+}
+function drawMeasureLabels(host){
+ host.querySelector(':scope>.jp-measure-numbers')?.remove();if(!host._measureLabels?.length)return;
+ const overlay=el('div','jp-measure-numbers'),box=host.getBoundingClientRect();overlay.setAttribute('aria-label','小节号');
+ for(const {number,row,anchor} of host._measureLabels){const a=anchor.getBoundingClientRect(),r=row.getBoundingClientRect(),label=el('span','jp-measure-number',String(number));
+  label.style.left=(a.left-box.left+host.scrollLeft)+'px';label.style.top=(r.top-box.top+host.scrollTop)+'px';label.title='第 '+number+' 小节';overlay.append(label);
+ }
+ host.append(overlay);
+}
 function silentMeasure(m){return m.events.length>0&&m.events.every(e=>['rest','dash'].includes(e.token.t)&&!e.token.orns?.length)}
 function mainHeight(tokens){return Math.max(1.1,...tokens.filter(t=>t.t==='chord').map(t=>t.notes.reduce((h,n)=>h+1.1+(n.octave?Math.abs(n.octave)*.18+.04:0),0)))}
 // Reuse the original cells/tokens, so editor navigation, playback cursors and per-voice sound stay intact.
@@ -365,6 +392,7 @@ function render(host,lines,opts={}){
   add(row);
  }
  compactStaves(host,partNames);
+ prepareMeasureLabels(host,lines,opts);
  host._arcs=arcs;host._tuplets=tuplets;fitWidth(host);justify(host);drawOverlay(host);
  if(!host._observer&&'ResizeObserver' in window){let lastWidth=0;host._observer=new ResizeObserver(()=>{if(host.clientWidth!==lastWidth){lastWidth=host.clientWidth;fitWidth(host);justify(host)}drawOverlay(host)});host._observer.observe(host)}
 }
@@ -405,6 +433,7 @@ function fitWidth(host){
 }
 
 function drawOverlay(host){
+ drawMeasureLabels(host);
  host.querySelector(':scope>svg.jp-slurs')?.remove();
  const arcs=host._arcs||[],tuplets=host._tuplets||[];if(!arcs.length&&!tuplets.length)return;
  const ns='http://www.w3.org/2000/svg',box=host.getBoundingClientRect();
@@ -427,6 +456,6 @@ function drawOverlay(host){
  host.prepend(svg);
 }
 
-window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline};
+window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline,numberMeasures};
 })();
-// Modified by AI on 2026-10-08 20:21:31
+// Modified by AI on 2026-10-08 20:41:46

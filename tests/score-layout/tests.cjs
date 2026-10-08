@@ -60,6 +60,18 @@ const timed=J.measureTimeline(J.parse('3{1/2/3/} ^5//6. 0/ |').lines[0].tokens)[
 assert.ok(Math.abs(timed.duration-3)<1e-8,'tuplets, dots and non-counted grace notes share playback beat units');
 console.log('PASS: named staff grouping, per-measure silent voice compaction, beat columns, original token/cursor identities, untouched serialization, part filtering and conservative mismatch fallback.');
 
+// Written measure numbering survives pages, repeats, display filtering and later page subsets.
+const numbered=J.parse('@part A · 笛\n@part B · 胡\n[A] |: 1 | 0 | 2 :|\n[B] 3 | 4 | 5 |\n@page 2\n[A] 6 | 7 | 1 |\n[B] 2 | 3 | 4 |');
+const numberMap=J.numberMeasures(numbered.lines),lastSystem=J.groupSystems(numbered.lines).filter(b=>b.kind==='system').at(-1);
+assert.equal(numberMap.get(lastSystem.lines[0].tokens.find(t=>t.t==='note')),4);
+J.render(host,numbered.lines,{fit:false,measureEvery:2,measureNumbers:numberMap});
+assert.deepEqual(host.querySelectorAll('.jp-measure-number').map(e=>e.textContent),['1','3','5'],'total score marks top visible voice only');
+J.render(host,lastSystem.lines,{fit:false,measureEvery:2,measureNumbers:numberMap});assert.deepEqual(host.querySelectorAll('.jp-measure-number').map(e=>e.textContent),['5'],'later pages do not reset to one');
+J.render(host,J.filterParts(numbered.lines,['B']),{fit:false,measureEvery:2,measureNumbers:numberMap});assert.deepEqual(host.querySelectorAll('.jp-measure-number').map(e=>e.textContent),['1','3','5']);
+J.render(host,J.parse('1 | 2 | 3 | 4 | 5 |').lines,{fit:false,measureEvery:4});assert.deepEqual(host.querySelectorAll('.jp-measure-number').map(e=>e.textContent),['1','5']);
+J.render(host,numbered.lines,{fit:false});assert.equal(host.querySelectorAll('.jp-measure-number').length,0,'unchecked removes numbering');
+console.log('PASS: small measure labels, configurable interval, full-score deduplication, repeat/page/filter continuity and disabled cleanup.');
+
 // Run actual numbered pagination against deterministic measured system heights.
 const controls=new Map(),$=id=>{if(!controls.has(id))controls.set(id,new El('div'));return controls.get(id)};
 c.$=$;c.document.body=new El('body');$('viewerBody').clientWidth=1000;$('viewerBody').clientHeight=420;
@@ -106,4 +118,4 @@ vm.runInContext(view.slice(view.indexOf('async function showPage('),view.indexOf
  assert.deepEqual($('viewerBody').children.map(e=>e.attrs['aria-label']),['第 3 页','第 4 页']);assert.match($('viewerPage').textContent,/3–4/);
  console.log('PASS: measured two-page available area, full-score pagination retains all 36 rows in intact systems; rapid page turns do not append stale pages.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-08 20:21:31
+// Modified by AI on 2026-10-08 20:41:46
