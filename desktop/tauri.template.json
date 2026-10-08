@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "笛调之间",
+  "identifier": "wang.weixuan.flutekeylab",
+  "build": {
+    "beforeDevCommand": "node ../scripts/serve.mjs --target desktop --port 1420",
+    "beforeBuildCommand": "node ../scripts/build.mjs web --target desktop",
+    "devUrl": "http://127.0.0.1:1420",
+    "frontendDist": "../../dist/desktop/web"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": null,
+      "capabilities": [
+        "main"
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app",
+      "dmg",
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "infoPlist": "Info.plist",
+      "signingIdentity": "-",
+      "entitlements": "Entitlements.plist"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    }
+  }
+}

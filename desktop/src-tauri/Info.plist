@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>NSMicrophoneUsageDescription</key><string>麦克风用于检测乐器音高和调音。</string>
+<key>NSCameraUsageDescription</key><string>摄像头用于扫描乐谱分享二维码。</string>
+</dict></plist>

@@ -1,0 +1,27 @@
+{
+  "name": "flute-key-lab-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "build:web": "node scripts/build.mjs web",
+    "build:desktop": "node scripts/desktop.mjs build",
+    "dev:desktop": "node scripts/desktop.mjs dev",
+    "check:desktop": "node scripts/desktop.mjs check",
+    "build:android": "node scripts/build.mjs android",
+    "export:android": "node scripts/build.mjs export-android",
+    "build:checker": "node scripts/build.mjs checker",
+    "test": "node scripts/test.mjs",
+    "check": "node scripts/build.mjs check",
+    "release:source": "node scripts/build.mjs source",
+    "package:mac": "node scripts/package-mac.mjs",
+    "security:check": "node scripts/security-check.mjs",
+    "security:history": "node scripts/security-check.mjs --history",
+    "security:install": "node scripts/install-hooks.mjs",
+    "prepare": "node scripts/install-hooks.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "fake-indexeddb": "6.2.4"
+  },
+  "license": "GPL-3.0-only"
+}

@@ -1,0 +1,11 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const project=JSON.parse(fs.readFileSync('project.json','utf8')),dirs=['dist/web','dist/android/assets','dist/desktop/web'];
+function files(root,prefix=''){return fs.readdirSync(path.join(root,prefix),{withFileTypes:true}).flatMap(e=>e.isDirectory()?files(root,path.join(prefix,e.name)):[path.join(prefix,e.name)])}
+const core=files('web').filter(f=>f!=='index.html');for(const dir of dirs){const info=JSON.parse(fs.readFileSync(path.join(dir,'build-info.json'),'utf8'));assert.equal(info.version,project.version);for(const file of core)assert.ok(fs.readFileSync(path.join('web',file)).equals(fs.readFileSync(path.join(dir,file))),`${dir}/${file}`);for(const file of files('platform'))assert.ok(fs.readFileSync(path.join('platform',file)).equals(fs.readFileSync(path.join(dir,'platform',file))));
+ const html=fs.readFileSync(path.join(dir,'index.html'),'utf8');for(const m of html.matchAll(/<script[^>]+src="([^"]+)"/g))assert.ok(fs.existsSync(path.join(dir,m[1].split('?')[0])));assert.ok(html.includes('platform/bridge.js'));
+ if(dir.includes('desktop')){assert.ok(!html.includes('<meta http-equiv="Content-Security-Policy"'));continue}
+ const policy=html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)[1];assert.ok(!policy.split('script-src')[1].split(';')[0].includes('unsafe-inline'));for(const m of html.matchAll(/<script\s*>([\s\S]*?)<\/script>/g))assert.ok(policy.includes('sha256-'+crypto.createHash('sha256').update(m[1]).digest('base64')));
+}
+const config=JSON.parse(fs.readFileSync('desktop/src-tauri/tauri.conf.json','utf8'));assert.equal(config.version,project.version);assert.equal(config.identifier,project.identifier);assert.ok(config.app.security.csp.includes('ipc:'));assert.equal(config.bundle.windows.webviewInstallMode.type,'downloadBootstrapper');
+const gradle=fs.readFileSync('android/app/build.gradle','utf8');assert.ok(gradle.includes('project.json')&&gradle.includes('syncWebAssets'));assert.ok(!fs.existsSync('android/app/src/main/assets'),'Android has no second editable web source');
+console.log('PASS: all three builds use identical canonical core/adapters, valid scripts/CSP, unified version/identifier, Android automatic sync and lightweight desktop configuration.');

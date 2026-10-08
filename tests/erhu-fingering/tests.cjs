@@ -1,0 +1,66 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root='web/';
+const ctx=vm.createContext({window:{}});for(const f of ['jianpu.js','erhu-fingering.js'])new vm.Script(fs.readFileSync(root+f,'utf8'),{filename:f}).runInContext(ctx);
+const J=ctx.window.Jianpu,E=ctx.window.ErhuFingering,steps=[0,2,4,5,7,9,11];
+function run(text,key=7,tuning=[62,69]){const p=J.parse(text);for(const t of p.notes)t.midi=60+key+steps[t.degree-1]+12*t.octave+t.acc;return {p,r:E.annotate(p.lines,{tuning,keyOf:()=>key})}}
+const opening='3/0/ 5/0/ 6/0/ 7/0/ | 6//6//5/ 3/7/ 6//6//5/ 3 - |';
+let {p,r}=run(opening);
+const chosen=p.notes.map(t=>r.map.get(t));assert.deepEqual(Array.from(chosen.slice(0,4),x=>x.finger),[1,1,2,3]);
+assert.equal(r.shifts,1);assert.ok(chosen.slice(1).every(x=>x.anchor===5));
+assert.deepEqual(Array.from(chosen.slice(4),x=>x.finger),[2,2,1,3,3,2,2,1,3]);
+// With standard D-A tuning, D5/E5/F#5 fit 1/2/3 on the same outer-string frame.
+assert.equal(chosen[1].anchorMidi,74);assert.equal(chosen[8].finger,3);assert.equal(p.notes[8].midi,78);
+function checkTrill(t,c,tuning){
+ if(c.finger==null)return;
+ assert.ok(c.finger<4,'no trill starts on finger 4');assert.ok(c.trill.finger>c.finger&&c.trill.finger<=4);
+ assert.equal(c.trill.string,c.string);assert.equal(c.trill.anchor,c.anchor);
+ assert.ok(c.trill.midi>t.midi);
+ const off=c.trill.midi-tuning[c.string]-c.anchor;
+ assert.ok(off>=c.trill.finger-1&&off<=2*(c.trill.finger-1),'auxiliary fits without extension');
+}
+let count=0;
+for(let key=0;key<12;key++)for(const tuning of [[62,69],[60,67],[55,62]]){
+ const z=run("1 2 3 4 5 6 7 1' | 1!tr 2!tr 3!tr 4!tr 5!tr 6!tr 7!tr 1'!tr",key,tuning);
+ for(const t of z.p.notes)if(t.orns.includes('tr')){checkTrill(t,z.r.map.get(t),tuning);count++}
+}
+({p,r}=run('6!tr - - - |'));const six=r.map.get(p.notes[0]);assert.equal(six.trill.midi,78);assert.equal(six.finger,2);assert.equal(six.trill.finger,3);
+({p,r}=run('b7!tr',0));assert.equal(r.map.get(p.notes[0]).trill.midi,72,'flattened 7 trills to 1, not natural 7');
+({p,r}=run('#4!tr',0));assert.equal(r.map.get(p.notes[0]).trill.midi,67);
+({p,r}=run('#7!tr',0));assert.equal(r.map.get(p.notes[0]).reason,'trill');assert.equal(r.trillUnavailable,1,'do not fabricate an octave-high auxiliary for enharmonic unison');
+({p,r}=run("7''!tr",7));assert.equal(r.map.get(p.notes[0]).finger,null,'out of range stays unknown');
+({p,r}=run('6 6!tr 6'));assert.ok(p.notes.every(t=>r.map.get(t).anchor===r.map.get(p.notes[1]).anchor),'look ahead and prepare for the trill');
+({p,r}=run('6 0 - 3'));assert.equal(r.map.get(p.notes[1]).finger,1,'long rest permits return to first position');
+// No new rule forbids ordinary fourth fingers.
+({p,r}=run('3 4 5 6'));assert.deepEqual(Array.from(p.notes,t=>r.map.get(t).finger),[1,2,3,4]);
+// Repeated 5s keep finger 3, including a returning open-string 2: shift on the new 6, with 2↔3.
+const repeated='5/0/ 5/0/ 5/0/ 5/0/ | 2 5//(5// 5/)2/ 5 | 6!tr - - - |';
+const continuation='6,/1/ 2/3/ 1/2/ 3/5/ | 6 - - 5 | 3 - - - | 2 - - 3 |';
+for(const phrase of [repeated,repeated+continuation,repeated+continuation+'2 - - - | 6 - - - | 5 - - - |','5 5 5 | 6!tr - - - |','5 2 5 | 6!tr - - - |']){
+ const z=run(phrase),tr=z.p.notes.find(t=>t.orns.includes('tr')),fives=z.p.notes.slice(0,z.p.notes.indexOf(tr)).filter(t=>t.degree===5);
+ for(const t of fives){const f=z.r.map.get(t);assert.equal(f.finger,3);assert.equal(f.anchor,2);assert.equal(f.shift,undefined)}
+ const f=z.r.map.get(tr);assert.equal(f.finger,2);assert.equal(f.trill.finger,3);assert.equal(f.anchor,5);assert.equal(f.shift,'up');assert.equal(z.p.notes.slice(0,z.p.notes.indexOf(tr)+1).filter(t=>z.r.map.get(t).shift).length,1);
+}
+// Third/fourth-finger trills remain available when they preserve an already useful hand frame.
+({p,r}=run('3 4 5!tr 4 3'));assert.equal(r.map.get(p.notes[2]).finger,3);assert.equal(r.map.get(p.notes[2]).trill.finger,4);
+// D-major shift regression cases: prefer prepared shifts over repeated little-finger stretches.
+({p,r}=run("6//1'//2'//3'// 2'//1'//6//5// |",2));
+assert.deepEqual(Array.from(p.notes,t=>r.map.get(t).finger),[1,1,2,3,2,1,1,0]);
+assert.equal(r.map.get(p.notes[1]).shift,'up');assert.ok(p.notes.every(t=>!r.map.get(t).extended));
+({p,r}=run("5/3/5/6/ 1'//3'//2'//7// |",2));
+assert.deepEqual(Array.from(p.notes.slice(4),t=>r.map.get(t).finger),[1,3,2,2]);
+assert.equal(r.map.get(p.notes[4]).shift,'up');assert.equal(r.map.get(p.notes[7]).shift,'down');assert.ok(p.notes.every(t=>!r.map.get(t).extended));
+// Incoming context used to favour a large index shift and a second shift at the final 1'.
+({p,r}=run("6!tr - - - | 0/2'/ | 3'/3'/ | 5'/3'/3'/2'/1'/ |",2));
+const phrase=p.notes.slice(1);assert.deepEqual(Array.from(phrase,t=>r.map.get(t).finger),[2,3,3,4,3,3,2,1]);
+assert.equal(r.map.get(phrase[0]).shift,'up');assert.equal(r.map.get(phrase.at(-1)).shift,undefined);
+assert.equal(phrase.filter(t=>r.map.get(t).extended).length,1,'one isolated peak may stretch; do not ban all extensions');
+assert.equal(r.map.get(phrase[3]).extended,true);
+// Changing the key in mid-piece must change the trill upper neighbour.
+p=J.parse('3!tr 3!tr');p.notes.forEach(t=>t.midi=64);
+r=E.annotate(p.lines,{keyOf:t=>t===p.notes[0]?0:2});assert.equal(r.map.get(p.notes[0]).trill.midi,65);assert.equal(r.map.get(p.notes[1]).trill.midi,67);
+// Inspect rendered annotation text and the actionable unavailable-trill tooltip without a browser.
+ctx.document={createElement:()=>({children:[],textContent:'',append(...xs){this.children.push(...xs)}})};
+const label=E.label(six);const all=n=>(n.textContent||'')+n.children.map(all).join('');assert.match(all(label),/二↔三/);
+const bad=E.label({finger:null,reason:'trill'});assert.match(bad.children[1].children[0].title,/颤音手型/);
+console.log(`PASS: opening 1123, one prepared shift, stable following frame; repeated 5 stays on 3 / shift at 6 with 2↔3; ${count} trills across 12 keys and 3 tunings; upper-degree accidentals; impossible trills; ordinary fourth fingers; phrase restart; label and tooltip.`);
+// Modified by AI on 2026-10-08 14:21:25

@@ -1,0 +1,21 @@
+plugins { id 'com.android.application' }
+def workspaceRoot = rootProject.projectDir.parentFile
+def release = new groovy.json.JsonSlurper().parse(new File(workspaceRoot, 'project.json'))
+android {
+    namespace release.identifier
+    compileSdk 35
+    defaultConfig {
+        applicationId release.identifier
+        minSdk release.minAndroidSdk
+        targetSdk release.targetAndroidSdk
+        versionCode release.androidVersionCode
+        versionName release.version
+    }
+    sourceSets { main { assets.srcDirs = [new File(workspaceRoot, 'dist/android/assets')] } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+}
+tasks.register('syncWebAssets', Exec) {
+    workingDir workspaceRoot
+    commandLine 'node', 'scripts/build.mjs', 'web', '--target', 'android'
+}
+tasks.named('preBuild').configure { dependsOn 'syncWebAssets' }
