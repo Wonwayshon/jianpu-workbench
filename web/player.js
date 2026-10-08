@@ -105,12 +105,13 @@ function setupMix(){
  // The room reverb is fed from the melody bus, so the balance scales it too.
  const send=ctx.createGain();send.gain.value=(Synth.MODELS[timbreName]||Synth.MODELS.flute).reverb;melodyBus.connect(send);send.connect(wet);
 }
-function tone(time,midi,dur,legato,stacc,vol,prevMidi,timbre=timbreName,bus=null){
+function tone(time,midi,dur,legato,stacc,vol,prevMidi,timbre=timbreName,bus=null,resumeOffset=0){
  if(!dry)setupMix();
  const model=Synth.MODELS[timbre]||Synth.MODELS.flute,len=Math.max(0.06,stacc?dur*0.45:legato?dur:dur*0.93);
+ if(resumeOffset>=len)return;
  const src=ctx.createBufferSource();src.buffer=Synth.note(timbre,midi,len,ctx.sampleRate,prevMidi);
  const g=ctx.createGain();g.gain.value=model.gain*vol;src.connect(g);g.connect(bus||melodyBus);
- src.start(Math.max(time,ctx.currentTime));
+ src.start(Math.max(time,ctx.currentTime),resumeOffset);
 }
 // Generic unpitched hit: a short decaying noise burst, independent of the selected pitched instrument.
 // X identifies a hit, not a particular drum; never invent a MIDI pitch or send it through flute synthesis.
@@ -145,7 +146,7 @@ function visibleTargets(token){
  return [];
 }
 function stop(){
- if(!playing)return;cancelAnimationFrame(playing.raf);for(const c of playing.cells)c.classList.remove('jp-playing');
+ if(!playing)return;cancelAnimationFrame(playing.raf);clearInterval(playing.timer);for(const c of playing.cells)c.classList.remove('jp-playing');
  const done=playing.onEnd;playing=null;partBuses.clear();if(ctx){ctx.close();ctx=null;dry=wet=melodyBus=clickBus=null}if(done)done();
 }
 
@@ -158,6 +159,8 @@ function play(lines,opts,onEnd){
  const events=all.events.filter(e=>e.start>=offset-1e-9);
  if(!events.length)return false; // silent cursor-only playback is allowed (melody and metronome both off)
  if(ctx){ctx.close();}ctx=new (window.AudioContext||window.webkitAudioContext)();dry=wet=melodyBus=clickBus=null;
+ if(ctx.state==='suspended')ctx.resume().catch(()=>{});
+ const audioContext=ctx;
  const spb=60/s.tempo,m=meter(s.time==='auto'?timeOf(lines):s.time),barBeats=m.beats*m.unit;
  // Playback starts right at the chosen note; clicks keep the piece's bar phase, so the accented click still falls
  // on each bar's first beat (count-in, when on, adds one bar before the start).
@@ -168,10 +171,13 @@ function play(lines,opts,onEnd){
  for(const id of all.parts){const bus=ctx.createGain();bus.gain.value=s.partMute?.[id]?0:1;bus.connect(melodyBus);partBuses.set(id,bus)}
  const prevByPart=new Map(),timbreOf=p=>{const t=s.partTimbres?.[p];return t&&t in TIMBRES?t:timbreName};
  let si=0;const ahead=()=>{if(s.muteMelody)return;while(si<events.length&&start+events[si].start*spb<ctx.currentTime+1.2){const e=events[si++];
-  const when=start+e.start*spb,prev=prevByPart.get(e.part),bus=partBuses.get(e.part);
+  const when=start+e.start*spb,now=ctx.currentTime,late=when<now-0.04,prev=prevByPart.get(e.part),bus=partBuses.get(e.part);
+  // Never replay a backlog at the current instant. Resume only the tail of a still-sounding note.
+  const resumeOffset=late?Math.max(0,now-when):0;
+  if(late&&(e.percussion||when+e.beats*spb<=now)){prevByPart.set(e.part,e.midi!=null?e:null);continue}
   if(e.percussion){percussion(when,(e.token.orns||[]).includes('accent'),e.stacc,bus);prevByPart.set(e.part,null)}
-  else if(e.midis){for(const mm of e.midis)tone(when,mm,e.beats*spb,e.legato,e.stacc,0.75,null,timbreOf(e.part),bus);prevByPart.set(e.part,null)}
-  else if(e.midi!=null){tone(when,e.midi,e.beats*spb,e.legato,e.stacc,1,prev&&prev.legato?prev.midi:null,timbreOf(e.part),bus);prevByPart.set(e.part,e)}
+  else if(e.midis){for(const mm of e.midis)tone(when,mm,e.beats*spb,e.legato,e.stacc,0.75,null,timbreOf(e.part),bus,resumeOffset);prevByPart.set(e.part,null)}
+  else if(e.midi!=null){tone(when,e.midi,e.beats*spb,e.legato,e.stacc,1,prev&&prev.legato?prev.midi:null,timbreOf(e.part),bus,resumeOffset);prevByPart.set(e.part,e)}
   else prevByPart.set(e.part,null)}};
  ahead();
  const beats=[],clicks=[];let ci=0;
@@ -194,22 +200,27 @@ function play(lines,opts,onEnd){
   beats.sort((a,b)=>a.time-b.time);clicks.sort((a,b)=>a.when-b.when);
  }
  // Clicks are created just ahead of time too (about 1.2 s), never all at once.
- const aheadClicks=()=>{while(ci<clicks.length&&clicks[ci].when<ctx.currentTime+1.2){click(clicks[ci].when,clicks[ci].kind,1);ci++}};aheadClicks();
+ const aheadClicks=()=>{while(ci<clicks.length&&clicks[ci].when<ctx.currentTime+1.2){const item=clicks[ci++];if(item.when>=ctx.currentTime-0.04)click(item.when,item.kind,1)}};aheadClicks();
  const end=Math.max(start+total*spb,s.metronome?start+all.warpBeat(Math.max(all.writtenTotal,writtenOffset+barBeats))*spb:0);
- playing={raf:0,cells,onEnd};
+ playing={raf:0,timer:0,cells,onEnd};const session=playing;
+ // The audio clock runs independently of visual animation, which WebViews pause when hidden/occluded.
+ const audioPulse=()=>{if(playing!==session||ctx!==audioContext)return;if(ctx.currentTime>=end+0.05){stop();return}ahead();aheadClicks()};
+ session.timer=setInterval(audioPulse,50);
  let idx=0,bi=0;const current=new Map(),leadPart=all.parts.includes(s.followPart)?s.followPart:(all.parts[0]??'');
  const tick=()=>{
-  if(!playing)return;const now=ctx.currentTime;ahead();aheadClicks();
-  while(idx<events.length&&start+events[idx].start*spb<=now){
-   const ev=events[idx],els=visibleTargets(ev.token);
-   for(const c of current.get(ev.part)||[])c.classList.remove('jp-playing');current.set(ev.part,els);
+  if(playing!==session||ctx!==audioContext)return;const now=ctx.currentTime,latest=new Map();
+  // When returning to the foreground, render only each part's current note, not every missed frame.
+  while(idx<events.length&&start+events[idx].start*spb<=now){const ev=events[idx++];latest.set(ev.part,ev)}
+  for(const [part,ev] of latest){const els=visibleTargets(ev.token);
+   for(const c of current.get(part)||[])c.classList.remove('jp-playing');current.set(part,els);
    for(const c of els){c.classList.add('jp-playing');cells.add(c)}
-   if(!ev.grace&&(ev.part??'')===leadPart)document.dispatchEvent(new CustomEvent('scoreplay',{detail:{token:ev.token,el:els[0]||null}}));idx++}
-  while(bi<beats.length&&beats[bi].time<=now){s.onBeat?.(beats[bi].index,m.beats);bi++}
+   if(!ev.grace&&(ev.part??'')===leadPart)document.dispatchEvent(new CustomEvent('scoreplay',{detail:{token:ev.token,el:els[0]||null}}));
+  }
+  let beat=null;while(bi<beats.length&&beats[bi].time<=now)beat=beats[bi++];if(beat)s.onBeat?.(beat.index,m.beats);
   if(now>=end+0.05){stop();return}
-  playing.raf=requestAnimationFrame(tick);
+  session.raf=requestAnimationFrame(tick);
  };
- playing.raf=requestAnimationFrame(tick);
+ session.raf=requestAnimationFrame(tick);
  return true;
 }
 
@@ -267,4 +278,4 @@ function setPartMute(id,muted){
 }
 window.ScorePlayer={timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,TIMBRE_LIST,play,stop,schedule,isPlaying:()=>!!playing,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-08 14:27:11

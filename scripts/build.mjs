@@ -19,6 +19,7 @@ export function buildWeb(target='web'){
  if(!['web','android','desktop'].includes(target))throw Error('Unknown target');
  const dest=target==='web'?path.join(root,'dist/web'):path.join(root,'dist',target,target==='android'?'assets':'web');fs.rmSync(dest,{recursive:true,force:true});fs.mkdirSync(dest,{recursive:true});fs.cpSync(path.join(root,'web'),dest,{recursive:true});fs.cpSync(path.join(root,'platform'),path.join(dest,'platform'),{recursive:true});
  let html=read('web/index.html').replace(/([?&]v=)[0-9.]+/g,'$1'+project.version);const policy=csp(html,target==='desktop');
+ for(const [name,value] of [['app-version',project.version],['app-platform',target==='desktop'?process.platform:target==='android'?'android':'browser'],['app-arch',process.arch]])html=html.replace(new RegExp('<meta name="'+name+'" content="[^"]*">'),'<meta name="'+name+'" content="'+value+'">');
  html=html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>\n?/,target==='desktop'?'':`<meta http-equiv="Content-Security-Policy" content="${policy}">\n`);fs.writeFileSync(path.join(dest,'index.html'),mark(html,'.html'));
  const manifest={version:project.version,target,assets:{}};for(const p of files(dest))manifest.assets[path.relative(dest,p).replaceAll('\\','/')]=hash(fs.readFileSync(p));fs.writeFileSync(path.join(dest,'build-info.json'),JSON.stringify(manifest,null,2)+'\n');
  if(target==='desktop'){
@@ -53,4 +54,4 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
  switch(task){case 'web':buildWeb(process.argv.includes('--target')?target:'web');break;case 'check':check();break;case 'export-android':exportAndroid();break;case 'checker':buildChecker();break;case 'android':exportAndroid();run('zsh',['scripts/build-android.sh']);break;case 'source':run('python3',['scripts/export-source.py']);break;default:throw Error('Unknown build command: '+task)}
  }catch(e){console.error(e.message);process.exitCode=1}
 }
-// Modified by AI on 2026-10-08 10:14:35
+// Modified by AI on 2026-10-08 14:35:52

@@ -113,6 +113,7 @@ fn open_external(url:String)->Result<(),String>{endpoint(&url)?;webbrowser::open
 pub fn run(){
     tauri::Builder::default().manage(State {credentials:Mutex::new(()),slots:tokio::sync::Semaphore::new(4),client:reqwest::Client::builder().redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(250)).connect_timeout(Duration::from_secs(20)).build().expect("HTTPS client")})
     .setup(|app|{tauri::WebviewWindowBuilder::new(app,"main",tauri::WebviewUrl::App("index.html".into())).title("笛调之间").inner_size(1280.0,840.0).min_inner_size(760.0,540.0)
+        .background_throttling(tauri::utils::config::BackgroundThrottlingPolicy::Disabled)
         .on_navigation(|url|url.scheme()=="tauri"||url.host_str()==Some("tauri.localhost")||(cfg!(debug_assertions)&&[Some("localhost"),Some("127.0.0.1")].contains(&url.host_str())&&url.port()==Some(1420)))
         .build()?;Ok(())})
     .invoke_handler(tauri::generate_handler![credential_list,credential_store,credential_remove,http_request,save_file,copy_text,read_clipboard,print_score,set_immersive,open_external])

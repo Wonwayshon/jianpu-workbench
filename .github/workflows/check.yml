@@ -2,8 +2,12 @@ name: Check and build desktop
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths: ['web/**', 'platform/**', 'desktop/**', 'scripts/**', 'tests/**', 'project.json', 'package*.json', '.github/workflows/**']
   pull_request:
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

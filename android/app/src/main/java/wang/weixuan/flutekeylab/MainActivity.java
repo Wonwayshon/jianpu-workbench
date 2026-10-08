@@ -325,6 +325,11 @@ public final class MainActivity extends Activity {
     private void toast(String message) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show(); }
 
     public final class NativeTools {
+        @JavascriptInterface public void openExternal(String url) {
+            runOnUiThread(() -> { try { routeNavigation(Uri.parse(CredentialVault.endpoint(url).toString())); }
+                catch (Exception error) { toast("链接无效。"); } });
+        }
+
         @JavascriptInterface public boolean storeCredential(String id, String kind, String url, String user, String secret) {
             if (!trustedDocument) return false;
             try { return vault.save(id, kind, url, user, secret); } catch (Exception error) { return false; }
@@ -624,4 +629,4 @@ public final class MainActivity extends Activity {
         super.onDestroy();
     }
 }
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-08 14:35:52

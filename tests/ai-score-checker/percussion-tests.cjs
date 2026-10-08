@@ -51,7 +51,7 @@ class Audio {
  close(){}
 }
 ctx.window.AudioContext=Audio;ctx.Synth={MODELS:{flute:{gain:1,reverb:0}},impulse:()=>null,note:()=>{melodic++;return null}};
-ctx.requestAnimationFrame=()=>1;ctx.cancelAnimationFrame=()=>{};ctx.document={dispatchEvent(){}};ctx.CustomEvent=class {};
+ctx.setInterval=()=>2;ctx.clearInterval=()=>{};ctx.requestAnimationFrame=()=>1;ctx.cancelAnimationFrame=()=>{};ctx.document={dispatchEvent(){}};ctx.CustomEvent=class {};
 P.play(J.parse('X/ 0/ X/').lines,{tempo:120},()=>{});assert.equal(hits.length,2);assert.equal(melodic,0);P.stop();
 hits=[];P.play(J.parse('[打] X/ X/').lines,{tempo:120,partMute:{打:true}},()=>{});assert.equal(hits.length,2);assert.ok(hits.every(h=>h.node.target.target.gain.value===0),'muted hits stay scheduled behind a silent part bus');P.stop();
 hits=[];P.play(J.parse('X X').lines,{tempo:120,muteMelody:true},()=>{});assert.equal(hits.length,0);P.stop();
@@ -59,4 +59,4 @@ const tool=require(path.resolve('outputs/ai-score-checker/validate-score.cjs')),
 for(const x of ['X X |','x/x/ |',text]){const r=tool.validate(x,{kind:'jianpu'},app).report;assert.equal(r.ok,true);assert.ok(r.summary.percussion>0)}
 assert.equal(tool.validate('\n'.repeat(29)+text,{kind:'jianpu'},app).report.ok,true);
 console.log('PASS: exact 7-bar user example (18 hits/10 rests/14 beats); rhythm/roundtrip/errors; cleanup; real transposition; parts; ABC cross heads; audio/mute dispatch; X-only checker; line 30.');
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-08 14:27:11

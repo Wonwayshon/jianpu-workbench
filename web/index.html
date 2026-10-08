@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-R0Wb5en7mvsOzK+1FXqosTcEROjswe3oOUxvmTtw8Xo=' 'sha256-pgc5W2G6vVstQYTVA2s7tdBUszpSASrT9F6KP3Bn7DE=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https: blob:; worker-src 'self' blob:; media-src 'self' blob: data:; font-src 'self' data:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="app-version" content="development">
+<meta name="app-platform" content="browser">
+<meta name="app-arch" content="unknown">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="pdf-workbench.css">
 <script src="platform/browser.js"></script>
@@ -27,6 +30,7 @@
 <script src="flute-chart.js?v=1.20.0" defer></script>
 <script src="whistle-chart.js?v=1.20.0" defer></script>
 <script src="tuner.js?v=1.20.0" defer></script><script src="practice.js?v=1.20.0" defer></script>
+<script src="app-updates.js?v=1.20.0" defer></script>
 <title>笛调之间 · 竹笛 / 篠笛 / 长笛 / 二胡</title>
 <style>
 :root{color-scheme:light;--ink:#182d3d;--muted:#566979;--blue:#145baf;--line:#d8e2ed;--bg:#f1f5fa;--paper:#fff;--soft:#eaf2ff;--warn:#875212}
@@ -142,7 +146,8 @@ nav{flex-wrap:wrap}.erhu-tuning{display:flex;flex-wrap:wrap;gap:12px;margin:20px
 <details class="dav-settings"><summary>WebDAV 同步</summary><p class="subtle">把谱库同步到坚果云、Nextcloud、群晖等 WebDAV 网盘，多台设备使用同一个远端文件夹即可互相同步。只支持 https 地址；Android 中密码由系统密钥加密保存；网页版只保留本次会话；桌面版使用系统凭据存储。</p><div class="fields"><div class="field"><label for="davPreset">服务商</label><select id="davPreset"><option value="">自定义</option><option value="https://dav.jianguoyun.com/dav/">坚果云</option><option value="https://你的服务器/remote.php/dav/files/用户名/">Nextcloud</option><option value="https://你的服务器:5006/">群晖 NAS</option></select></div><div class="field"><label for="davFolder">远端文件夹</label><input id="davFolder" type="text" autocomplete="off" spellcheck="false" placeholder="笛调之间"></div></div><label for="davUrl">服务器地址</label><input id="davUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://dav.jianguoyun.com/dav/"><div class="fields"><div class="field"><label for="davUser">用户名</label><input id="davUser" type="text" autocomplete="off" spellcheck="false"></div><div class="field"><label for="davPass">密码 / 应用密码</label><input id="davPass" type="password" autocomplete="off"></div></div><div class="toolbar"><button id="davSave">保存设置</button><button id="davForget">清除保存的密码</button><button id="davTest">测试连接</button><button id="davSync" class="primary">立即同步</button></div><p id="davLast" class="subtle"></p><p id="davStatus" class="status pdf-status" role="status"></p><p class="subtle">同步规则：每份存档比较修改时间，较新版本优先；覆盖前在本机保留可恢复版本，删除也会同步。原文件只在变化时上传或下载。坚果云需在网页端「安全选项」里生成第三方应用密码。</p></details><p id="pdfArchiveStatus" class="status pdf-status" role="status"></p></div>
 </div></div></section>
 <details class="card no-print"><summary>隐私与安全说明</summary><p>本工具不提供开发者账号服务。乐谱排版、换算、调音、PDF 文字提取与谱库管理在本机进行。只有主动使用视觉识别或 WebDAV 时，才会把所选图片、请求文字或谱库文件发往你配置的服务。</p><p>视觉识别使用你自己的 API Key，费用由对应服务商收取；服务商的数据保留规则需自行确认。麦克风仅用于调音、相机仅用于扫码，离开功能后停止使用。剪贴板仅在你点粘贴时读取。</p><p>Android 版的 API Key 和 WebDAV 密码由 Android Keystore 管理的密钥加密保存，不包含在二维码和谱库备份中。换设备或清除应用数据后需重新填写。网页版凭据仅保留在当前会话。</p><p>二维码、导出文字和谱库备份本身不加密，拿到文件的人可以读取内容，请只发给信任的人。回收站和历史版本保存在本机，可手动清空；卸载或清除应用数据会删除本机谱库。安全存储降低凭据泄露风险，不能保证已被控制的设备安全。</p></details>
-<footer>换算参考：<a href="https://www.suzuki-music.co.jp/app/uploads/11_WAG-4.pdf" target="_blank" rel="noopener">铃木篠笛指法表（第 3 页）</a><a href="https://vas-2.sakura.ne.jp/T03-Unsihyou_Toudai.pdf" target="_blank" rel="noopener">东京大学横笛会 · 本数对照</a><a href="https://www.yamaha.com/en/musical_instrument_guide/flute/play/play002.html" target="_blank" rel="noopener">Yamaha 长笛指法</a><p>除视觉大模型识别外全部离线可用 · 文件在本机处理</p></footer>
+<footer><p><span id="appVersion"></span> · <button id="appUpdate" type="button">检查更新</button></p>换算参考：<a href="https://www.suzuki-music.co.jp/app/uploads/11_WAG-4.pdf" target="_blank" rel="noopener">铃木篠笛指法表（第 3 页）</a><a href="https://vas-2.sakura.ne.jp/T03-Unsihyou_Toudai.pdf" target="_blank" rel="noopener">东京大学横笛会 · 本数对照</a><a href="https://www.yamaha.com/en/musical_instrument_guide/flute/play/play002.html" target="_blank" rel="noopener">Yamaha 长笛指法</a><p>除视觉大模型识别外全部离线可用 · 文件在本机处理</p></footer>
+<dialog id="updateDialog" class="sheet"><div class="sheet-head"><h2>应用更新</h2><button id="updateClose" type="button" class="small-btn">关闭</button></div><p id="updateCurrent" class="subtle"></p><p id="updateStatus" role="status" aria-live="polite"></p><pre id="updateNotes" style="white-space:pre-wrap;max-height:45vh;overflow:auto;font:inherit"></pre><div class="toolbar"><button id="updateRetry" type="button">重新检查</button><button id="updateDownload" type="button" class="primary" hidden>下载新版安装包</button></div><p class="subtle">下载完成后按系统提示安装。更新前可在谱库导出备份。</p></dialog>
 </main>
 <dialog id="erhuPartDialog" class="sheet"><form method="dialog"><div class="sheet-head"><h2>二胡指法适用声部</h2><button value="cancel">取消</button></div><p class="subtle">只为勾选的声部推算二胡指法和弓法。各声部独立计算，未选声部保持普通排版。全选需在这里明确选择。</p><div class="toolbar"><button id="erhuSelectAll" type="button">全选</button><button id="erhuSelectNone" type="button">清空</button></div><div id="erhuPartChoices" class="part-display-choices"></div><p id="erhuPartError" class="error" role="alert" hidden></p><button id="erhuApplyParts" type="button" class="primary">应用声部</button></form></dialog>
 <dialog id="partDisplayDialog" class="sheet"><form method="dialog"><div class="sheet-head"><h2>选择显示的乐器</h2><button value="cancel">取消</button></div><p class="subtle">勾选的声部会一起显示在预览和全屏中。播放仍按「播放范围」设置。</p><div class="toolbar"><button id="displayAllParts" type="button">全选</button><button id="displayNoParts" type="button">清空选择</button></div><div id="partDisplayChoices" class="part-display-choices"></div><p id="partDisplayError" class="error" role="alert" hidden></p><button id="applyDisplayParts" type="button" class="primary">应用选择</button></form></dialog>
@@ -398,4 +403,4 @@ if(TAB_NAMES.includes(location.hash.slice(1)))showTab(location.hash.slice(1));
 </script>
 </body>
 </html>
-<!-- Modified by AI on 2026-10-08 10:06:28 -->
+<!-- Modified by AI on 2026-10-08 14:35:52 -->

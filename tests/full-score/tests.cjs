@@ -17,17 +17,18 @@ const p=J.parse('@key 1=C\n@time 2/4\n@part 笛 · 竹笛\n@part 琴 · 钢琴\n
 for(const t of p.notes)t.midi=60+[0,2,4,5,7,9,11][t.degree-1]+12*t.octave+t.acc;
 const schedule=P.schedule(p.lines);assert.equal(schedule.total,4);assert.equal(schedule.parts.length,3);
 assert.equal(schedule.events.find(e=>e.part==='琴').start,0);assert.equal(schedule.events.find(e=>e.midi===62&&e.part==='笛').start,2);
-let contexts=[],hits=[],raf;
+let contexts=[],hits=[],raf,audioPump,timerActive=false;
 class Audio{
  constructor(){contexts.push(this);this.currentTime=0;this.sampleRate=8000;this.destination={};this.closed=false}
  createGain(){return {gain:{value:0,setTargetAtTime(v){this.value=v}},connect(t){this.target=t}}}
  createDynamicsCompressor(){return Object.fromEntries(['threshold','knee','ratio','attack','release'].map(k=>[k,{value:0}]).concat([['connect',()=>{}]]))}
  createConvolver(){return {connect(){}}}
  createBuffer(n,len){return {getChannelData:()=>new Float32Array(len)}}
- createBufferSource(){return {connect(t){this.target=t},start(time){hits.push({node:this,time})},stop(){}}}
+ createBufferSource(){return {connect(t){this.target=t},start(time,offset=0){hits.push({node:this,time,offset})},stop(){}}}
  close(){this.closed=true}
 }
 c.window.AudioContext=Audio;c.Synth={MODELS:{flute:{gain:1,reverb:0},piano:{gain:1,reverb:0}},impulse:()=>null,note:(t,m)=>({t,m})};
+c.setInterval=f=>(audioPump=f,timerActive=true,2);c.clearInterval=()=>{timerActive=false};
 c.requestAnimationFrame=f=>(raf=f,1);c.cancelAnimationFrame=()=>{};c.document={dispatchEvent(){}};c.CustomEvent=class{};
 assert.equal(P.play(p.lines,{tempo:120,partTimbres:{琴:'piano'},partMute:{琴:true}},()=>{}),true);
 const flute=hits.find(h=>h.node.buffer?.m===60),chord=hits.filter(h=>h.node.buffer?.t==='piano');
@@ -36,7 +37,7 @@ const bus=h=>h.node.target.target;assert.equal(bus(flute).gain.value,1);assert.o
 contexts[0].currentTime=.3;P.setPartMute('笛',true);P.setPartMute('琴',false);
 assert.equal(bus(flute).gain.value,0);assert.ok(chord.every(h=>bus(h).gain.value===1));assert.equal(contexts.length,1);assert.ok(!contexts[0].closed&&P.isPlaying());
 const drum=hits.find(h=>!h.node.buffer?.t);assert.ok(drum);P.setPartMute('打',true);assert.equal(bus(drum).gain.value,0);
-contexts[0].currentTime=1;raf();assert.equal(contexts.length,1);assert.ok(hits.some(h=>h.node.buffer?.m===62&&h.time===1.12));
+contexts[0].currentTime=1;audioPump();raf();assert.equal(contexts.length,1);assert.ok(hits.some(h=>h.node.buffer?.m===62&&h.time===1.12));
 P.setPartMute('不存在',true);P.stop();assert.ok(contexts[0].closed);P.setPartMute('琴',false);
 
 // Starting from the main note must include its preceding grace notes.
@@ -75,10 +76,28 @@ console.log('PASS: four scoped prompts; three-part simultaneous scheduling acros
 
 // Actual audio scheduling and metronome both resume on the shared fermata clock.
 const fermata=J.parse('@part A · 笛\n@part B · 琴\n[A] 1!fermata | 2 |\n[B] 5 | 2 |');for(const t of fermata.notes)t.midi=60+t.degree;
-hits=[];P.play(fermata.lines,{tempo:60,metronome:true},()=>{});contexts.at(-1).currentTime=1;raf();
+hits=[];P.play(fermata.lines,{tempo:60,metronome:true},()=>{});contexts.at(-1).currentTime=1;audioPump();raf();
 const afterHold=hits.filter(h=>h.node.buffer?.m===62);assert.equal(afterHold.length,2);assert.ok(afterHold.every(h=>Math.abs(h.time-1.72)<1e-8));assert.ok(hits.some(h=>!h.node.buffer?.m&&Math.abs(h.time-1.72)<1e-8));P.stop();
 // Starting after a hold preserves count-in spacing and does not repeat the hold.
-hits=[];P.play(fermata.lines,{tempo:60,metronome:true,countIn:true,startToken:fermata.notes[1]},()=>{});contexts.at(-1).currentTime=3.1;raf();const resumed=hits.filter(h=>h.node.buffer?.m===62);assert.ok(resumed.every(h=>Math.abs(h.time-4.12)<1e-8));assert.equal(resumed.length,2);P.stop();
+hits=[];P.play(fermata.lines,{tempo:60,metronome:true,countIn:true,startToken:fermata.notes[1]},()=>{});contexts.at(-1).currentTime=3.1;audioPump();raf();const resumed=hits.filter(h=>h.node.buffer?.m===62);assert.ok(resumed.every(h=>Math.abs(h.time-4.12)<1e-8));assert.equal(resumed.length,2);P.stop();
 vm.runInContext(view.slice(view.indexOf('function syncTimingWarning('),view.indexOf('window.onScoreConverted=')),u);u.ScorePlayer.timingWarnings=()=>['笛一第 52 行 10 拍；笛二第 53 行 14 拍'];u.syncTimingWarning([]);assert.equal($('playbackWarning').hidden,false);assert.match($('playbackWarning').textContent,/14 拍/);assert.equal($('viewerPlaybackWarning').hidden,false);u.ScorePlayer.timingWarnings=()=>[];u.syncTimingWarning([]);assert.equal($('playbackWarning').hidden,true);
 console.log('PASS: real scheduling synchronizes post-fermata notes/metronome, count-in from a selected note, and timing-warning UI clear/update.');
-// Modified by AI on 2026-10-08 10:06:28
+
+// No animation callbacks run while another application covers the WebView. Audio must continue anyway.
+const backgroundPiece=J.parse('1 2 3 4 | 5 6 7 1 |');for(const n of backgroundPiece.notes)n.midi=60+n.degree;
+hits=[];let ended=0;P.play(backgroundPiece.lines,{tempo:60,metronome:true},()=>ended++);const backgroundContext=contexts.at(-1);
+for(let time=0.5;time<=7.5;time+=0.5){backgroundContext.currentTime=time;audioPump()}
+assert.equal(hits.filter(h=>h.node.buffer?.m).length,8,'audio continues without animation frames');
+assert.equal(hits.filter(h=>!h.node.buffer?.m).length,8,'metronome continues on the same clock');
+backgroundContext.currentTime=8.3;audioPump();assert.equal(ended,1);assert.equal(timerActive,false);
+// A severely delayed scheduler must discard elapsed melody/percussion/clicks, not collapse them into a chord.
+const delayed=J.parse('1 2 X 3 | 4 - - - |');for(const n of delayed.notes)n.midi=60+n.degree;
+hits=[];P.play(delayed.lines,{tempo:60,metronome:true},()=>{});const delayedContext=contexts.at(-1);hits=[];
+delayedContext.currentTime=3.6;audioPump();
+assert.equal(hits.filter(h=>h.node.buffer?.m).length,2);assert.ok(hits.every(h=>h.time>=3.6));
+assert.ok(Math.abs(hits.find(h=>h.node.buffer?.m===63).offset-.48)<1e-8,'resume the sounding tail without replaying its attack');
+assert.equal(hits.filter(h=>!h.node.buffer?.m).length,1,'no old percussion or click backlog');
+const count=hits.length;raf();raf();assert.equal(hits.length,count,'visual frames never schedule sound');
+P.stop();assert.equal(timerActive,false);audioPump();assert.equal(hits.length,count,'stopped timer callback cannot revive audio');
+console.log('PASS: audio and metronome run with animation suspended; missed notes/clicks are not replayed in a burst; stop releases the audio timer.');
+// Modified by AI on 2026-10-08 14:30:01
