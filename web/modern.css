@@ -435,4 +435,19 @@ select.chip-source{display:none}
  .finger-detail.open{transform:none}
  .finger-detail-close{display:inline-flex}
 }
-/* Modified by AI on 2026-10-11 02:00:04 */
+
+/* 转谱: parse errors and stale preview, parts pop-over */
+#scoreError{background:#FFF8EB;color:#6B4300;box-shadow:inset 0 0 0 1px #F4D9A6;border-radius:12px;padding:10px 14px;font-size:13px}
+#scoreError::after{content:"谱面停在上次正确的版本，修好后自动刷新；试听和导出暂不可用。";display:block;margin-top:2px;color:#8A6A2E}
+.output-card.stale .score{opacity:.4;filter:grayscale(1)}
+#scoreInput.has-error{box-shadow:inset 0 0 0 1.5px #E5484D;background:#FFFBFB}
+.error-inline{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:var(--danger-bg);color:#8F1D1D;font-size:13px}
+.error-inline[hidden]{display:none}
+.error-inline span{flex:1 1 200px}
+.error-inline button{background:#B42318;color:#fff}
+.parts-wrap[hidden]{display:none}
+.parts-menu{width:380px;padding:14px;gap:12px}
+.parts-menu>div{margin:0}
+.parts-menu .part-row{display:flex;align-items:center;gap:8px}
+.parts-menu{left:auto;right:0}
+/* Modified by AI on 2026-10-11 02:02:16 */

@@ -192,6 +192,7 @@ async function renderStaff(host,lines){
  try{await Staff.render(host,lines,{keyLabel:lastConverted.keyLabel,partNames:scoreParts(),...scoreDisplayOptions(lines,'staff')})}catch(error){host.textContent='五线谱无法显示：'+error.message}
 }
 function renderMain(){
+ if(!lastConverted&&$('scoreOutput').closest('.output-card')?.classList.contains('stale'))return; // keep the last good score visible while the text has a parse error
  if(!lastConverted||!(lastConverted.notes.length||lastConverted.percussionCount)){$('scoreOutput').replaceChildren('输入音符后在这里显示');$('scorePreview').replaceChildren();$('staffOutput').replaceChildren();return}
  syncPartBar();fillErhuParts();
  const flute=F(lastConverted.lines);Jianpu.render($('scoreOutput'),flute,scoreDisplayOptions(flute,'flute'));const so=erhuOpts(F(lastConverted.source.lines),'source');Jianpu.render($('scorePreview'),F(lastConverted.source.lines),so);renderTrans();
@@ -655,4 +656,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-10 15:20:21
+// Modified by AI on 2026-10-11 02:02:16

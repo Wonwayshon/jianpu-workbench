@@ -138,5 +138,53 @@ sel.onchange = () => go(state().staff, sel.value);
 for (const id of ['viewerFlute', 'viewerSource', 'viewerStaff', 'viewerTrans']) new MutationObserver(sync).observe($(id), { attributes: true, attributeFilter: ['aria-pressed'] });
 sync();
 })();
+
+// ---------- parse errors: mirror into the text pane with a jump-to-line action ----------
+(() => {
+const err = $('scoreError'), inline = $('scoreErrorInline'), ta = $('scoreInput');
+function jump(n) {
+const lines = ta.value.split('\n'); let start = 0;
+for (let i = 0; i < n - 1 && i < lines.length; i++) start += lines[i].length + 1;
+const end = start + (lines[n - 1] || '').length;
+if (window.setScorePane) window.setScorePane('text');
+ta.focus(); ta.setSelectionRange(start, end);
+const lh = parseFloat(getComputedStyle(ta).lineHeight) || 28; ta.scrollTop = Math.max(0, (n - 3) * lh);
+}
+function sync() {
+const msg = err.hidden ? '' : err.textContent.trim();
+ta.classList.toggle('has-error', !!msg);
+inline.hidden = !msg; inline.replaceChildren();
+if (!msg) return;
+const text = document.createElement('span'); text.textContent = msg; inline.append(text);
+const m = msg.match(/第\s*(\d+)\s*行/);
+if (m) { const b = document.createElement('button'); b.type = 'button'; b.className = 'small-btn'; b.textContent = '跳到第 ' + m[1] + ' 行'; b.onclick = () => jump(Number(m[1])); inline.append(b); }
+}
+new MutationObserver(sync).observe(err, { attributes: true, attributeFilter: ['hidden'], childList: true, characterData: true, subtree: true });
+sync();
 })();
-// Modified by AI on 2026-10-11 00:17:25
+
+// ---------- multi-part scores: one 声部 pop-over ----------
+(() => {
+const bar = $('partBar'), play = $('scorePartPlayback'), disp = $('dispBtn');
+if (!bar || !disp) return;
+const wrap = document.createElement('div'); wrap.className = 'menu-wrap parts-wrap';
+wrap.innerHTML = '<button type="button" id="partsBtn" class="out-pill" aria-haspopup="true" aria-expanded="false"><span class="out-pill-k">声部</span><span id="partsBtnLabel"></span></button><div id="partsMenu" class="pop-menu parts-menu" hidden></div>';
+disp.parentElement.before(wrap);
+const btn = $('partsBtn'), menu = $('partsMenu');
+menu.append(bar, play);
+menus.push(['partsBtn', 'partsMenu']);
+btn.addEventListener('click', (e) => { e.stopPropagation(); const open = menu.hidden; closeMenus('partsMenu'); menu.hidden = !open; btn.setAttribute('aria-expanded', String(open)); });
+menu.addEventListener('click', (e) => e.stopPropagation());
+function sync() {
+wrap.hidden = bar.hidden;
+const o = $('partSelect').selectedOptions[0];
+$('partsBtnLabel').textContent = o ? o.textContent.trim() : '';
+}
+new MutationObserver(sync).observe(bar, { attributes: true, attributeFilter: ['hidden'] });
+new MutationObserver(sync).observe($('partSelect'), { childList: true, subtree: true });
+$('partSelect').addEventListener('change', sync);
+document.addEventListener('click', () => setTimeout(sync), true);
+sync();
+})();
+})();
+// Modified by AI on 2026-10-11 02:02:16
