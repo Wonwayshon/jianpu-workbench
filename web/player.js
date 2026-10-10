@@ -24,7 +24,7 @@ const PATTERNS=[
  {id:'dotted-eighth-sixteenth',label:'附点八分 + 十六分',span:1,notes:[{d:.75,dot:true},{d:.25}],clicks:[0,.75]},
  {id:'sixteenth-dotted-eighth',label:'十六分 + 附点八分',span:1,notes:[{d:.25},{d:.75,dot:true}],clicks:[0,.25]},
 ];
-const DEFAULTS={tempo:80,metronome:false,accent:true,pattern:'quarter',time:'auto',countIn:false,balance:0.5,muteMelody:false,timbre:'flute'};
+const DEFAULTS={tempo:80,metronome:false,accent:true,pattern:'quarter',time:'auto',countIn:false,balance:0.5,muteMelody:false,timbre:window.FaustEngine?.available?'faust_flute_airy':'flute'};
 // One balance control: 0 = melody only, 1 = metronome only, 0.5 = both at full volume.
 const mix=b=>({melodyVol:Math.min(1,2*(1-b))*0.85,clickVol:Math.min(1,2*b)*0.8});
 const STORE='flute.player.v1';
@@ -126,7 +126,7 @@ function metronomeGrid(all,s,from=0,until=all.writtenTotal){
 
 // Timbre names shown in the settings; the sound models live in synth.js.
 const TIMBRES={flute:{label:'长笛'},dizi:{label:'竹笛'},erhu:{label:'二胡'},clarinet:{label:'单簧管'},piano:{label:'钢琴'},guzheng:{label:'古筝'},yangqin:{label:'扬琴 · 现有'},ocarina:{label:'陶笛'},organ:{label:'风琴'}};
-for(const [id,p] of Object.entries(window.FaustEngine?.presets||{}))if(window.FaustEngine.available)TIMBRES[id]={label:p.label};
+for(const [id,p] of Object.entries(window.FaustEngine?.presets||{}))if(window.FaustEngine.available)TIMBRES[id]={label:p.label+(Object.values(window.FaustEngine.recommended).includes(id)?'（推荐）':'')};
 let timbreName='flute';
 // Notes are rendered by synth.js into buffers and played through a dry path plus a shared room reverb.
 // Melody and metronome have their own buses so the balance slider can change them while playing.
@@ -368,4 +368,4 @@ function setPartMute(id,muted){
 }
 window.ScorePlayer={metronomeGrid,timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,PREVIEW_PHRASES,TIMBRE_LIST,play,playReady,stop,schedule,isPlaying:()=>!!playing||preparing!=null,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
 })();
-// Modified by AI on 2026-10-10 13:56:00
+// Modified by AI on 2026-10-10 14:10:36

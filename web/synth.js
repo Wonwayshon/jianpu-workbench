@@ -109,7 +109,7 @@ function request(timbre,midi,dur,sr,fromMidi,grace=false){
 function renderJob(r){
  if(workerFailed||typeof Worker==='undefined')return new Promise((resolve,reject)=>setTimeout(()=>{try{resolve(window.FaustEngine.render(r.timbre,r.midi,r.dur,r.sr,r.fromMidi,{grace:r.grace}))}catch(e){reject(e)}},0));
  if(!worker){try{
-  worker=new Worker(window.FaustWorkerURL||new URL('faust-worker.js?v='+window.FaustBank.models.flute.sourceSha256.slice(0,12),document.baseURI));
+  worker=new Worker(window.FaustWorkerURL||new URL('faust-worker.js?v='+window.FaustBank.digest.slice(0,12)+'-'+(document.querySelector('meta[name="app-version"]')?.content||'preview'),document.baseURI));
   worker.onmessage=({data:r})=>{const job=jobs.get(r.id);if(!job)return;jobs.delete(r.id);r.error?job.reject(Error(r.error)):job.resolve(r.data)};
   worker.onerror=()=>{workerFailed=true;worker.terminate();worker=null;for(const job of jobs.values())job.reject(Error('Faust background rendering failed'));jobs.clear()};
  }catch{workerFailed=true;return renderJob(r)}}
@@ -146,4 +146,4 @@ function impulse(ctx,seconds=1.8){
 }
 window.Synth={note,impulse,MODELS,prewarm,cacheInfo:()=>({bytes:cacheBytes,entries:cache.size,pending:pending.size,background:!!worker})};
 })();
-// Modified by AI on 2026-10-10 13:56:00
+// Modified by AI on 2026-10-10 14:10:36
