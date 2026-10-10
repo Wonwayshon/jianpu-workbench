@@ -21,6 +21,7 @@ jobs:
       - run: npm run security:check
       - run: npm test
   desktop:
+    if: github.event_name != 'push'
     needs: core
     strategy:
       matrix:
