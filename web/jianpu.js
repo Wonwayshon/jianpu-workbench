@@ -406,12 +406,14 @@ function render(host,lines,opts={}){
 function justify(host,endsPiece=host._endsPiece!==false){
  alignSystems(host);
  const rows=[...host.querySelectorAll(':scope>.jp-line')];if(!rows.length)return;
- for(const r of rows)r.classList.remove('jp-justify');
+ for(const r of rows){r.classList.remove('jp-justify');r.style.minWidth=''}
  const cs=getComputedStyle(host),avail=host.clientWidth-parseFloat(cs.paddingLeft||0)-parseFloat(cs.paddingRight||0);
  if(avail<=0)return;
- rows.forEach((r,i)=>{const kids=[...r.children].filter(c=>!c.classList.contains('jp-measure-numbers'));if(kids.length<3)return;
-  const natural=kids[kids.length-1].getBoundingClientRect().right-kids[0].getBoundingClientRect().left;
-  if(natural>avail+1)return;
+ const naturals=rows.map(r=>{const kids=[...r.children].filter(c=>!c.classList.contains('jp-measure-numbers'));return kids.length<3?0:kids[kids.length-1].getBoundingClientRect().right-kids[0].getBoundingClientRect().left});
+ // A line still too wide at the minimum font scrolls; the others stretch to the same width so bar lines stay aligned.
+ const width=Math.max(avail,...naturals);
+ rows.forEach((r,i)=>{const natural=naturals[i];if(!natural)return;
+  if(width>avail+1)r.style.minWidth=Math.ceil(width)+'px';
   if(endsPiece&&i===rows.length-1&&natural<avail*0.25)return; // only a very short ending (about one bar) stays left
   r.classList.add('jp-justify')});
 }
@@ -469,4 +471,4 @@ function drawOverlay(host){
 
 window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline,numberMeasures};
 })();
-// Modified by AI on 2026-10-08 23:44:57
+// Modified by AI on 2026-10-11 05:55:14

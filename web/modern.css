@@ -156,7 +156,7 @@ select.chip-source{display:none}
 .conv-field{display:flex;flex-direction:column;gap:8px}.conv-field+.conv-field{margin-top:18px}
 #diziExplanation b,#diziExplanation strong{color:var(--ink)}
 .flute-box{background:var(--bg);border-radius:14px;padding:12px 12px 8px;margin:14px 0 10px}
-.flute-box .fingering{background:#fff;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);margin:0;padding:6px 8px}
+.flute-box .fingering{background:transparent;border-radius:0;box-shadow:none;margin:0;padding:6px 0}
 .flute-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 4px 0;font-size:12px;color:var(--muted)}
 .flute-legend span{display:flex;align-items:center;gap:6px}
 .flute-legend i{width:10px;height:10px;border-radius:50%;box-sizing:border-box}
@@ -530,4 +530,124 @@ body[data-tab=score] #floatPlayer{display:none!important}
 .tuner-side .tuner-steady-head{flex-direction:column;gap:2px}
 .tuner-side .tuner-steady-head span:first-child{font-size:15px}
 .tuner-side .tuner-steady-bars{height:72px}
-/* Modified by AI on 2026-10-11 02:29:06 */
+/* Bar numbers get their own band (8px floor at small fonts), so they never touch bow marks or ornaments. */
+.jp-score .jp-line.jp-numbered-line{padding-top:max(.9em,calc(max(.42em,8px)*1.2 + .2em))!important}
+.jp-score .jp-line.jp-numbered-line.jp-decorated{padding-top:max(1.4em,calc(max(.42em,8px)*1.2 + .6em))!important}
+.jp-score .jp-line.jp-numbered-line.jp-erhu-line{padding-top:calc(max(.42em,8px)*1.2 + .25em)!important}
+/* Viewer bar: one flex row — model on the left, options in the middle (wrapping inside), page / play / close on the right. */
+.viewer-bar{display:flex!important;flex-wrap:nowrap;align-items:center;gap:10px;overflow:visible}
+.viewer-bar>.viewer-model,.viewer-bar>.viewer-tools{flex:none}
+.viewer-bar>.viewer-middle{flex:1 1 0;min-width:0}
+.viewer-bar>.viewer-tools{margin-left:auto}
+.viewer-sym{display:none}
+.viewer.editing .viewer-model{display:none}
+.viewer.editing .viewer-sym{display:flex;gap:4px;margin:0;padding:0;overflow-x:auto;scrollbar-width:none;flex:0 1 auto;min-width:0}
+.viewer.editing .viewer-sym::-webkit-scrollbar{display:none}
+.viewer.editing .viewer-sym button{flex:0 0 46px;min-height:40px;height:40px;padding:0;border-radius:10px}
+.viewer.editing .viewer-sym small{font-size:10px}
+.viewer.editing .viewer-middle{flex:1 1 120px}
+@media(max-width:680px){
+ .viewer-bar{flex-wrap:wrap}
+ .viewer-bar>.viewer-middle{order:3;flex-basis:100%}
+ .viewer.editing .viewer-sym{order:3;flex-basis:100%}
+ .viewer.editing .viewer-bar>.viewer-middle{order:4}
+}
+/* Sidebar (design: full-width rows, long names); a little larger than the mock for tablet reading distance. */
+nav[aria-label="工具"] .nav-l{display:none}
+@media screen and (min-width:900px){
+ body nav[aria-label="工具"]{flex-wrap:nowrap;align-content:normal;align-items:stretch;gap:4px}
+ nav[aria-label="工具"] .nav-s{display:none}
+ nav[aria-label="工具"] .nav-l{display:inline}
+ nav[aria-label="工具"] .nav-brand{display:flex;align-items:baseline;gap:10px;font-size:17px}
+ nav[aria-label="工具"] .nav-brand small{margin-left:auto;font-size:11px;font-weight:400;letter-spacing:0;color:var(--faint)}
+ nav[aria-label="工具"] .nav-group{font-size:12px}
+ body nav[aria-label="工具"] button{width:auto;height:42px;min-height:42px;font-size:15px}
+ body nav[aria-label="工具"] button[aria-selected=true]{font-weight:600}
+ nav[aria-label="工具"] button svg{width:20px;height:20px}
+}
+/* Workbench fills the window (design): text and score scroll inside their own panes, the page itself does not. */
+@media screen and (min-width:900px) and (min-height:560px){
+ body[data-tab=score] main{padding-bottom:20px}
+ #scorePanel:not([hidden]){display:flex;flex-direction:column;height:calc(100dvh - 48px);min-height:0}
+ #scorePanel>.ws-head{flex:none}
+ #scorePanel .score-work{flex:1;min-height:0;align-items:stretch;grid-template-rows:minmax(0,1fr)}
+ #scorePanel .score-controls{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+ #scorePanel .editor-wrap{flex:1 0 200px;min-height:200px}
+ #scorePanel .editor-wrap #scoreInput{height:auto;min-height:0;resize:none;overflow:auto;overscroll-behavior:contain}
+ #scorePanel .score-work>.output-card{position:relative;top:auto;height:auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+ #scorePanel .play-bar{bottom:0}
+ #scorePanel .output-card>.score{min-height:240px}
+}
+/* Every select draws its own chevron at the right; older rules with "padding:0 12px" let text run under it. */
+select{padding-right:34px!important}
+/* 练习 header (design): title + one-line hint on the left, score pill + reset on the right; settings sit on the page. */
+.practice-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;margin-bottom:16px}
+.practice-head .practice-stats{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.practice-head #practiceSession,.practice-head #practiceTotal{height:40px;display:flex;align-items:center;padding:0 14px;border-radius:12px;background:#fff;box-shadow:0 0 0 1px var(--line);white-space:nowrap;font-size:14px;color:var(--ink)}
+.practice-head #practiceTotal{color:var(--muted);font-size:13px}
+.practice-head #practiceTotal:empty{display:none}
+.practice-head #practiceWeak{flex-basis:100%;text-align:right;font-size:12px}
+.practice-head #practiceWeak:empty{display:none}
+.practice-head #practiceReset{height:40px;min-height:40px;background:transparent;box-shadow:none;color:var(--muted)}
+.practice-settings{padding:0;background:transparent;box-shadow:none;border-radius:0}
+/* 谱库 (design): title + view switch + actions on one row; list card with compact filters; sheets for backup / WebDAV / recovery. */
+.library-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.library-head h1{margin:0}
+.library-head .app-segments{margin:0 0 0 12px;display:inline-grid;grid-auto-flow:column;grid-template-columns:none}
+.library-head .app-segments button{min-height:36px;padding:0 16px}
+.library-head .grow{flex:1}
+.library-actions{display:flex;gap:8px;flex-wrap:wrap}
+.library-actions button{height:38px;min-height:38px;padding:0 12px;border-radius:10px;background:#fff;box-shadow:0 0 0 1px var(--line);font-weight:500}
+.library-actions button.primary{background:var(--accent);color:var(--on-accent,#fff);box-shadow:none;padding:0 16px;font-weight:600}
+#libDav{display:flex;align-items:center;gap:8px}
+.dav-dot{width:8px;height:8px;border-radius:50%;background:#A3A8B3}
+#libDav.on .dav-dot{background:#2E9D5B}
+.archive-split-list{background:#fff;border-radius:20px;box-shadow:0 0 0 1px var(--line-soft);overflow:hidden;min-width:0}
+.archive-split-list>.archive-filters{margin:0;padding:14px 16px;border-bottom:1px solid #F0F1F4;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.archive-filters .archive-search{flex:1 1 220px;min-width:0;margin:0}
+.archive-filters .archive-search label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.archive-filters .archive-search input{width:100%;min-height:38px;height:38px}
+.archive-filters .archive-filter-grid{display:contents}
+.archive-filters .archive-filter-grid>div{display:flex;align-items:center;gap:2px;padding-left:12px;border-radius:10px;background:var(--fill);margin:0}
+.archive-filters .archive-filter-grid label{margin:0;font-size:12px;color:var(--faint);white-space:nowrap}
+.archive-filters .archive-filter-grid select{min-height:38px;height:38px;background-color:transparent;font-size:13px;font-weight:600;width:auto;padding-left:6px}
+.archive-filters .archive-custom-dates,.archive-filters .archive-list-toolbar,.archive-filters #archiveFilterError{flex-basis:100%;margin:0}
+.archive-filters .archive-list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.archive-filters .archive-list-toolbar .toolbar{margin:0;gap:4px}
+.archive-filters .archive-list-toolbar button{min-height:30px;height:30px;padding:0 10px;font-size:12px;background:transparent;color:var(--muted)}
+.archive-split-list>.pdf-archive-list{padding:6px 10px 12px}
+.archive-split-list>.archive-pagination{padding:0 16px 12px}
+.library-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 20px;border-top:1px solid #F0F1F4;font-size:12px;color:var(--faint)}
+.link-btn{background:transparent;border:0;box-shadow:none;padding:0;min-height:0;height:auto;color:var(--accent-text);font-size:12px;font-weight:500}
+.lib-sheet{width:min(640px,calc(100vw - 32px))}
+.lib-sheet details{border:0;padding:0;background:transparent;box-shadow:none}
+.lib-sheet details>summary{display:none}
+@media(max-width:599px){.library-head .app-segments{margin:0;order:3;flex-basis:100%}.library-actions{flex-basis:100%}.library-actions button{flex:1}}
+/* Play bar (design): round play button, beat lane, tempo pill, divider, dark 演奏视图. Text stays for screen readers. */
+.play-bar{min-height:76px;box-sizing:border-box;padding:0 20px;gap:14px;border-radius:16px;box-shadow:0 0 0 1px var(--line);white-space:nowrap}
+.play-bar #playScore,.float-player #floatStop{flex:none;width:48px;height:48px;min-width:48px;min-height:48px;padding:0;border-radius:50%;font-size:0;color:transparent;background:var(--accent);box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 30%,transparent);display:grid;place-items:center}
+.play-bar #playScore::before,.float-player #floatStop::before{content:"";width:18px;height:18px;background:var(--on-accent,#fff);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E") center/contain no-repeat}
+.play-bar #playScore.playing::before,.float-player #floatStop.playing::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='6' y='6' width='12' height='12' rx='2'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='6' y='6' width='12' height='12' rx='2'/%3E%3C/svg%3E")}
+.play-bar #beatDots{flex:1 1 auto;min-width:60px}
+.play-bar #playSettings,.float-player #floatSettings{height:40px;min-height:40px;padding:0 14px;border-radius:10px;background:var(--fill);color:var(--ink);font-weight:600;flex:none}
+.play-bar #editView{height:40px;min-height:40px;padding:0 14px;border-radius:10px;background:var(--fill);flex:none}
+.play-bar #fullView{height:40px;min-height:40px;padding:0 14px;border-radius:10px;flex:none;position:relative;margin-left:15px}
+.play-bar #fullView::before{content:"";position:absolute;left:-15px;top:6px;bottom:6px;width:1px;background:var(--line)}
+.play-bar .grow{flex:0 0 0}
+/* Floating player away from 转谱: a full-width bar along the bottom instead of a draggable capsule. */
+.float-player{position:fixed!important;left:0!important;right:0!important;top:auto!important;bottom:calc(73px + env(safe-area-inset-bottom))!important;width:auto!important;max-width:none!important;max-height:none!important;flex-direction:row!important;gap:14px!important;padding:8px 16px!important;border-radius:0!important;background:#fff!important;color:var(--ink)!important;box-shadow:0 -1px 0 var(--line)!important;cursor:default!important;touch-action:auto!important;overflow:visible!important}
+.float-player .float-grip{display:none!important}
+.float-player #floatInfo{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:14px!important;text-align:left!important;color:var(--ink)}
+.float-player #floatInfo small{display:inline!important;color:var(--muted);opacity:1}
+.float-player .beat-dots{flex-direction:row!important;gap:5px!important;padding:0!important}
+.float-player .beat-dots i{width:10px!important;height:10px!important;background:#E7E9EE!important;box-shadow:none!important}
+.float-player .beat-dots i.first{width:12px!important;height:12px!important}
+.float-player .beat-dots i.on{background:var(--accent)!important}.float-player .beat-dots i.first.on{background:#e07b24!important}
+.float-player .float-close{min-width:40px!important;min-height:40px!important;border-radius:10px!important;background:transparent!important;color:var(--muted)!important;font-size:16px!important}
+body:has(#floatPlayer:not([hidden])) main{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+@media screen and (min-width:600px) and (max-width:899px){.float-player{left:84px!important;bottom:0!important;padding:10px 24px calc(10px + env(safe-area-inset-bottom))!important}}
+@media screen and (min-width:900px){.float-player{left:var(--rail-width)!important;bottom:0!important;min-height:76px;padding:0 36px!important}body:has(#floatPlayer:not([hidden])) main{padding-bottom:110px}}
+@media(max-width:599px){.play-bar{padding:0 12px;gap:8px;min-height:64px}.play-bar #fullView{margin-left:0}.play-bar #fullView::before{display:none}}
+#scorePanel .output-card>.play-bar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+#scorePanel .output-card>.play-bar::-webkit-scrollbar{display:none}
+/* Modified by AI on 2026-10-11 05:55:14 */

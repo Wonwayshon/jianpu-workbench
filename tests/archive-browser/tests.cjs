@@ -63,7 +63,7 @@ vm.runInContext(pdf.slice(pdf.indexOf('  let archiveBrowser='),pdf.indexOf('  as
  let fullOpen=null;c.loadToScore=async(r,opts)=>{fullOpen={id:r.id,fullscreen:!!opts?.fullscreen}};
  await row.children[1].children.find(e=>e.textContent==='打开').onclick();assert.deepEqual(fullOpen,{id:valid.id,fullscreen:true});
  await row.children[1].children.find(e=>e.textContent==='加载到转谱').onclick();assert.equal(fullOpen.fullscreen,false);
- assert.deepEqual(actions,['打开','校对识别','加载到转谱','分享','编辑','原文件','导出文字','删除']);
+ assert.deepEqual(actions,['打开','校对识别','加载到转谱','分享','编辑','原文件','更换原文件','导出文字','删除']);
  console.log('PASS: local inclusive date boundaries, calendar ranges/leap day, search/type/status/sort, immutable records, bounded pagination, empty/reset/invalid filters, collapse/expand, stale refresh guard, existing management actions.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-08 23:47:33
+// Modified by AI on 2026-10-11 05:55:14

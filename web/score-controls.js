@@ -53,6 +53,8 @@ $('notationStaff').onclick = () => apply(true, current().key);
 for (const b of $('keyMenu').querySelectorAll('[data-key]')) b.onclick = () => { apply(current().staff, b.dataset.key); if (b.dataset.key !== 'trans') closeMenus(); };
 for (const id of ['viewFlute', 'viewSource', 'viewStaff', 'viewTrans']) new MutationObserver(render).observe($(id), { attributes: true, attributeFilter: ['aria-pressed'] });
 for (const id of ['songKey', 'transKey', 'transMode', 'transShow']) $(id).addEventListener('change', () => setTimeout(render));
+// @key in the text sets songKey without a change event; every re-render of the score refreshes the label.
+for (const id of ['scorePreview', 'scoreOutput']) if ($(id)) new MutationObserver(render).observe($(id), { childList: true });
 render();
 
 // ---------- import dialog ----------
@@ -84,19 +86,39 @@ window.setScorePane = setPane;
 const input = $('scoreInput');
 let caret = null;
 input.addEventListener('blur', () => { caret = [input.selectionStart, input.selectionEnd]; });
-for (const b of document.querySelectorAll('.sym-bar [data-ins]')) {
+function insertSym(field, ins, sel) {
+const [s, e] = sel;
+const chord = ins === '<>';
+field.setRangeText(chord ? '<' + field.value.slice(s, e) + '>' : ins, s, e, 'end');
+if (chord && s === e) field.setSelectionRange(s + 1, s + 1);
+field.focus();
+field.dispatchEvent(new Event('input', { bubbles: true }));
+}
+const symBar = document.querySelector('.score-controls .sym-bar');
+for (const b of symBar.querySelectorAll('[data-ins]')) {
+b.addEventListener('mousedown', (e) => e.preventDefault());
+b.onclick = () => insertSym(input, b.dataset.ins, document.activeElement === input ? [input.selectionStart, input.selectionEnd] : caret || [input.value.length, input.value.length]);
+}
+// Edit mode (full screen): the same symbols go into the text line last edited on the right.
+(() => {
+const bar = document.querySelector('.viewer-bar'), body = $('viewerBody');
+if (!bar || !body) return;
+const vsym = symBar.cloneNode(true);
+vsym.classList.add('viewer-sym'); vsym.classList.remove('no-print');
+let line = null, lineSel = null;
+body.addEventListener('focusin', (e) => { if (e.target.classList.contains('edit-line')) line = e.target; });
+body.addEventListener('focusout', (e) => { if (e.target === line) lineSel = [line.selectionStart, line.selectionEnd]; });
+for (const b of vsym.querySelectorAll('[data-ins]')) {
+b.title = b.getAttribute('aria-label');
 b.addEventListener('mousedown', (e) => e.preventDefault());
 b.onclick = () => {
-const ins = b.dataset.ins;
-const [s, e] = document.activeElement === input ? [input.selectionStart, input.selectionEnd] : caret || [input.value.length, input.value.length];
-const chord = ins === '<>';
-const text = chord ? '<' + input.value.slice(s, e) + '>' : ins;
-input.setRangeText(text, s, e, 'end');
-if (chord && s === e) input.setSelectionRange(s + 1, s + 1);
-input.focus();
-input.dispatchEvent(new Event('input', { bubbles: true }));
+if (!line || !line.isConnected) line = body.querySelector('.edit-line:not(.meta):not(.blank)');
+if (!line) return;
+insertSym(line, b.dataset.ins, document.activeElement === line ? [line.selectionStart, line.selectionEnd] : lineSel || [line.value.length, line.value.length]);
 };
 }
+bar.querySelector('.viewer-middle').before(vsym);
+})();
 
 // ---------- full-screen viewer: same notation × key model ----------
 (() => {
@@ -224,6 +246,9 @@ let timer; ta.addEventListener('input', () => { clearTimeout(timer); timer = set
 new MutationObserver(status).observe(src, { childList: true, characterData: true, subtree: true });
 setInterval(() => { if (!document.hidden) title(); }, 1500);
 title(); status();
+// Sidebar version tag (release builds only).
+const ver = (document.querySelector('meta[name="app-version"]') || {}).content || '';
+if ($('navVersion') && /^\d+\.\d+/.test(ver)) $('navVersion').textContent = ver.match(/^\d+\.\d+/)[0];
 })();
 })();
-// Modified by AI on 2026-10-11 02:29:06
+// Modified by AI on 2026-10-11 05:55:14

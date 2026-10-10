@@ -227,7 +227,7 @@ function showBeat(index,count,signature){
 }
 function setPlaying(on){
  $('playScore').textContent=on?'■ 停止':'▶ 试听';$('playScore').classList.toggle('playing',on);
- $('viewerPlay').textContent=on?'■':'▶';$('floatStop').textContent=on?'■':'▶';if(on)floatAvailable=true;syncFloatPlayer();
+ $('viewerPlay').textContent=on?'■':'▶';$('floatStop').textContent=on?'■':'▶';$('floatStop').classList.toggle('playing',on);if(on)floatAvailable=true;syncFloatPlayer();
  $('floatInfo').innerHTML=`<b>♩=${settings.tempo}</b> <small>${ScorePlayer.tempoName(settings.tempo)}</small>`;
  if(!on){for(const id of ['beatDots','floatBeats'])$(id).replaceChildren();clearStaffCursor()}
 }
@@ -656,4 +656,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 02:29:06
+// Modified by AI on 2026-10-11 05:55:14

@@ -351,6 +351,22 @@
   byId('recoveryClear').onclick=async()=>{if(!confirm('永久清空所有历史与回收站？当前存档会保留。'))return;try{await ScoreLibrary.clearRecovery();await refreshRecovery()}catch(error){byId('recoveryStatus').textContent=error.message}};
   let archiveBrowser=null,archivesRequest=0;
   const archiveOpen=new Set();
+  // Links (or replaces) the original PDF / image of an archive, e.g. one received as a QR share. The app keeps its own
+  // copy in the library; recognised text stays, and the previous version (with its old file) remains recoverable.
+  async function relinkFile(record){
+    const input=document.createElement('input');input.type='file';input.accept=byId('pdfFile').accept;input.hidden=true;document.body.append(input);
+    const file=await new Promise(resolve=>{input.onchange=()=>resolve(input.files[0]||null);input.addEventListener('cancel',()=>resolve(null));input.click()}).finally(()=>input.remove());
+    if(!file)return;
+    if(file.size>MAX_FILE_BYTES)throw new Error('文件超过 80 MB，请先拆成较小文件再关联。');
+    if(!/^(application\/pdf|image\/(png|jpeg|webp)|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/.test(file.type)&&!/\.(pdf|png|jpe?g|webp|docx?)$/i.test(file.name))throw new Error('只能关联 PDF、图片或 Word 文件。');
+    if(record.fileId&&!confirm(`用「${file.name}」替换「${record.title}」的原文件「${record.fileName}」？已识别的文字保留，替换前的版本可在「回收站与历史版本」恢复。`))return;
+    const fileId=ScoreLibrary.newFileId();
+    await ScoreLibrary.putFile({id:fileId,blob:file,name:file.name,type:file.type,size:file.size});
+    const latest=await ScoreLibrary.getRecord(record.id)||record;
+    await ScoreLibrary.putRecord(checkedRecord({...latest,fileId,fileName:file.name,fileType:file.type,fileSize:file.size,updatedAt:new Date().toISOString()}));
+    report('pdfArchiveStatus',`已为「${record.title}」关联「${file.name}」，文件已在本机谱库里另存一份。`);
+    await refreshArchives();
+  }
   function archiveRow(record){
         const row=document.createElement('details');row.className='pdf-archive-row archive-entry';row.open=archiveOpen.has(record.id);
         row.addEventListener('toggle',()=>{if(!row.isConnected)return;if(row.open)archiveOpen.add(record.id);else archiveOpen.delete(record.id)});
@@ -367,6 +383,7 @@
         if(record.results.some(r=>r.text.trim()))actions.push(['加载到转谱',()=>loadToScore(record)],['分享',()=>ScoreShare.show(record)]);
         actions.push(['编辑',()=>editArchive(record)]);
         if(record.fileId)actions.push(['原文件',()=>downloadOriginal(record)]);
+        actions.push([record.fileId?'更换原文件':'关联 PDF / 图片',()=>relinkFile(record)]);
         if(record.results.length)actions.push(['导出文字',()=>exportFile(record.title+'.txt','text/plain',archiveText(record))]);
         actions.push(['删除',async()=>{if(!confirm(`将「${record.title}」移至本机回收站？删除状态也会通过 WebDAV 同步，原文件暂保留供恢复。`))return;await ScoreLibrary.removeRecord(record.id);if(state.archiveId===record.id){state.archiveId=null;state.createdAt=null;state.fileMeta=null;markDirty();}await refreshArchives();}]);
         for(const [label,action] of actions){
@@ -482,4 +499,4 @@
   window.PdfWorkbenchCore={parsePages,joinText,usableText,checkedRecord};
   syncControls();setLibraryView(true);
 })();
-// Modified by AI on 2026-10-11 02:29:06
+// Modified by AI on 2026-10-11 05:55:14

@@ -38,4 +38,40 @@ new MutationObserver(wire).observe(list, { childList: true, subtree: true });
 wide.addEventListener('change', () => { if (wide.matches) wire(); else { release(); pane.replaceChildren(empty); } });
 wire();
 })();
-// Modified by AI on 2026-10-11 01:58:20
+// Header actions (design): recycle bin, backup and WebDAV open as sheets; their original <details> move inside intact.
+(() => {
+const $ = (id) => document.getElementById(id);
+function sheet(id, title) {
+const panel = $(id);
+if (!panel) return null;
+const dlg = document.createElement('dialog');
+dlg.className = 'sheet lib-sheet'; dlg.setAttribute('aria-label', title);
+const body = document.createElement('div'); body.className = 'sheet-body';
+const head = document.createElement('div'); head.className = 'sheet-head';
+const h = document.createElement('h2'); h.textContent = title;
+const close = document.createElement('button'); close.type = 'button'; close.className = 'small-btn'; close.textContent = '关闭';
+close.onclick = () => dlg.close();
+head.append(h, close); body.append(head);
+panel.before(dlg); body.append(panel); dlg.append(body);
+dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+return () => { if (!panel.open) panel.open = true; if (!dlg.open) dlg.showModal(); };
+}
+const openRecovery = sheet('recoveryPanel', '回收站与历史版本');
+const openBackup = sheet('backupPanel', '备份 / 恢复');
+const openDav = sheet('davPanel', 'WebDAV 同步');
+if ($('libRecovery') && openRecovery) $('libRecovery').onclick = openRecovery;
+if ($('libBackup') && openBackup) $('libBackup').onclick = openBackup;
+if ($('libImport')) $('libImport').onclick = () => $('pdfImportTab').click();
+function davState() {
+let on = false;
+try { const c = window.ScoreLibrary && window.ScoreLibrary.davConfig(); on = !!(c && c.url && c.user); } catch {}
+$('libDavLabel').textContent = on ? 'WebDAV 已设置' : 'WebDAV 未设置';
+$('libDav').classList.toggle('on', on);
+}
+if ($('libDav') && openDav) {
+$('libDav').onclick = openDav;
+$('davPanel').closest('dialog').addEventListener('close', davState);
+davState();
+}
+})();
+// Modified by AI on 2026-10-11 05:55:14
