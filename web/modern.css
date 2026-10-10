@@ -450,4 +450,24 @@ select.chip-source{display:none}
 .parts-menu>div{margin:0}
 .parts-menu .part-row{display:flex;align-items:center;gap:8px}
 .parts-menu{left:auto;right:0}
-/* Modified by AI on 2026-10-11 02:02:16 */
+
+/* Tablet (600–899px): icon rail instead of the bottom bar; 转谱 stacks score over text */
+@media screen and (min-width:600px) and (max-width:899px){
+ body nav[aria-label="工具"]{top:0;bottom:0;left:0;right:auto;width:84px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 8px calc(16px + env(safe-area-inset-bottom));border-top:0;border-right:1px solid var(--line)}
+ nav[aria-label="工具"] .nav-spacer{display:block;flex:1}
+ body nav[aria-label="工具"] button{width:66px;min-height:60px;flex:none;border-radius:12px}
+ body nav[aria-label="工具"] button[aria-selected=true]{background:var(--accent-soft)}
+ main{margin-left:84px;padding:24px 24px 40px}
+ .tool-subtabs{margin:-24px -24px 18px;padding:10px 24px 0}
+ .conv-grid .result{bottom:16px}
+ .play-bar{bottom:16px}
+ .pane-switch{display:none}
+ #scorePanel .score-work{display:flex;flex-direction:column}
+ #scorePanel[data-pane] .score-controls,#scorePanel[data-pane] .output-card{display:flex}
+ #scorePanel .output-card{order:-1;flex-direction:column}
+ #scorePanel .score-controls #scoreInput{min-height:180px}
+ #editView{display:inline-flex}
+ .key-menu,.disp-menu{bottom:24px}
+ .finger-detail{left:84px}
+}
+/* Modified by AI on 2026-10-11 02:02:57 */
