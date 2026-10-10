@@ -1,0 +1,116 @@
+/* Modern UI layer: neutral greys, one accent (theme.js), quiet cards. Loaded after app-shell.css and wins on equal specificity. */
+:root{--ink:#0F1115;--muted:#5B616E;--faint:#6B7180;--line:#E7E9EE;--line-soft:#EDEFF3;--bg:#F6F7F9;--fill:#F2F3F6;--fill-2:#ECEEF2;--paper:#fff;--dark:#111318;--dark-2:#1C1F26;--ok:#1F7A45;--ok-bg:#E7F6EE;--warn:#8A4B00;--warn-bg:#FFF4E5;--danger:#B42318;--danger-bg:#FEF1F1;--accent:#4F46E5;--blue:var(--accent-text,#4F46E5);--soft:var(--accent-soft,#EEF0FF);--radius:14px;--rail-width:232px;--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--font);-webkit-font-smoothing:antialiased}
+h1{font-size:26px;font-weight:700;letter-spacing:-.3px;line-height:1.3}
+h2{font-size:16px;font-weight:600}
+.intro,.subtle{color:var(--muted)}
+.intro{font-size:14px}
+a{color:var(--accent-text)}
+
+/* Buttons */
+button{border:0;border-radius:10px;background:var(--fill);color:var(--ink);padding:9px 16px;font-weight:600;min-height:40px;transition:background .12s,box-shadow .12s}
+button:hover{background:#E9EBEF}
+button.primary{background:var(--accent);color:var(--on-accent,#fff);border:0}
+button.primary:hover{background:var(--accent-hover)}
+button:disabled{opacity:.45}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.small-btn{min-height:34px;padding:6px 12px;font-size:13px}
+.file-btn{border:0;background:var(--fill);border-radius:10px}
+
+/* Fields */
+label{font-size:13px;font-weight:500;color:var(--muted)}
+select,input[type=number],input[type=text],input[type=password],input[type=url],input[type=search],input[type=date]{border:0;border-radius:10px;background:var(--fill);color:var(--ink);min-height:44px;padding:0 12px;box-shadow:inset 0 0 0 1px transparent}
+select{-webkit-appearance:none;appearance:none;padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235B616E' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+select:focus,input:focus,textarea:focus{background-color:#fff;box-shadow:inset 0 0 0 1.5px var(--accent);outline:none}
+textarea{border:0;border-radius:12px;background:#FBFBFC;box-shadow:inset 0 0 0 1px var(--line-soft);color:var(--ink)}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
+input[type=range]{accent-color:var(--accent)}
+
+/* Surfaces */
+.card{background:var(--paper);border:0;border-radius:18px;box-shadow:0 0 0 1px var(--line-soft)}
+.result{background:var(--dark);border:0;box-shadow:none;border-radius:22px;color:#fff}
+.result .subtle,.result .eyebrow{color:#A7ADBA}
+.result .line{background:#2A2E37}
+.result button{background:#fff;color:var(--ink)}
+.result button:hover{background:#ECEEF2}
+details{background:var(--paper);border:0;box-shadow:0 0 0 1px var(--line-soft);border-radius:var(--radius)}
+summary{font-weight:600;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"";flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translateY(-3px);transition:transform .15s}
+details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
+.card details,.sheet details{box-shadow:none;background:var(--bg)}
+.callout{background:var(--accent-soft);color:var(--accent-ink);border-radius:12px}
+.warning{background:var(--warn-bg);color:var(--warn);border-radius:12px}
+.error{background:var(--danger-bg);color:var(--danger);border-radius:12px}
+.pill{background:var(--fill);border-radius:999px;padding:3px 10px}
+.line{background:var(--line-soft)}
+.labelnum{font:600 13px/1 var(--font);color:var(--accent-text)}
+table th{color:var(--faint)}
+tr.selected{background:var(--accent-soft)}
+
+/* Segmented controls */
+.app-segments{background:var(--fill-2);border-radius:12px;padding:4px;gap:2px}
+.app-segments button{background:transparent;color:var(--muted);font-weight:500;border-radius:9px;min-height:38px}
+.app-segments button[aria-pressed=true],.app-segments button[aria-selected=true]{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px #0F11151a}
+
+/* Dialogs: centred cards on wide screens, bottom sheets on phones */
+dialog.sheet{border:0;border-radius:22px;box-shadow:0 24px 60px #0000004d;padding:0;color:var(--ink)}
+.sheet::backdrop{background:#0F111566}
+@media(max-width:599px){dialog.sheet{margin:auto 0 0;width:100%;max-width:100%;max-height:92vh;border-radius:22px 22px 0 0}dialog.sheet::before{content:"";display:block;width:36px;height:5px;border-radius:3px;background:#D9DCE2;margin:10px auto 0}}
+
+/* Navigation: phone bottom bar (5 entries) */
+body nav[aria-label="工具"]{grid-template-columns:repeat(5,minmax(0,1fr));background:#fff;border-top:1px solid var(--line);box-shadow:none}
+body nav[aria-label="工具"] button{color:var(--muted);background:transparent;font-weight:500}
+body nav[aria-label="工具"] button[aria-selected=true]{color:var(--accent-text);font-weight:600;background:transparent}
+body nav[aria-label="工具"] button[aria-selected=true] .app-nav-icon{background:transparent}
+body nav[aria-label="工具"] button[aria-selected=true] svg{stroke:var(--accent)}
+nav[aria-label="工具"] .nav-brand,nav[aria-label="工具"] .nav-group,nav[aria-label="工具"] .nav-spacer{display:none}
+#instrumentTab,#fingeringTab,#tunerTab,#erhuTab{display:none}
+.tool-subtabs{position:sticky;top:0;z-index:12;display:flex;gap:22px;margin:-22px -16px 18px;padding:10px 20px 0;background:#fff;border-bottom:1px solid var(--line)}
+.tool-subtabs[hidden]{display:none}
+.tool-subtabs button{background:transparent;border-radius:0;min-height:42px;padding:0;color:var(--muted);font-weight:500;font-size:15px}
+.tool-subtabs button[aria-selected=true]{color:var(--ink);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent)}
+
+/* Navigation: desktop sidebar */
+@media screen and (min-width:900px){
+ :root{--rail-width:232px}
+ body nav[aria-label="工具"]{top:0;bottom:0;left:0;right:auto;width:var(--rail-width);display:flex;flex-direction:column;gap:2px;padding:22px 14px;border-top:0;border-right:1px solid var(--line);overflow-y:auto}
+ nav[aria-label="工具"] .nav-brand{display:block;font-size:16px;font-weight:700;letter-spacing:.5px;padding:4px 10px 18px;color:var(--ink)}
+ nav[aria-label="工具"] .nav-group{display:block;font-size:11px;font-weight:600;letter-spacing:.5px;color:var(--faint);padding:18px 10px 6px}
+ nav[aria-label="工具"] .nav-spacer{display:block;flex:1}
+ #instrumentTab,#fingeringTab,#tunerTab,#erhuTab{display:flex}
+ #toolsTab{display:none}
+ body nav[aria-label="工具"] button{flex-direction:row;justify-content:flex-start;gap:10px;min-height:40px;height:40px;padding:0 10px;border-radius:10px;font-size:14px;color:#3F4450}
+ body nav[aria-label="工具"] button:hover{background:var(--fill)}
+ body nav[aria-label="工具"] button[aria-selected=true]{background:var(--accent-soft);color:var(--ink)}
+ nav[aria-label="工具"] .app-nav-icon{width:auto;height:auto;padding:0;border-radius:0;background:none}
+ nav[aria-label="工具"] button svg{width:19px;height:19px}
+ main{margin-left:var(--rail-width);padding:28px 36px 48px}
+ .tool-subtabs,.tool-subtabs:not([hidden]){display:none}
+}
+@media print{.tool-subtabs{display:none!important}}
+
+/* Settings: grouped lists */
+.settings-page{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.settings-page h1{margin:0}
+.settings-group h2{margin:0 4px 8px;font-size:13px;font-weight:600;color:var(--faint)}
+.settings-card{background:#fff;border-radius:16px;box-shadow:0 0 0 1px var(--line-soft);overflow:hidden}
+.settings-row{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #F3F4F6}
+.settings-row:last-child{border-bottom:0}
+.settings-row>div{flex:1;min-width:0}
+.settings-row p{margin:2px 0 0;font-size:13px}
+.settings-link{width:100%;min-height:56px;display:flex;align-items:center;gap:12px;padding:10px 18px;background:#fff;border-radius:0;text-align:left;font-weight:500;border-bottom:1px solid #F3F4F6}
+.settings-link:last-child{border-bottom:0}
+.settings-link:hover{background:#FAFAFB}
+.settings-link span{flex:1;display:flex;flex-direction:column}
+.settings-link small{font-size:12px;font-weight:400;color:var(--muted)}
+.settings-link svg{width:16px;height:16px;fill:none;stroke:#A3A8B3;stroke-width:2.2;stroke-linecap:round}
+.settings-text{padding:14px 18px;font-size:13px;color:#3F4450}
+.settings-text p{margin:0 0 8px}.settings-text p:last-child{margin:0}
+.theme-swatches{display:flex;flex-wrap:wrap;gap:10px;padding:4px 18px 16px;border-bottom:1px solid #F3F4F6}
+.theme-swatch{width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;background:var(--swatch);box-shadow:inset 0 0 0 2px #ffffff55}
+.theme-swatch:hover{background:var(--swatch);transform:scale(1.06)}
+.theme-swatch[aria-checked=true]{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--swatch)}
+.theme-custom label{color:var(--ink);font-size:14px}
+.theme-custom input[type=color]{width:44px;height:36px;padding:0;border:0;border-radius:10px;background:none;cursor:pointer}
+/* Modified by AI on 2026-10-10 19:44:57 */
