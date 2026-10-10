@@ -28,6 +28,19 @@ function jianpu(rel,octave){
  if(octave){const dots=document.createElement('span');dots.className='jp-dots '+(octave>0?'up':'down');for(let i=0;i<Math.abs(octave);i++){const e=document.createElement('i');e.textContent='•';dots.append(e)}d.append(dots)}
  box.append(d);return box;
 }
+// Long-tone stability: last 8 s of cents deviation in 200 ms bins, reset when the note changes.
+const STEADY_MS=8000,BIN_MS=200,BINS=STEADY_MS/BIN_MS;let steady=[],steadyMidi=null;
+function steadyBars(){const box=$('tunerSteadyBars');if(box&&!box.children.length)for(let i=0;i<BINS;i++)box.append(document.createElement('i'));return box}
+function drawSteady(now){
+ const box=steadyBars();if(!box)return;steady=steady.filter(s=>now-s.t<=STEADY_MS);
+ const bins=Array.from({length:BINS},()=>[]);for(const s of steady){const i=BINS-1-Math.floor((now-s.t)/BIN_MS);if(i>=0)bins[i].push(s.c)}
+ [...box.children].forEach((bar,i)=>{const v=bins[i];if(!v.length){bar.className='';bar.style.removeProperty('--h');bar.style.removeProperty('--y');return}const c=v.reduce((a,b)=>a+b,0)/v.length,h=Math.max(3,Math.min(48,Math.abs(c)*1.6));bar.className=Math.abs(c)<=5?'ok':'off';bar.style.setProperty('--h',h+'px');bar.style.setProperty('--y',(c<0?h/2:-h/2)+'px')});
+ const note=$('tunerSteadyNote');if(!note)return;
+ if(steady.length<8){note.textContent='吹一个长音，这里显示最近 8 秒的音分偏差';return}
+ const cs=steady.map(s=>s.c),mean=cs.reduce((a,b)=>a+b,0)/cs.length,sd=Math.sqrt(cs.reduce((a,b)=>a+(b-mean)**2,0)/cs.length);
+ note.textContent=`平均 ${mean>0?'+':''}${Math.round(mean)} 音分 · 波动 ±${Math.round(sd)}${sd<=5&&Math.abs(mean)<=5?' · 很稳':''}`;
+}
+function noteSteady(midi,cents,now){if(midi!==steadyMidi){steady=[];steadyMidi=midi}steady.push({t:now,c:cents});drawSteady(now)}
 function show(freq){
  const a4=Number($('tunerA4').value)||440,midiFloat=69+12*Math.log2(freq/a4),midi=Math.round(midiFloat),cents=Math.round((midiFloat-midi)*100);
  const tonic=Number($('tunerKey').value)||0,oct=Math.floor(midi/12)-1;
@@ -36,12 +49,12 @@ function show(freq){
  $('tunerFixed').replaceChildren(jianpu(midi-60,Math.floor((midi-60)/12)));
  const rel=midi-(60+tonic);$('tunerMovable').replaceChildren(jianpu(rel,Math.floor(rel/12)));
  const angle=Math.max(-50,Math.min(50,cents))*0.9;$('tunerNeedle').setAttribute('transform',`rotate(${angle} 150 150)`);
- const ok=Math.abs(cents)<=5;$('tunerPanelCard').classList.toggle('in-tune',ok);$('tunerHint').textContent=ok?'音准 ✓':cents<0?'偏低，往上调 / 吹得更集中':'偏高，往下调 / 气息放缓';
+ noteSteady(midi,(midiFloat-midi)*100,performance.now());const ok=Math.abs(cents)<=5;$('tunerPanelCard').classList.toggle('in-tune',ok);$('tunerHint').textContent=ok?'音准 ✓':cents<0?'偏低，往上调 / 吹得更集中':'偏高，往下调 / 气息放缓';
 }
 function loop(){
  analyser.getFloatTimeDomainData(buf);const r=yin(buf,ctx.sampleRate),now=performance.now();
  if(r&&r.clarity>0.8&&r.freq>120&&r.freq<4200){history.push(r.freq);if(history.length>5)history.shift();const sorted=[...history].sort((a,b)=>a-b);show(sorted[sorted.length>>1]);lastSeen=now;$('tunerPanelCard').classList.remove('idle')}
- else if(now-lastSeen>900){history=[];$('tunerPanelCard').classList.add('idle');$('tunerHint').textContent='请对着麦克风吹一个长音'}
+ else if(now-lastSeen>900){history=[];if(steady.length)drawSteady(now);$('tunerPanelCard').classList.add('idle');$('tunerHint').textContent='请对着麦克风吹一个长音'}
  raf=requestAnimationFrame(loop);
 }
 async function start(){
@@ -51,7 +64,7 @@ async function start(){
   stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
   ctx=new (window.AudioContext||window.webkitAudioContext)();await ctx.resume();
   analyser=ctx.createAnalyser();analyser.fftSize=4096;buf=new Float32Array(analyser.fftSize);
-  ctx.createMediaStreamSource(stream).connect(analyser);
+  ctx.createMediaStreamSource(stream).connect(analyser);steady=[];steadyMidi=null;drawSteady(performance.now());
   $('tunerToggle').textContent='■ 停止';$('tunerStatus').textContent='正在聆听（声音只在本机处理，不录音、不上传）';loop();
  }catch(error){stop();$('tunerStatus').textContent=error.name==='NotAllowedError'?'没有麦克风权限。请允许录音，或到系统设置里为本应用开启麦克风。':`无法打开麦克风：${error.message}`}
 }
@@ -69,4 +82,4 @@ new MutationObserver(()=>{if($('tunerPanel').hidden)stop()}).observe($('tunerPan
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stop()});
 window.Tuner={yin,start,stop};
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-11 02:03:49
