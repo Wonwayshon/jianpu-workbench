@@ -13,12 +13,14 @@ const presets={
  faust_piano_bright:{model:'piano',color:1,attack:.001,release:.15,pre:0,vibrato:0,base:'piano',label:'Faust 钢琴 B · 明亮'},
  faust_guzheng_round:{model:'guzheng',color:0,attack:.001,release:.2,pre:0,vibrato:0,base:'guzheng',label:'Faust 古筝 A · 圆润'},
  faust_guzheng_bright:{model:'guzheng',color:1,attack:.001,release:.15,pre:0,vibrato:0,base:'guzheng',label:'Faust 古筝 B · 明亮'},
- faust_clarinet_wood:{model:'clarinet',color:0,attack:.025,release:.07,pre:.08,vibrato:.001,base:'clarinet',label:'Faust 单簧管 A · 木质'},
- faust_clarinet_bright:{model:'clarinet',color:1,attack:.02,release:.06,pre:.08,vibrato:.0012,base:'clarinet',label:'Faust 单簧管 B · 明亮'},
+ faust_oboe_soft:{model:'oboe',color:0,attack:.035,release:.07,pre:.035,vibrato:.003,vibRate:5.2,vibDelay:.18,base:'oboe',label:'Faust 双簧管 A · 柔和'},
+ faust_oboe_bright:{model:'oboe',color:1,attack:.025,release:.065,pre:.035,vibrato:.0038,vibRate:5.3,vibDelay:.18,base:'oboe',label:'Faust 双簧管 B · 明亮'},
+ faust_clarinet_wood:{model:'clarinet',color:0,attack:.025,release:.07,pre:.08,vibrato:.0035,vibRate:4.9,vibDelay:.14,base:'clarinet',label:'Faust 单簧管 A · 自然'},
+ faust_clarinet_bright:{model:'clarinet',color:1,attack:.02,release:.06,pre:.08,vibrato:.0048,vibRate:5.1,vibDelay:.18,base:'clarinet',label:'Faust 单簧管 B · 明亮'},
  faust_yangqin_crisp:{model:'hammer',color:1,attack:.001,release:.1,pre:0,vibrato:0,base:'yangqin',label:'Faust 敲弦 B · 清脆'},
 };
 // Faust's standalone WASM ABI exposes init/compute/setParamValue and linear memory.
-const env={_sinf:Math.sin,_cosf:Math.cos,_expf:Math.exp,_logf:Math.log,_powf:Math.pow,_sqrtf:Math.sqrt,_tanf:Math.tan,_floorf:Math.floor,_ceilf:Math.ceil,_roundf:Math.round,_max_f:Math.max,_min_f:Math.min,_fmodf:(a,b)=>a%b};
+const env={_atan2f:Math.atan2,_log10f:Math.log10,_acosf:Math.acos,_asinf:Math.asin,_atanf:Math.atan,_sinf:Math.sin,_cosf:Math.cos,_expf:Math.exp,_logf:Math.log,_powf:Math.pow,_sqrtf:Math.sqrt,_tanf:Math.tan,_floorf:Math.floor,_ceilf:Math.ceil,_roundf:Math.round,_max_f:Math.max,_min_f:Math.min,_fmodf:(a,b)=>a%b};
 try{
  if(!window.FaustBank||typeof WebAssembly!=='object')throw Error('设备暂不支持 Faust 音色');
  for(const [id,meta] of Object.entries(window.FaustBank.models)){
@@ -51,14 +53,15 @@ function render(id,midi,dur,sr,fromMidi,{grace=false,vibrato=true}={}){
   const t=i/sr,k=Math.floor(position),frac=position-k;
   const sample=(raw[k]||0)*(1-frac)+(raw[k+1]||0)*frac;
   const env=Math.sin(Math.PI/2*Math.min(1,t/attack))*Math.max(0,t>dur?1-(t-dur)/release:1);
-  out[i]=Number.isFinite(sample)?sample*env:0;
+  const breath=(!grace&&vibrato&&['flute','clarinet','oboe'].includes(p.model))?1+.017*Math.min(1,t/.2)*Math.sin(2*Math.PI*.8*t+midi*.41):1;
+  out[i]=Number.isFinite(sample)?sample*env*breath:0;
   const bend=glide==null?1:2**(((glide-midi)*Math.max(0,1-t/.075))/12);
-  const depth=!grace&&vibrato?p.vibrato*Math.min(1,Math.max(0,(t-.25)/.3)):0;
-  position+=RATE/sr*ratio*bend*(1+depth*Math.sin(2*Math.PI*5.6*t));
+  const depth=!grace&&vibrato?p.vibrato*Math.min(1,Math.max(0,(t-(p.vibDelay??.25))/.3)):0;
+  position+=RATE/sr*ratio*bend*(1+depth*Math.sin(2*Math.PI*(p.vibRate||5.6)*t+(midi*.618+p.color)*Math.PI*2));
  }
  return out;
 }
-const recommended={flute:'faust_flute_airy',erhu:'faust_erhu_warm',yangqin:'faust_yangqin_soft'};
+const recommended={flute:'faust_flute_airy',erhu:'faust_erhu_warm',yangqin:'faust_yangqin_soft',guzheng:'faust_guzheng_round'};
 window.FaustEngine={render,presets,recommended,available:instances.size===Object.keys(window.FaustBank?.models||{}).length&&instances.size>0,error,bankBytes:Object.values(window.FaustBank?.models||{}).reduce((n,m)=>n+m.wasmBytes,0),sampleRate:RATE};
 })();
-// Modified by AI on 2026-10-10 14:15:26
+// Modified by AI on 2026-10-10 14:28:10

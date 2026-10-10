@@ -5,9 +5,10 @@ const families=[
  {id:'flute',label:'笛子',choices:[['flute','现有长笛','原来的轻量合成音色。'],['faust_flute_clear','Faust A · 清晰','气流与管体反馈，起音较清楚。'],['faust_flute_airy','Faust B · 气息','同一管笛模型，增加气息和柔和起音。']]},
  {id:'erhu',label:'二胡',choices:[['erhu','现有二胡','原来的谐波、弓噪与琴体滤波。'],['faust_erhu_warm','Faust A · 柔和','弓与弦相互作用，较柔和的共鸣。'],['faust_erhu_bright','Faust B · 明亮','改变弓压、弓位，起音更鲜明。']]},
  {id:'yangqin',label:'扬琴',choices:[['yangqin','现有敲弦','轻量谐波敲弦，与新模型作对照。'],['faust_yangqin_soft','Faust A · 圆润','多阶弦振动共鸣，较长的自然衰减。'],['faust_yangqin_crisp','Faust B · 清脆','不同敲击位置，较短、清脆的衰减。']]},
- {id:'piano',label:'钢琴',choices:[['piano','现有钢琴','原来的非谐性分音与琴槌合成。'],['faust_piano_soft','Faust A · 柔软','柔软琴槌、双弦与音板共鸣。'],['faust_piano_bright','Faust B · 明亮','较硬琴槌，更清晰的高频分音。']]},
+ {id:'piano',label:'钢琴',choices:[['piano','现有钢琴','原来的非谐性分音与琴槌合成。'],['faust_piano_soft','Faust A · 柔软','柔软琴槌与耦合琴弦，保留低中频共鸣。'],['faust_piano_bright','Faust B · 明亮','更清楚的琴槌起音，耦合琴弦自然衰减。']]},
  {id:'guzheng',label:'古筝',choices:[['guzheng','现有古筝','原来的拨弦位置与谐波合成。'],['faust_guzheng_round','Faust A · 圆润','弦内传播与琴码损耗，较圆润的拨弦。'],['faust_guzheng_bright','Faust B · 明亮','调整拨弦位置，带更明亮的泛音。']]},
- {id:'clarinet',label:'单簧管',choices:[['clarinet','现有单簧管','原来的奇数谐波、气息与管体滤波。'],['faust_clarinet_wood','Faust A · 木质','簧片与管体反馈，偏柔和木质音。'],['faust_clarinet_bright','Faust B · 明亮','调整簧片硬度与气压，音色更明亮。']]},
+ {id:'clarinet',label:'单簧管',choices:[['clarinet','现有单簧管','原来的奇数谐波、气息与管体滤波。'],['faust_clarinet_wood','Faust A · 自然','缓慢变化的气息，延后渐入的轻微颤音。'],['faust_clarinet_bright','Faust B · 明亮','较亮的簧片声，加入柔和气息与颤音。']]},
+ {id:'oboe',label:'双簧管',choices:[['oboe','轻量双簧管','轻量簧片波形与管体滤波作对照。'],['faust_oboe_soft','Faust A · 柔和','簧片波形与共鸣，较柔和的鼻音。'],['faust_oboe_bright','Faust B · 明亮','更鲜明的簧片与高频共鸣。']]},
 ];
 let family=families[0],playing='',epoch=0;
 const status=text=>{$('audioLabStatus').textContent=text};
@@ -43,4 +44,4 @@ $('audioLabStop').onclick=()=>{stop();status('已停止。')};
 for(const id of ['audioLabPhrase','audioLabDry'])$(id).onchange=()=>{stop();status('已切换试听设置，点音色重新试听。')};
 window.AudioLab={open,families};
 })();
-// Modified by AI on 2026-10-10 14:11:09
+// Modified by AI on 2026-10-10 14:28:10

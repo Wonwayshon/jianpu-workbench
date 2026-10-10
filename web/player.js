@@ -125,7 +125,7 @@ function metronomeGrid(all,s,from=0,until=all.writtenTotal){
 }
 
 // Timbre names shown in the settings; the sound models live in synth.js.
-const TIMBRES={flute:{label:'长笛'},dizi:{label:'竹笛'},erhu:{label:'二胡'},clarinet:{label:'单簧管'},piano:{label:'钢琴'},guzheng:{label:'古筝'},yangqin:{label:'扬琴 · 现有'},ocarina:{label:'陶笛'},organ:{label:'风琴'}};
+const TIMBRES={flute:{label:'长笛'},dizi:{label:'竹笛'},erhu:{label:'二胡'},clarinet:{label:'单簧管'},oboe:{label:'双簧管'},piano:{label:'钢琴'},guzheng:{label:'古筝'},yangqin:{label:'扬琴 · 现有'},ocarina:{label:'陶笛'},organ:{label:'风琴'}};
 for(const [id,p] of Object.entries(window.FaustEngine?.presets||{}))if(window.FaustEngine.available)TIMBRES[id]={label:p.label+(Object.values(window.FaustEngine.recommended).includes(id)?'（推荐）':'')};
 let timbreName='flute';
 // Notes are rendered by synth.js into buffers and played through a dry path plus a shared room reverb.
@@ -368,4 +368,4 @@ function setPartMute(id,muted){
 }
 window.ScorePlayer={metronomeGrid,timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,PREVIEW_PHRASES,TIMBRE_LIST,play,playReady,stop,schedule,isPlaying:()=>!!playing||preparing!=null,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
 })();
-// Modified by AI on 2026-10-10 14:10:36
+// Modified by AI on 2026-10-10 14:25:57

@@ -7,6 +7,7 @@ const c=vm.createContext({console,atob,WebAssembly,AudioBuffer:Buffer,setTimeout
 vm.runInContext('window=globalThis',c);
 for(const file of ['vendor/faust/models','faust-engine','synth','jianpu','player'])vm.runInContext(fs.readFileSync('web/'+file+'.js','utf8'),c);
 const E=c.FaustEngine,S=c.Synth,P=c.ScorePlayer,J=c.Jianpu;
+for(const [file,hash] of Object.entries(c.FaustBank.libraries))assert.equal(hash,crypto.createHash('sha256').update(fs.readFileSync('web/vendor/faust/source/'+file)).digest('hex'),'parameter curves match the generated bank');
 assert.ok(E.available,E.error);assert.ok(E.bankBytes<80*1024);
 assert.ok(fs.statSync('web/vendor/faust/models.js').size<128*1024);
 for(const [id,m] of Object.entries(c.FaustBank.models))assert.equal(m.sourceSha256,crypto.createHash('sha256').update(fs.readFileSync('web/vendor/faust/source/'+id+'.dsp')).digest('hex'),'precompiled model matches editable source');
@@ -52,6 +53,6 @@ function pitch(data,f,sr){
  E.render=render;
  assert.equal(await P.previewTimbre('faust_yangqin_soft',.85,{dry:true}),true);const preview=audio.at(-1).nodes.find(n=>n.buffer);
  assert.ok(preview.buffer.duration>3);assert.ok(preview.buffer.getChannelData().every(Number.isFinite));P.stop();
- console.log(`PASS: 6 compiled DSPs / 12 presets; source hashes and <128 KiB bank; pitch within 20 cents at 44.1/48 kHz, high register at 96 kHz; brief audible grace envelopes; deduplicated prewarm/cache; cancel and Context reuse; ensemble grace clock; portable audition (${Math.round(performance.now()-started)} ms).`);
+ console.log(`PASS: 7 compiled DSPs / 14 presets; source hashes and <128 KiB bank; pitch within 20 cents at 44.1/48 kHz, high register at 96 kHz; brief audible grace envelopes; deduplicated prewarm/cache; cancel and Context reuse; ensemble grace clock; portable audition (${Math.round(performance.now()-started)} ms).`);
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-10 14:11:09
+// Modified by AI on 2026-10-10 14:28:10

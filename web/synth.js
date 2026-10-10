@@ -32,6 +32,7 @@ const MODELS={
  flute:{kind:'wind',harm:[1,.42,.16,.07,.035,.015],bright:2600,attack:.06,release:.09,scoop:28,vibRate:5.1,vibDepth:.0045,vibDelay:.22,tremolo:.09,jitter:1,breath:.075,breathMul:2.2,breathQ:1.1,chiff:.28,chiffLen:.035,gain:.34,reverb:.22},
  dizi:{kind:'wind',harm:[1,.7,.5,.34,.24,.16,.11,.07,.05],bright:4200,attack:.04,release:.08,scoop:35,vibRate:5.6,vibDepth:.008,vibDelay:.16,tremolo:.12,jitter:1.4,breath:.1,breathMul:2.6,breathQ:.9,chiff:.32,chiffLen:.03,buzz:.22,gain:.26,reverb:.2},
  ocarina:{kind:'wind',harm:[1,.06,.02],bright:2000,attack:.07,release:.1,scoop:15,vibRate:4.8,vibDepth:.003,vibDelay:.3,tremolo:.05,jitter:.7,breath:.045,breathMul:1.6,breathQ:1.4,chiff:.12,chiffLen:.03,gain:.4,reverb:.25},
+ oboe:{kind:'wind',harm:[1,.65,.7,.48,.38,.23,.18,.12,.08],bright:3500,attack:.06,release:.09,scoop:8,vibRate:5.2,vibDepth:.003,vibDelay:.25,tremolo:.05,jitter:.5,breath:.025,breathMul:3,breathQ:1.2,chiff:.07,chiffLen:.025,body:[['peaking',1400,.9,4],['peaking',2600,1.1,3]],gain:.26,reverb:.2},
  clarinet:{kind:'wind',harm:[1,.03,.62,.04,.4,.03,.24,.02,.14,.01,.08],bright:3000,attack:.045,release:.08,scoop:8,vibRate:5,vibDepth:.0012,vibDelay:.4,tremolo:.02,jitter:.6,breath:.03,breathMul:3,breathQ:1.2,chiff:.1,chiffLen:.02,body:[['peaking',1500,1.2,5],['peaking',3200,1.5,3]],gain:.3,reverb:.2},
  erhu:{kind:'wind',harm:[1,.78,.62,.5,.42,.34,.28,.22,.18,.14,.11,.09,.07,.05],bright:3600,attack:.1,release:.12,scoop:40,glide:.09,vibRate:6.1,vibDepth:.014,vibDelay:.16,tremolo:.14,jitter:1.8,harmJitter:.18,breath:.035,breathMul:4,breathQ:.7,chiff:.1,chiffLen:.05,body:[['peaking',480,1.6,7],['peaking',1150,2,4],['peaking',2800,1.4,-3]],gain:.23,reverb:.24},
  // Steady reference tone for tuning: no vibrato, drift, breath or chiff.
@@ -146,4 +147,4 @@ function impulse(ctx,seconds=1.8){
 }
 window.Synth={note,impulse,MODELS,prewarm,cacheInfo:()=>({bytes:cacheBytes,entries:cache.size,pending:pending.size,background:!!worker})};
 })();
-// Modified by AI on 2026-10-10 14:10:36
+// Modified by AI on 2026-10-10 14:25:57
