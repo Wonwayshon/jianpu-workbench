@@ -113,4 +113,79 @@ nav[aria-label="工具"] .nav-brand,nav[aria-label="工具"] .nav-group,nav[aria
 .theme-swatch[aria-checked=true]{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--swatch)}
 .theme-custom label{color:var(--ink);font-size:14px}
 .theme-custom input[type=color]{width:44px;height:36px;padding:0;border:0;border-radius:10px;background:none;cursor:pointer}
-/* Modified by AI on 2026-10-10 19:44:57 */
+
+/* Shared helpers */
+.sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;margin-bottom:22px}
+.page-head h1{margin:0}.page-head .intro{margin:4px 0 0}
+.page-head .app-segments{margin:0}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;margin-bottom:14px}
+.card-head h2{margin:0}.card-head p{margin:0;font-size:13px}
+
+/* Chip groups (chip-select.js) */
+select.chip-source{display:none}
+.chips{display:grid;gap:6px}
+.chip{min-height:44px;padding:4px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1.25;font-weight:500;background:var(--fill);border-radius:10px}
+.chip .chip-sub{font-size:12px;font-weight:400;color:var(--faint)}
+.chip[aria-checked=true]{background:var(--accent);color:var(--on-accent,#fff);font-weight:600}
+.chip[aria-checked=true] .chip-sub{color:inherit;opacity:.85}
+.chips-keys{grid-template-columns:repeat(12,minmax(0,1fr))}
+.chips-digits{grid-template-columns:repeat(7,minmax(0,1fr))}
+.chips-digits .chip{min-height:48px;font-size:20px}
+.chips-hon{grid-template-columns:repeat(6,minmax(0,1fr))}
+.chips-hon .chip{min-height:56px}
+.chips-cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.chips-cards .chip{min-height:60px;align-items:flex-start;padding:8px 14px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line);text-align:left}
+.chips-cards .chip[aria-checked=true]{background:var(--accent-soft);color:var(--ink);box-shadow:inset 0 0 0 2px var(--accent)}
+.chips-cards .chip[aria-checked=true] .chip-sub{color:var(--accent-ink);opacity:1}
+.chips-cards .chip-minor{grid-column:span 1;min-height:40px;flex-direction:row;gap:6px;align-items:center;justify-content:flex-start;background:transparent;box-shadow:none;color:var(--accent-text);padding:0 4px}
+.chips-cards .chip-minor .chip-sub{color:var(--faint)}
+.chips-cards .chip-minor[aria-checked=true]{background:var(--accent-soft);box-shadow:none;padding:0 12px}
+@media(max-width:699px){
+ .chips-keys{display:flex;overflow-x:auto;margin:0 -20px;padding:0 20px 2px;scrollbar-width:none}
+ .chips-keys .chip{flex:0 0 50px}
+ .chips-hon{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .chips-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .chips-cards .chip:first-child{grid-column:1/-1}
+}
+
+/* 换算 */
+#instrumentPanel[data-mode=pick] .conv-own,#instrumentPanel[data-mode=pick] .conv-own-only,#instrumentPanel[data-mode=own] .conv-pick,#instrumentPanel[data-mode=own] .conv-pick-only{display:none}
+.conv-grid{align-items:start}
+.conv-inputs{display:flex;flex-direction:column;gap:16px;min-width:0}
+.conv-field{display:flex;flex-direction:column;gap:8px}.conv-field+.conv-field{margin-top:18px}
+#diziExplanation b,#diziExplanation strong{color:var(--ink)}
+.flute-box{background:var(--bg);border-radius:14px;padding:12px 12px 8px;margin:14px 0 10px}
+.flute-box .fingering{background:#fff;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);margin:0;padding:6px 8px}
+.flute-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 4px 0;font-size:12px;color:var(--muted)}
+.flute-legend span{display:flex;align-items:center;gap:6px}
+.flute-legend i{width:10px;height:10px;border-radius:50%;box-sizing:border-box}
+.lg-closed{background:var(--ink)}.lg-open{border:1.5px solid var(--ink)}
+.hole-toggle .hole-dot{border-color:var(--ink)}.hole-toggle.closed .hole-dot{background:var(--ink)}
+.hole-toggle:hover{background:var(--accent-soft)}
+.conv-grid .result{padding:28px;gap:14px}
+.conv-grid .result .eyebrow{font-size:13px;letter-spacing:0;color:#A7ADBA}
+.big-row{display:flex;align-items:center;gap:12px}
+.conv-grid .result .big{font-size:104px;font-weight:600;letter-spacing:-4px;line-height:1;margin:6px 0 4px}
+.conv-grid .result .big small{font-size:26px;letter-spacing:0;margin-left:6px}
+.key-pill{margin-left:auto;background:var(--accent);color:var(--on-accent,#fff);border-radius:999px;padding:6px 14px;font-size:18px;font-weight:600;white-space:nowrap}
+#honLabel{color:#D7DAE1;margin:0 0 14px}
+.conv-chain{list-style:none;margin:0 0 14px;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.conv-chain li{background:var(--dark-2);border-radius:12px;padding:9px 11px;display:flex;flex-direction:column;min-width:0}
+.conv-chain span{font-size:11px;color:#A7ADBA}.conv-chain strong{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-grid .equation{display:none}
+#resultExplanation,#reverseText{color:#D7DAE1}
+.reverse-big{font-size:72px!important;letter-spacing:-2px}
+#toScore{width:100%;min-height:48px;margin-top:10px}
+.result-foot{font-size:12px;margin:12px 0 0}
+@media screen and (min-width:900px){.conv-grid{grid-template-columns:minmax(0,1.45fr) minmax(320px,1fr)}}
+@media(max-width:899px){
+ .conv-grid .result{position:sticky;bottom:calc(84px + env(safe-area-inset-bottom));z-index:6;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 12px;padding:12px 12px 12px 18px;border-radius:18px;box-shadow:0 8px 24px #0F11152e}
+ .conv-grid .result .eyebrow,#honLabel,.conv-chain,#resultExplanation,#reverseText,.result-foot{display:none}
+ .conv-grid .result .big{font-size:30px;letter-spacing:-.5px;margin:0}.conv-grid .result .big small{font-size:16px}
+ .reverse-big{font-size:30px!important;margin:0}
+ .key-pill{margin-left:8px;font-size:14px;padding:3px 10px}
+ .conv-pick-only,.conv-own-only{min-width:0}
+ #toScore{width:auto;margin:0;min-height:44px;padding:0 14px;grid-column:2;grid-row:1}
+}
+/* Modified by AI on 2026-10-10 19:48:00 */

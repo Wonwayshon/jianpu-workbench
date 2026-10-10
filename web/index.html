@@ -9,6 +9,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="pdf-workbench.css">
 <script src="theme.js?v=1.20.0"></script>
+<script src="chip-select.js?v=1.20.0"></script>
 <script src="platform/browser.js"></script>
 <script src="platform/android.js"></script>
 <script src="platform/desktop.js"></script>
@@ -50,16 +51,27 @@ nav{flex-wrap:wrap}.erhu-tuning{display:flex;flex-wrap:wrap;gap:12px;margin:20px
 <body>
 <main>
 <nav role="tablist" aria-label="工具"><div class="nav-brand" aria-hidden="true">笛调之间</div><button role="tab" id="scoreTab" aria-controls="scorePanel" aria-selected="false" tabindex="-1"><span class="app-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4v12m0-10 6-2v10"/><ellipse cx="11" cy="17" rx="3" ry="2"/><ellipse cx="17" cy="15" rx="3" ry="2"/><path d="M3 5h5M3 9h5M3 13h3"/></svg></span><span>转谱</span></button><button role="tab" id="pdfTab" aria-controls="pdfPanel" aria-selected="false" tabindex="-1"><span class="app-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8 12h8M8 16h5"/></svg></span><span>谱库</span></button><button role="tab" id="practiceTab" aria-controls="practicePanel" aria-selected="false" tabindex="-1"><span class="app-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 10h18M3 14h18M3 18h18"/><ellipse cx="9" cy="16" rx="2.4" ry="1.8"/><path d="M11.4 16V6"/><path d="m15 9 2 2 4-5"/></svg></span><span>练习</span></button><button role="tab" id="toolsTab" class="nav-tools" aria-selected="false" tabindex="-1" aria-label="乐器工具"><span class="app-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg></span><span>工具</span></button><div class="nav-group" aria-hidden="true">乐器工具</div><button role="tab" id="instrumentTab" aria-controls="instrumentPanel" aria-selected="true"><span class="app-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14m-4-4 4 4-4 4M19 17H5m4-4-4 4 4 4"/></svg></span><span>换算</span></button><button role="tab" id="fingeringTab" aria-controls="fingeringPanel" aria-selected="false" tabindex="-1"><span class="app-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3zM7 8h10M7 12h10M7 16h10"/></svg></span><span>指法</span></button><button role="tab" id="tunerTab" aria-controls="tunerPanel" aria-selected="false" tabindex="-1"><span class="app-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17a8 8 0 1 1 16 0M12 17l4-6M12 5v2M5.5 8.5l1.4 1.4M18.5 8.5l-1.4 1.4"/></svg></span><span>调音</span></button><button role="tab" id="erhuTab" aria-controls="erhuPanel" aria-selected="false" tabindex="-1"><span class="app-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v14m5-14v14M7 7h9M7 11h9M8 17h8v4H8zM4 14l16-5"/></svg></span><span>二胡</span></button><div class="nav-spacer" aria-hidden="true"></div><button role="tab" id="settingsTab" aria-controls="settingsPanel" aria-selected="false" tabindex="-1"><span class="app-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/></svg></span><span>设置</span></button></nav><div class="tool-subtabs" role="tablist" aria-label="乐器工具" hidden><button type="button" role="tab" data-tool="instrument">换算</button><button type="button" role="tab" data-tool="fingering">指法</button><button type="button" role="tab" data-tool="tuner">调音</button><button type="button" role="tab" data-tool="erhu">二胡</button></div>
-<section id="instrumentPanel" role="tabpanel" aria-labelledby="instrumentTab">
-<h1>笛子调性换算</h1><p class="intro">先算乐曲的 1，再按你熟悉的指法选篠笛。默认：靠近吹孔的三个孔按住作 1。</p>
-<div class="grid">
-<div class="card"><h2><span class="labelnum">01</span>竹笛与指法</h2><div class="fields"><div class="field"><label for="diziKey">竹笛标注的调</label><select id="diziKey" data-keys></select></div><div class="field"><label for="diziDegree">筒音作几</label><select id="diziDegree"><option value="0">1</option><option value="2" selected>2</option><option value="4">3</option><option value="5">4</option><option value="7">5</option><option value="9">6</option><option value="11">7</option></select></div></div><p class="subtle" id="diziExplanation"></p><div class="line"></div>
-<h2><span class="labelnum">02</span>篠笛上，哪个音当 1</h2><label for="shinMode">七孔唄用／ドレミ调指法</label><select id="shinMode"><option value="5">上三孔按住作 1（你的指法）</option><option value="0">标准「一」音作 1（本调）</option><option value="7">上两孔按住作 1（「五」音位置）</option><option value="holes">点选下面的孔位作 1</option><option value="custom">按实际笛子校准音高</option></select>
+<section id="instrumentPanel" role="tabpanel" aria-labelledby="instrumentTab" data-mode="pick">
+<div class="page-head"><div><h1>调性换算</h1><p class="intro">竹笛曲换篠笛吹，或者看手上的篠笛能吹什么调。</p></div>
+<div class="app-segments conv-mode" role="group" aria-label="换算方向"><button type="button" id="convPick" aria-pressed="true">竹笛曲 → 选篠笛</button><button type="button" id="convOwn" aria-pressed="false">我的篠笛 → 吹什么调</button></div></div>
+<div class="grid conv-grid">
+<div class="conv-inputs">
+<div class="card conv-pick"><div class="card-head"><h2>竹笛</h2><p class="subtle" id="diziExplanation"></p></div>
+<div class="conv-field"><label for="diziKey">笛身标注的调</label><select id="diziKey" data-keys data-chips="keys"></select></div>
+<div class="conv-field"><label for="diziDegree">筒音作</label><select id="diziDegree" data-chips="digits"><option value="0">1</option><option value="2" selected>2</option><option value="4">3</option><option value="5">4</option><option value="7">5</option><option value="9">6</option><option value="11">7</option></select></div></div>
+<div class="card conv-own"><div class="card-head"><h2>我的篠笛是几本</h2><p class="subtle">括号里是标准「一」音</p></div><label for="existingHon" class="sr-only">篠笛本数</label><select id="existingHon" data-chips="hon"></select></div>
+<div class="card"><div class="card-head"><h2>篠笛上哪个音当 1</h2></div><label for="shinMode" class="sr-only">七孔唄用／ドレミ调指法</label><select id="shinMode" data-chips="cards"><option value="5" data-chip-label="上三孔作 1" data-chip-sub="常用 · 默认">上三孔按住作 1（你的指法）</option><option value="0" data-chip-label="标准「一」音作 1" data-chip-sub="本调">标准「一」音作 1（本调）</option><option value="7" data-chip-label="上两孔作 1" data-chip-sub="「五」音位置">上两孔按住作 1（「五」音位置）</option><option value="holes" data-chip-label="自定义孔位" data-chip-sub="点下方孔位" data-chip-minor>点选下面的孔位作 1</option><option value="custom" data-chip-label="按实测校准" data-chip-sub="用调音器测音" data-chip-minor>按实际笛子校准音高</option></select>
 <div id="customBox" class="spaced" hidden><div class="fields"><div class="field"><label for="calibrationHon">用哪支笛子实测</label><select id="calibrationHon"></select></div><div class="field"><label for="customPitch">这个孔位吹出的音</label><select id="customPitch" data-keys><option value="">请选择实测音名</option></select></div></div><p class="subtle">用调音器测这套按孔的音名，再选上面的本数。不确定的组合不会自动猜调性。</p></div>
-<p class="subtle">点孔位切换按住 / 打开，把这套指法的音当作 1。</p><div id="fingerDiagram" class="fingering" aria-label="从吹孔到笛尾的按孔图"></div><p class="subtle" id="fingerNote"></p><div class="callout">● 按住　○ 打开。孔序从吹孔一侧画到笛尾；不把日本数字谱的「五」直接当成中国简谱的 5。</div></div>
-<div class="card result" aria-live="polite"><div class="eyebrow">保持乐曲调性 · 推荐篠笛</div><div class="big"><span id="honResult">8</span><small>本调子</small></div><p id="honLabel"></p><div class="line"></div><div class="equation" id="equation"></div><p class="subtle" id="resultExplanation"></p><button id="toScore">用这个调转换简谱</button><div class="grow"></div><p class="subtle spaced">这里只匹配调性，不代表每个音都用原来的手指动作；音区、半孔与叉指仍需按曲谱调整。</p></div>
+<div class="flute-box"><div id="fingerDiagram" class="fingering" aria-label="从吹孔到笛尾的按孔图"></div><p class="flute-legend"><span><i class="lg-closed"></i>按住</span><span><i class="lg-open"></i>打开</span><span>点孔位可切换，孔序从吹孔一侧画到笛尾</span></p></div>
+<p class="subtle" id="fingerNote"></p><p class="subtle compact">不把日本数字谱的「五」直接当成中国简谱的 5。</p></div>
 </div>
-<div class="card reverse"><div><h2><span class="labelnum">03</span>我已有一支篠笛，它能吹什么调？</h2><label for="existingHon">选择本数 · 沿用上方“哪个音当 1”</label><select id="existingHon"></select></div><div class="reverse-answer" aria-live="polite"><p id="reverseBase" class="subtle compact"></p><strong id="reverseResult"></strong><p id="reverseText" class="subtle"></p></div></div>
+<div class="card result" aria-live="polite">
+<div class="conv-pick-only"><div class="eyebrow">推荐篠笛</div><div class="big-row"><div class="big"><span id="honResult">8</span><small>本</small></div><span class="key-pill" id="convSongKey"></span></div><p id="honLabel"></p>
+<ol class="conv-chain" id="convChain"></ol><div class="equation" id="equation"></div><p class="subtle" id="resultExplanation"></p></div>
+<div class="conv-own-only"><div class="eyebrow" id="reverseBase"></div><div class="big reverse-big" id="reverseResult"></div><p id="reverseText" class="subtle"></p></div>
+<button id="toScore" type="button">用这个调转换简谱</button>
+<p class="subtle result-foot">只匹配调性，不代表每个音的手指动作都相同；音区、半孔与叉指仍需按曲谱调整。</p></div>
+</div>
 <details><summary>展开 1–12 本对照表与计算方法</summary><div class="table-wrap"><table><thead><tr><th>篠笛</th><th>标准「一」音</th><th>当前指法作 1</th></tr></thead><tbody id="honTable"></tbody></table></div><p class="subtle">竹笛筒音 = 标注调名 + 7 半音；乐曲主音 = 筒音 −“筒音作几”的音程。简谱 1–7 的音程为 0、2、4、5、7、9、11 半音。篠笛本数每增加 1，整体升高半音，八本的标准「一」音为 C；上三孔作 1 使用四度关系，即再加 5 半音。计算调性时按 12 半音循环。</p></details>
 <div class="smallprint"><p>适用范围：常见六孔竹笛，以及七孔唄用／ドレミ调篠笛。古典调、囃子用的音阶不一定符合本表，不能直接据此选笛。点孔只记录全按或全开；半孔和吹奏力度请用实测校准。自定义校准仅修正所选主音，不能把非平均律音阶整体校正。</p><p>上三孔指法以八本篠笛的 F 音位置为基准。部分制作者的准确 F 需要加按笛尾小指孔或使用叉指；请以厂家指法表、调音器为准。本数对应的是标准「一」音，与你另选指法作 1 的乐曲调名是两回事。</p></div>
 </section>
@@ -194,7 +206,7 @@ let holeState=[true,true,true,false,false,false,false],chartSelection=null;
 const HOLE_PITCH={'1111110':0,'1111100':2,'1111000':4,'1110000':5,'1100000':7,'1000000':9,'1110001':5,'1100001':7,'1000001':9,'0000001':11};
 function holeKey(){return holeState.map(v=>v===true?'1':v===false?'0':v).join('')}
 function needsCalibration(){if(chartSelection&&chartSelection.pitch!==null)return false;return $('shinMode').value==='custom'||($('shinMode').value==='holes'&&HOLE_PITCH[holeKey()]===undefined)}
-let currentSong=5,lastConverted=null;
+let currentSong=5,lastConverted=null,currentOwn=null;const convOwnMode=()=>$('instrumentPanel').dataset.mode==='own';
 function offset(){
  if(chartSelection&&chartSelection.pitch!==null)return chartSelection.pitch;
  if(needsCalibration())return $('customPitch').value===''?null:mod(Number($('customPitch').value)-honBase(Number($('calibrationHon').value)));
@@ -223,11 +235,11 @@ function updateInstruments(){
  currentSong=mod(bottom-degree);
  $('customBox').hidden=!needsCalibration();renderHoles();
  $('diziExplanation').textContent=`筒音的音名是 ${keyName(bottom)}；筒音当 ${STEPS.indexOf(degree)+1} 时，乐曲为 1=${keyName(currentSong)}。`;
- $('equation').textContent=`${keyName(dizi)} 调竹笛 · 筒音作 ${STEPS.indexOf(degree)+1} ＝ 1=${keyName(currentSong)}`;
+ $('equation').textContent=`${keyName(dizi)} 调竹笛 · 筒音作 ${STEPS.indexOf(degree)+1} ＝ 1=${keyName(currentSong)}`;$('convSongKey').textContent=`1 = ${keyName(currentSong)}`;const chain=[['竹笛',`${keyName(dizi)} 调`],['筒音',`${keyName(bottom)} 作 ${STEPS.indexOf(degree)+1}`],['乐曲',`1=${keyName(currentSong)}`],['篠笛',o===null?'待校准':`${cn[mod(mod(currentSong-o)-5)+1]}本`]];$('convChain').replaceChildren(...chain.map(([k,v])=>{const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('strong');a.textContent=k;b.textContent=v;li.append(a,b);return li}));
  const existing=Number($('existingHon').value);
  $('reverseBase').textContent=`${cn[existing]}本 · 本调 ${keyName(honBase(existing))}`;
  $('toScore').disabled=o===null;$('honTable').replaceChildren();
- if(o===null){
+ if(o===null){currentOwn=null;syncConvCta();
   $('honResult').textContent='—';$('honLabel').textContent='孔位音高待校准';$('resultExplanation').textContent='这套组合没有预设音高。选实测笛子的本数和吹出的音名后，即可继续换算。';
   $('fingerNote').textContent='当前为自定义孔位：请用调音器确认实际音名。';$('reverseResult').textContent='待校准';$('reverseText').textContent='孔位已保留，尚未确定调性。';return;
  }
@@ -235,7 +247,7 @@ function updateInstruments(){
  $('honResult').textContent=hon;$('honLabel').textContent=`${cn[hon]}本 · 标准「一」音为 ${keyName(base)}`;
  $('resultExplanation').textContent=`换用${cn[hon]}本篠笛，以${modeLabel()}，同样得到 ${keyName(currentSong)} 调。`;
  $('fingerNote').textContent=chartSelection?`${chartSelection.label}；以所选音作 1。请保留表中标注的吹奏方法。`:needsCalibration()?`已用${cn[Number($('calibrationHon').value)]}本实测 ${keyName(Number($('customPitch').value))} 校准；其他本数按半音关系推算。`:`这套孔位在八本上按 ${keyName(o)} 音换算。主干指法仅作参考，小指孔或叉指请按制作者指法表校音。`;
- const target=mod(honBase(existing)+o);$('reverseResult').textContent=`1 = ${keyName(target)} 调`;$('reverseText').textContent=`${modeLabel()}，主音是 ${keyName(target)}。`;
+ const target=mod(honBase(existing)+o);currentOwn=target;syncConvCta();$('reverseResult').textContent=`1 = ${keyName(target)} 调`;$('reverseText').textContent=`${modeLabel()}，主音是 ${keyName(target)}。`;
  for(let h=1;h<=12;h++){const row=document.createElement('tr');if(h===existing)row.className='selected';for(const val of [`${cn[h]}本`,keyName(honBase(h)),`1=${keyName(honBase(h)+o)}`]){const cell=document.createElement('td');cell.textContent=val;row.append(cell)}$('honTable').append(row)}
 }
 for(const id of ['diziKey','diziDegree','customPitch','calibrationHon','existingHon'])$(id).addEventListener('change',updateInstruments);
@@ -248,7 +260,10 @@ const TOOL_TABS=['instrument','fingering','tuner','erhu'];let lastTool='instrume
 function showTab(name){for(const n of TAB_NAMES){const active=n===name;$(n+'Panel').hidden=!active;$(n+'Tab').setAttribute('aria-selected',String(active));$(n+'Tab').tabIndex=active?0:-1}const tool=TOOL_TABS.includes(name);if(tool)lastTool=name;$('toolsTab').setAttribute('aria-selected',String(tool));const sub=document.querySelector('.tool-subtabs');sub.hidden=!tool;for(const b of sub.children){const on=b.dataset.tool===name;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1}document.body.dataset.tab=name;window.scrollTo(0,0);}
 $('toolsTab').onclick=()=>showTab(lastTool);for(const b of document.querySelectorAll('.tool-subtabs [data-tool]'))b.onclick=()=>showTab(b.dataset.tool);
 for(const name of TAB_NAMES){$(name+'Tab').onclick=()=>showTab(name);$(name+'Tab').onkeydown=e=>{if(e.ctrlKey||e.metaKey||e.altKey)return;if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const idx=TAB_NAMES.indexOf(name);const dest=e.key==='Home'?TAB_NAMES[0]:e.key==='End'?TAB_NAMES[TAB_NAMES.length-1]:TAB_NAMES[(idx+(e.key==='ArrowRight'?1:-1)+TAB_NAMES.length)%TAB_NAMES.length];showTab(dest);$(dest+'Tab').focus()}}}
-$('toScore').onclick=()=>{$('songKey').value=currentSong;showTab('score');updateScore();$('scoreTab').focus()};
+function syncConvCta(){const key=convOwnMode()?currentOwn:currentSong;$('toScore').disabled=key===null||key===undefined;$('toScore').textContent=key===null||key===undefined?'需先校准孔位':`用 1=${keyName(key)} 去转谱`}
+function setConvMode(mode){$('instrumentPanel').dataset.mode=mode;$('convPick').setAttribute('aria-pressed',String(mode==='pick'));$('convOwn').setAttribute('aria-pressed',String(mode==='own'));syncConvCta()}
+$('convPick').onclick=()=>setConvMode('pick');$('convOwn').onclick=()=>setConvMode('own');
+$('toScore').onclick=()=>{const key=convOwnMode()?currentOwn:currentSong;if(key===null||key===undefined)return;$('songKey').value=key;showTab('score');updateScore();$('scoreTab').focus()};
 const DIGITS_FLAT=['1','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
 const DIGITS_SHARP=['1','♯1','2','♯2','3','4','♯4','5','♯5','6','♯6','7'];
 const NAMES_FLAT=['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
@@ -419,4 +434,4 @@ showTab(TAB_NAMES.includes(location.hash.slice(1))?location.hash.slice(1):'instr
 </script>
 </body>
 </html>
-<!-- Modified by AI on 2026-10-10 19:44:57 -->
+<!-- Modified by AI on 2026-10-10 19:48:00 -->
