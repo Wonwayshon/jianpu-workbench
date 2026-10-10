@@ -407,4 +407,32 @@ select.chip-source{display:none}
 @media(max-width:599px){.archive-entry-date{display:none}.archive-entry>summary{gap:10px;padding:8px 12px}}
 .archive-split .pdf-archive-list,.archive-split .archive-month-grid{grid-template-columns:minmax(0,1fr)}
 .archive-status[hidden]{display:none}
-/* Modified by AI on 2026-10-11 01:58:20 */
+
+/* 指法表: register switch, list + detail */
+.finger-regs{display:inline-grid;grid-auto-flow:column;grid-template-columns:none;margin:0 0 14px}
+.finger-regs button{padding:0 16px}
+.finger-split{display:grid;gap:16px;align-items:start}
+#shinoChartView .fingering-groups{grid-template-columns:minmax(0,1fr)!important;margin:0}
+.chart-fingering.selected{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.finger-detail{background:#fff;border-radius:18px;box-shadow:0 0 0 1px var(--line-soft);padding:20px;display:flex;flex-direction:column;gap:14px}
+.finger-detail-head{display:flex;align-items:center;gap:12px}
+.finger-detail-head strong{font-size:48px;line-height:1;font-weight:600}
+.finger-detail-head span{flex:1;display:flex;flex-direction:column}
+.finger-detail-head small{color:var(--muted)}
+.finger-detail-close{display:none}
+.finger-detail-pic{background:var(--bg);border-radius:14px;padding:12px 12px 8px;display:flex;flex-direction:column;gap:6px}
+.finger-detail-pic .chart-holes{max-height:none;width:100%}
+.finger-detail-ends,.finger-detail-fingers{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:0 4px}
+.finger-detail-fingers span{flex:1;text-align:center}
+.finger-tip{background:#FFF8EB;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;font-size:13px;color:#5C4A2E}
+.finger-tip b{color:#7A4300}
+.finger-detail p{margin:0;font-size:13px}
+.finger-go{min-height:48px}
+.chart-guide{padding:16px 18px}
+@media screen and (min-width:1000px){.finger-split{grid-template-columns:minmax(0,1fr) 360px}.finger-detail{position:sticky;top:24px}}
+@media(max-width:999px){
+ .finger-detail{position:fixed;left:0;right:0;bottom:0;z-index:60;border-radius:22px 22px 0 0;box-shadow:0 -12px 40px #0F111533;padding:16px 16px calc(20px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .2s;max-height:85vh;overflow:auto}
+ .finger-detail.open{transform:none}
+ .finger-detail-close{display:inline-flex}
+}
+/* Modified by AI on 2026-10-11 02:00:04 */

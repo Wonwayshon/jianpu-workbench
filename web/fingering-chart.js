@@ -11,8 +11,26 @@ function diagram(pattern){
  if(state==='h')svg.append(element('path',{d:`M ${x-11} 18 A 11 11 0 0 1 ${x+11} 18 Z`,fill:'#294459'}));
  });return svg;
 }
-for(const [heading,japanese,rows] of groups){
- const section=document.createElement('section');section.className='card fingering-group';
+const TIPS=[[/カリ/,'カリ · 外转升音','把笛子略向外转，使音高升高。声音会更响、更粗犷。'],[/メリ/,'メリ · 内转降音','把笛子略向内转，使音高降低。声音会更轻、更含蓄；大メリ幅度更大。'],[/微开/,'微开 · 只开一点','手指横向稍移，让孔只开一点；也可纵向移开约一半并配合メリ。']];
+const host=document.getElementById('fingeringGroups');
+const tabs=document.createElement('div');tabs.className='app-segments finger-regs';tabs.setAttribute('role','group');tabs.setAttribute('aria-label','音区');
+const detail=document.createElement('aside');detail.className='finger-detail';detail.id='fingerDetail';detail.setAttribute('aria-live','polite');
+const split=document.createElement('div');split.className='finger-split';host.before(tabs);host.before(split);split.append(host,detail);
+const sections=[];let current=null;
+function select(button,info){
+ if(current)current.classList.remove('selected');current=button;button.classList.add('selected');
+ const {pattern,pitch,heading,label,technique}=info;detail.replaceChildren();
+ const close=document.createElement('button');close.type='button';close.className='finger-detail-close small-btn';close.textContent='关闭';close.onclick=()=>detail.classList.remove('open');
+ const head=document.createElement('div');head.className='finger-detail-head';const big=document.createElement('strong');big.textContent=label;const meta=document.createElement('span');const reg=document.createElement('b');reg.textContent=heading;const tech=document.createElement('small');tech.textContent=technique||'基本指法';meta.append(reg,tech);head.append(big,meta,close);
+ const pic=document.createElement('div');pic.className='finger-detail-pic';const ends=document.createElement('div');ends.className='finger-detail-ends';ends.innerHTML='<span>吹口侧</span><span>笛尾</span>';const fingers=document.createElement('div');fingers.className='finger-detail-fingers';fingers.innerHTML='<span>左食</span><span>左中</span><span>左无</span><span>右食</span><span>右中</span><span>右无</span><span>右小</span>';pic.append(ends,diagram(pattern),fingers);
+ detail.append(head,pic);
+ const tip=TIPS.find(([re])=>re.test(technique||''));if(tip){const t=document.createElement('div');t.className='finger-tip';const b=document.createElement('b');b.textContent=tip[1];const p=document.createElement('span');p.textContent=tip[2];t.append(b,p);detail.append(t)}
+ const note=document.createElement('p');note.className='subtle';note.textContent=pitch===null?'大甲音区只带入孔位，需按实际吹出的音校准。':'谱号是日本篠笛记号；0 不是休止符，× 也不是中国简谱的升号。';detail.append(note);
+ const go=document.createElement('button');go.type='button';go.className='primary finger-go';go.textContent=pitch===null?'带入换算并校准':`用「${label}」作 1 去换算`;go.onclick=()=>{detail.classList.remove('open');applyChartFingering(pattern,pitch,`${heading} ${label}${technique?' · '+technique:''}`)};detail.append(go);
+ detail.classList.add('open');
+}
+groups.forEach(([heading,japanese,rows],gi)=>{
+ const section=document.createElement('section');section.className='card fingering-group';section.hidden=gi!==0;
  const h=document.createElement('h2');h.textContent=heading;const jp=document.createElement('span');jp.className='subtle';jp.textContent=japanese;h.append(jp);section.append(h);
  const direction=document.createElement('p');direction.className='chart-direction';direction.textContent='吹口侧　左手：食指 / 中指 / 无名指　→　右手：食指 / 中指 / 无名指 / 小指';section.append(direction);
  for(const [label,pitch,variants] of rows){
@@ -22,12 +40,16 @@ for(const [heading,japanese,rows] of groups){
  variants.forEach(([pattern,technique],index)=>{
  const button=document.createElement('button');button.className='chart-fingering';button.type='button';
  const description=[...pattern].map((v,i)=>`${i+1}孔${{'1':'按住','0':'打开',s:'微开',h:'半开'}[v]}`).join('，');
- button.setAttribute('aria-label',`${heading} ${label}，第 ${index+1} 种指法，${description}${technique?'，'+technique:''}。${pitch===null?'带入孔位并校准':'以此音作 1'}`);
+ button.setAttribute('aria-label',`${heading} ${label}，第 ${index+1} 种指法，${description}${technique?'，'+technique:''}。查看详情`);
  button.append(diagram(pattern));const text=document.createElement('span');text.className='chart-technique';text.textContent=(technique||'基本指法')+' · '+(pitch===null?'带入校准':'作 1');button.append(text);
- button.onclick=()=>{applyChartFingering(pattern,pitch,`${heading} ${label}${technique?' · '+technique:''}`);};list.append(button);
+ const info={pattern,pitch,heading,label,technique};
+ button.onclick=()=>select(button,info);list.append(button);
+ if(gi===0&&!current)queueMicrotask(()=>{if(!current){select(button,info);detail.classList.remove('open')}});
  });row.append(list);section.append(row);
  }
- document.getElementById('fingeringGroups').append(section);
-}
+ host.append(section);sections.push(section);
+ const t=document.createElement('button');t.type='button';t.textContent=heading.replace(' · ','·');t.setAttribute('aria-pressed',String(gi===0));
+ t.onclick=()=>{sections.forEach((s,i)=>s.hidden=i!==gi);for(const b of tabs.children)b.setAttribute('aria-pressed',String(b===t))};tabs.append(t);
+});
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-11 02:00:04
