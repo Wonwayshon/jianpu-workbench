@@ -70,7 +70,7 @@ async function start(){
 }
 function stop(){
  cancelAnimationFrame(raf);raf=0;stream?.getTracks().forEach(t=>t.stop());stream=null;if(ctx){ctx.close();ctx=null}history=[];
- $('tunerToggle').textContent='🎤 开始调音';$('tunerPanelCard').classList.add('idle');if(!$('tunerStatus').textContent.startsWith('没有')&&!$('tunerStatus').textContent.startsWith('无法'))$('tunerStatus').textContent='';
+ $('tunerToggle').textContent='开始调音';$('tunerPanelCard').classList.add('idle');if(!$('tunerStatus').textContent.startsWith('没有')&&!$('tunerStatus').textContent.startsWith('无法'))$('tunerStatus').textContent='';
 }
 for(let hz=430;hz<=446;hz++)$('tunerA4').add(new Option(`A4 = ${hz} Hz`,hz));
 for(let i=0;i<12;i++)$('tunerKey').add(new Option(`1 = ${NAMES[i]}`,i));
@@ -82,4 +82,4 @@ new MutationObserver(()=>{if($('tunerPanel').hidden)stop()}).observe($('tunerPan
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stop()});
 window.Tuner={yin,start,stop};
 })();
-// Modified by AI on 2026-10-11 02:03:49
+// Modified by AI on 2026-10-11 02:07:33
