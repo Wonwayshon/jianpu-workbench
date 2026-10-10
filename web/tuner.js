@@ -73,6 +73,7 @@ function stop(){
  $('tunerToggle').textContent='开始调音';$('tunerPanelCard').classList.add('idle');if(!$('tunerStatus').textContent.startsWith('没有')&&!$('tunerStatus').textContent.startsWith('无法'))$('tunerStatus').textContent='';
 }
 for(let hz=430;hz<=446;hz++)$('tunerA4').add(new Option(`A4 = ${hz} Hz`,hz));
+for(const [id,d] of [['tunerA4Down',-1],['tunerA4Up',1]]){const b=$(id);if(b)b.onclick=()=>{const sel=$('tunerA4'),i=Math.max(0,Math.min(sel.options.length-1,sel.selectedIndex+d));if(i!==sel.selectedIndex){sel.selectedIndex=i;sel.dispatchEvent(new Event('change',{bubbles:true}))}}}
 for(let i=0;i<12;i++)$('tunerKey').add(new Option(`1 = ${NAMES[i]}`,i));
 $('tunerA4').value=store('flute.tunerA4')||'440';$('tunerKey').value=store('flute.tunerKey')||'0';
 $('tunerA4').onchange=()=>store('flute.tunerA4',$('tunerA4').value);$('tunerKey').onchange=()=>store('flute.tunerKey',$('tunerKey').value);
@@ -82,4 +83,4 @@ new MutationObserver(()=>{if($('tunerPanel').hidden)stop()}).observe($('tunerPan
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stop()});
 window.Tuner={yin,start,stop};
 })();
-// Modified by AI on 2026-10-11 02:07:33
+// Modified by AI on 2026-10-11 02:29:06

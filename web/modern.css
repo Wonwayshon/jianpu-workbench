@@ -477,4 +477,57 @@ select.chip-source{display:none}
 .tuner-steady-bars::before{content:"";position:absolute;left:8px;right:8px;top:50%;height:1px;background:var(--line)}
 .tuner-steady-bars i{flex:1;height:var(--h,0);border-radius:2px;transform:translateY(var(--y,0));background:transparent}
 .tuner-steady-bars i.ok{background:#7FD3A4}.tuner-steady-bars i.off{background:#F5B48A}
-/* Modified by AI on 2026-10-11 02:03:49 */
+
+/* 转谱 alignment with the design: paper preview, line numbers, compact status */
+#scoreArchiveSource{display:none}
+.ws-status{font-size:12px;border-radius:999px;padding:3px 10px;background:var(--warn-bg);color:var(--warn);white-space:nowrap}
+.ws-status.saved{background:var(--ok-bg);color:var(--ok)}
+.ws-title h1{max-width:min(520px,60vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pane-head{gap:8px;flex-wrap:wrap}
+.src-tabs{margin:0;grid-template-columns:auto auto}
+.src-tabs button{min-height:32px;padding:0 12px;font-size:13px}
+#scorePanel .src-row select{padding:0 34px 0 12px;min-height:36px;min-width:84px;font-size:14px}
+.help-menu{left:auto;right:0;width:min(420px,calc(100vw - 48px));max-height:70vh;overflow:auto;padding:14px;gap:10px}
+.help-menu p,.help-menu details{margin:0}
+.help-menu details{background:var(--bg);box-shadow:none;padding:10px 12px}
+.editor-wrap{display:flex;border-radius:12px;background:#FBFBFC;box-shadow:inset 0 0 0 1px var(--line-soft);overflow:hidden}
+.line-gutter{flex:none;width:40px;padding:14px 8px 14px 0;box-sizing:border-box;text-align:right;white-space:pre;overflow:hidden;font:13px/1.9 ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#A3A8B3;user-select:none}
+.editor-wrap #scoreInput{flex:1;min-width:0;border-radius:0;box-shadow:none;background:transparent;padding:14px 12px 14px 6px;font-size:15px;line-height:1.9;white-space:pre;overflow-x:auto}
+.editor-wrap:has(#scoreInput.has-error){box-shadow:inset 0 0 0 1.5px #E5484D}
+.editor-wrap #scoreInput:focus{box-shadow:none}
+.editor-wrap:focus-within{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.score-controls[data-src=img] .editor-wrap,.score-controls[data-src=img] .sym-bar,.score-controls[data-src=img] .src-row,.score-controls[data-src=img] .error-inline{display:none}
+.src-image{display:flex;flex-direction:column;gap:8px;min-height:260px;border-radius:12px;background:var(--fill);padding:12px;justify-content:center}
+.src-image img{max-width:100%;border-radius:8px;background:#fff}
+/* preview: grey workspace with a white paper sheet */
+#scorePanel .output-card{background:transparent;box-shadow:none;padding:0}
+#scorePanel .output-card .score{background:#fff;border-radius:6px;box-shadow:0 1px 3px #0F11150f,0 0 0 1px var(--fill-2);padding:36px 40px;min-height:420px}
+#scorePanel #rangeNote{font-size:12px;padding:8px 12px;margin:0 0 10px}
+body[data-tab=score] #floatPlayer{display:none!important}
+/* parts pop-over: roomier mixer rows */
+.parts-menu{width:min(620px,calc(100vw - 48px));max-height:75vh;overflow:auto;padding:16px}
+.parts-menu .part-mixer{padding:12px 14px}
+.parts-menu .part-mixer .part-row{grid-template-columns:minmax(0,1fr) 170px auto;gap:10px;min-height:44px}
+.parts-menu .part-mixer .part-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.parts-menu .part-mixer .part-row button{white-space:nowrap;min-height:36px;padding:0 12px}
+.parts-menu .part-mixer .part-row select{min-height:36px}
+.parts-menu .trans-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.parts-menu .trans-controls select{width:auto;min-width:200px}
+@media(max-width:899px){#scorePanel .output-card .score{padding:20px 16px;min-height:240px}.parts-menu{position:fixed;left:12px;right:12px;width:auto;top:auto;bottom:calc(92px + env(safe-area-inset-bottom))}}
+
+/* 调音器: gauge card + side cards (design layout) */
+.tuner-layout{display:grid;gap:20px;align-items:start}
+@media screen and (min-width:1000px){.tuner-layout{grid-template-columns:minmax(0,1fr) 340px}.tuner-layout .tuner-card{max-width:none;margin:0}}
+.tuner-side{display:flex;flex-direction:column;gap:16px}
+.tuner-side-card{padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+.tuner-side-card h2{margin:0;font-size:15px}
+.tuner-side-card h2 label{color:var(--ink);font-size:15px;font-weight:600}
+.tuner-side-card p{margin:0;font-size:12px}
+.tuner-a4{display:flex;align-items:center;gap:8px}
+.tuner-a4 button{width:44px;min-height:44px;padding:0;font-size:20px}
+.tuner-a4 select{flex:1;text-align:center;font-weight:600;font-size:16px}
+.tuner-side .tuner-steady{margin:0;max-width:none}
+.tuner-side .tuner-steady-head{flex-direction:column;gap:2px}
+.tuner-side .tuner-steady-head span:first-child{font-size:15px}
+.tuner-side .tuner-steady-bars{height:72px}
+/* Modified by AI on 2026-10-11 02:29:06 */

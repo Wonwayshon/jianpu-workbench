@@ -186,5 +186,44 @@ $('partSelect').addEventListener('change', sync);
 document.addEventListener('click', () => setTimeout(sync), true);
 sync();
 })();
+
+// ---------- text pane: help pop-over, text / original image, line numbers ----------
+(() => {
+const hb = $('helpBtn'), hm = $('helpMenu');
+if (hb && hm) {
+menus.push(['helpBtn', 'helpMenu']);
+hb.addEventListener('click', (e) => { e.stopPropagation(); const open = hm.hidden; closeMenus('helpMenu'); hm.hidden = !open; hb.setAttribute('aria-expanded', String(open)); });
+hm.addEventListener('click', (e) => e.stopPropagation());
+}
+const pane = document.querySelector('.score-controls'), img = $('srcImage'), prev = $('imagePreview');
+function syncImage() { const src = prev && !prev.hidden && prev.getAttribute('src'); img.hidden = !src; if (src) img.src = src; $('srcImageHint').hidden = !!src; }
+function setSrc(v) { pane.dataset.src = v; for (const b of pane.querySelectorAll('.src-tabs [data-src]')) b.setAttribute('aria-pressed', String(b.dataset.src === v)); pane.querySelector('.src-image').hidden = v !== 'img'; if (v === 'img') syncImage(); }
+for (const b of pane.querySelectorAll('.src-tabs [data-src]')) b.onclick = () => setSrc(b.dataset.src);
+if (prev) new MutationObserver(syncImage).observe(prev, { attributes: true, attributeFilter: ['src', 'hidden'] });
+setSrc('text');
+const ta = $('scoreInput'), gutter = $('lineGutter');
+let count = 0;
+function numbers() { const n = ta.value.split('\n').length; if (n !== count) { count = n; gutter.textContent = Array.from({ length: n }, (_, i) => i + 1).join('\n'); } gutter.scrollTop = ta.scrollTop; }
+ta.addEventListener('input', numbers); ta.addEventListener('scroll', () => { gutter.scrollTop = ta.scrollTop; });
+new MutationObserver(numbers).observe(ta, { attributes: true });
+setInterval(() => { if (!document.hidden && ta.offsetParent) numbers(); }, 800);
+numbers();
 })();
-// Modified by AI on 2026-10-11 02:02:16
+
+// ---------- workspace title and compact archive status ----------
+(() => {
+const h1 = document.querySelector('.ws-title h1'), src = $('scoreArchiveSource'), ta = $('scoreInput');
+const chip = document.createElement('span'); chip.id = 'wsStatus'; chip.className = 'ws-status'; src.after(chip);
+function title() { const m = ta.value.match(/^@title[ \t]+(.+)$/m); h1.textContent = m ? m[1].trim() : '转谱'; }
+function status() {
+const t = src.textContent.trim(); chip.title = t;
+const linked = /关联|已保存/.test(t) && !/尚未/.test(t);
+chip.textContent = linked ? '已存档' : '未存档'; chip.classList.toggle('saved', linked);
+}
+let timer; ta.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(title, 200); });
+new MutationObserver(status).observe(src, { childList: true, characterData: true, subtree: true });
+setInterval(() => { if (!document.hidden) title(); }, 1500);
+title(); status();
+})();
+})();
+// Modified by AI on 2026-10-11 02:29:06

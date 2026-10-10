@@ -343,7 +343,7 @@ function fillPartMixer(){
   for(const p of parts){
    const row=document.createElement('div');row.className='part-row';
    const name=p.name===p.id?p.id:`${p.id} · ${p.name}`;
-   const mute=document.createElement('label');mute.className='switch-row part-name';
+   const mute=document.createElement('label');mute.className='switch-row part-name';mute.title=name;
    const cb=Object.assign(document.createElement('input'),{type:'checkbox',checked:!settings.partMute[p.id]});cb.setAttribute('aria-label',`${name}发声`);
    cb.onchange=()=>applyPartMutes({...settings.partMute,[p.id]:!cb.checked});mute.append(cb,name);
    const sel=document.createElement('select');sel.setAttribute('aria-label',`${name}音色`);sel.add(new Option('默认音色',''));for(const [tid,label] of ScorePlayer.TIMBRE_LIST)sel.add(new Option(label,tid));sel.value=settings.partTimbres[p.id]||'';
@@ -656,4 +656,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 02:02:16
+// Modified by AI on 2026-10-11 02:29:06

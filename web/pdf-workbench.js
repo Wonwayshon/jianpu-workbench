@@ -480,6 +480,6 @@
   window.pdfWorkbenchCanLeave=()=>{if(state.busy){alert('正在识别，请先停止或等待完成，再退出。');return false;}return !state.dirty||confirm('还有未存档的识别结果，仍要退出吗？');};
   // Pure functions exposed for deterministic regression tests, without document contents.
   window.PdfWorkbenchCore={parsePages,joinText,usableText,checkedRecord};
-  syncControls();refreshArchives();
+  syncControls();setLibraryView(true);
 })();
-// Modified by AI on 2026-10-11 01:58:52
+// Modified by AI on 2026-10-11 02:29:06
