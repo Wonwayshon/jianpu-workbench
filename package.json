@@ -17,9 +17,12 @@
     "security:check": "node scripts/security-check.mjs",
     "security:history": "node scripts/security-check.mjs --history",
     "security:install": "node scripts/install-hooks.mjs",
-    "prepare": "node scripts/install-hooks.mjs"
+    "prepare": "node scripts/install-hooks.mjs",
+    "build:faust": "node scripts/build-faust.mjs",
+    "build:audition": "node scripts/build-audition.mjs"
   },
   "devDependencies": {
+    "@grame/faustwasm": "0.19.0",
     "@tauri-apps/cli": "^2.0.0",
     "fake-indexeddb": "6.2.4"
   },

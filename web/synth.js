@@ -38,8 +38,11 @@ const MODELS={
  reference:{kind:'wind',harm:[1,.4,.18,.08,.04],bright:3000,attack:.03,release:.18,scoop:0,vibRate:5,vibDepth:0,vibDelay:1,tremolo:0,jitter:0,breath:0,breathMul:2,breathQ:1,chiff:0,chiffLen:.01,gain:.4,reverb:.08},
  organ:{kind:'wind',harm:[1,.75,.2,.5,0,.18,0,.3],bright:6000,attack:.012,release:.05,scoop:0,vibRate:6.8,vibDepth:.0009,vibDelay:0,tremolo:.02,jitter:.2,breath:.01,breathMul:3,breathQ:1,chiff:.35,chiffLen:.012,gain:.24,reverb:.3},
  piano:{kind:'strike',B:.00032,count:18,tauLow:3.2,tauHigh:.55,tauK:.22,pos:.13,hammer:.35,strings:2,detune:.00045,release:.14,gain:.36,reverb:.22},
+ yangqin:{kind:'strike',B:.00008,count:18,tauLow:2.2,tauHigh:.7,tauK:.3,pos:.18,hammer:.4,strings:2,detune:.0006,release:.16,ring:.12,gain:.3,reverb:.2},
  guzheng:{kind:'strike',B:.00008,count:16,tauLow:1.9,tauHigh:.45,tauK:.35,pos:.22,hammer:.18,strings:1,detune:0,release:.25,ring:.35,gain:.4,reverb:.26},
 };
+
+for(const [id,p] of Object.entries(window.FaustEngine?.presets||{}))MODELS[id]={...MODELS[p.base],gain:MODELS[p.base].gain,reverb:.18,faust:true};
 
 function renderWind(m,f,dur,sr,from){
  const n=Math.ceil((dur+m.release)*sr),out=new Float32Array(n);
@@ -91,18 +94,48 @@ function renderStrike(m,f,dur,sr){
 }
 function peakNormalize(buf,target=.9){let p=0;for(let i=0;i<buf.length;i++)p=Math.max(p,Math.abs(buf[i]));if(p>0){const k=target/p;for(let i=0;i<buf.length;i++)buf[i]*=k}return buf}
 
-const cache=new Map();
+const cache=new Map(),pending=new Map();let cacheBytes=0,worker=null,workerFailed=false,jobId=0;const jobs=new Map(),CACHE_LIMIT=24*1024*1024;
+function store(key,data,sr){
+ const buf=new AudioBuffer({length:data.length,sampleRate:sr,numberOfChannels:1});buf.copyToChannel(peakNormalize(data),0);
+ if(cache.has(key))cacheBytes-=cache.get(key).length*4;cache.set(key,buf);cacheBytes+=buf.length*4;
+ while(cache.size>1&&(cache.size>500||cacheBytes>CACHE_LIMIT)){const first=cache.keys().next().value;cacheBytes-=cache.get(first).length*4;cache.delete(first)}
+ return buf;
+}
+function request(timbre,midi,dur,sr,fromMidi,grace=false){
+ const base=MODELS[timbre]||MODELS.flute,q=grace||base.faust?Math.max(.002,Math.round(dur*1000)/1000):Math.max(.05,Math.round(dur*16)/16);
+ const m=grace?{...base,attack:Math.min(base.attack||.006,.006,q/4),release:Math.min(base.release,.008,q/4),ring:0,glide:0,scoop:0}:base,glide=m.glide&&fromMidi!=null&&fromMidi!==midi?fromMidi:null;
+ return {key:`${timbre}|${midi}|${q}|${sr}|${glide??''}|${grace?'grace':'normal'}`,base,m,q,glide};
+}
+function renderJob(r){
+ if(workerFailed||typeof Worker==='undefined')return new Promise((resolve,reject)=>setTimeout(()=>{try{resolve(window.FaustEngine.render(r.timbre,r.midi,r.dur,r.sr,r.fromMidi,{grace:r.grace}))}catch(e){reject(e)}},0));
+ if(!worker){try{
+  worker=new Worker(window.FaustWorkerURL||new URL('faust-worker.js?v='+window.FaustBank.models.flute.sourceSha256.slice(0,12),document.baseURI));
+  worker.onmessage=({data:r})=>{const job=jobs.get(r.id);if(!job)return;jobs.delete(r.id);r.error?job.reject(Error(r.error)):job.resolve(r.data)};
+  worker.onerror=()=>{workerFailed=true;worker.terminate();worker=null;for(const job of jobs.values())job.reject(Error('Faust background rendering failed'));jobs.clear()};
+ }catch{workerFailed=true;return renderJob(r)}}
+ return new Promise((resolve,reject)=>{const id=++jobId;jobs.set(id,{resolve,reject});worker.postMessage({...r,id})});
+}
+function prewarm(notes){
+ const promises=[];
+ for(const n of notes){if(!MODELS[n.timbre]?.faust||!window.FaustEngine?.available)continue;
+  const r=request(n.timbre,n.midi,n.dur,n.sr,n.fromMidi,n.grace);if(cache.has(r.key))continue;
+  if(!pending.has(r.key)){
+   const promise=renderJob({...n,dur:r.q,fromMidi:r.glide}).catch(()=>window.FaustEngine.render(n.timbre,n.midi,r.q,n.sr,r.glide,{grace:n.grace})).then(data=>store(r.key,data,n.sr)).finally(()=>pending.delete(r.key));
+   pending.set(r.key,promise);
+  }
+  promises.push(pending.get(r.key));
+ }
+ return Promise.all(promises);
+}
 // Returns an AudioBuffer for the note (cached unless it glides from a previous pitch).
 function note(timbre,midi,dur,sr,fromMidi,{grace=false}={}){
- const base=MODELS[timbre]||MODELS.flute,q=grace?Math.max(.002,Math.round(dur*1000)/1000):Math.max(.05,Math.round(dur*16)/16);
- const m=grace?{...base,attack:Math.min(base.attack||.006,.006,q/4),release:Math.min(base.release,.008,q/4),ring:0,glide:0,scoop:0}:base,glide=m.glide&&fromMidi!=null&&fromMidi!==midi?fromMidi:null;
- const key=`${timbre}|${midi}|${q}|${sr}|${glide??''}|${grace?'grace':'normal'}`;
+ const {key,base,m,q,glide}=request(timbre,midi,dur,sr,fromMidi,grace);
  let buf=cache.get(key);if(buf){cache.delete(key);cache.set(key,buf);return buf}
+ if(base.faust&&window.FaustEngine?.available)return store(key,window.FaustEngine.render(timbre,midi,q,sr,glide,{grace}),sr);
+
  const f=440*Math.pow(2,(midi-69)/12),from=glide!=null?440*Math.pow(2,(glide-69)/12):null;
- const data=peakNormalize(m.kind==='strike'?renderStrike(m,f,q,sr):renderWind(m,f,q,sr,from));
- buf=new AudioBuffer({length:data.length,sampleRate:sr,numberOfChannels:1});buf.copyToChannel(data,0);
- cache.set(key,buf);if(cache.size>500)cache.delete(cache.keys().next().value);
- return buf;
+ const data=m.kind==='strike'?renderStrike(m,f,q,sr):renderWind(m,f,q,sr,from);
+ return store(key,data,sr);
 }
 // A small generated room: decaying stereo noise with a few early reflections.
 function impulse(ctx,seconds=1.8){
@@ -111,6 +144,6 @@ function impulse(ctx,seconds=1.8){
   for(const [at,g] of [[.011,.5],[.019,.38],[.027,.3],[.041,.22]]){const i=Math.floor((at+c*.003)*sr);if(i<n)d[i]+=g}}
  return b;
 }
-window.Synth={note,impulse,MODELS};
+window.Synth={note,impulse,MODELS,prewarm,cacheInfo:()=>({bytes:cacheBytes,entries:cache.size,pending:pending.size,background:!!worker})};
 })();
-// Modified by AI on 2026-10-09 00:29:15
+// Modified by AI on 2026-10-10 13:56:00

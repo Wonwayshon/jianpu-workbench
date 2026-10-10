@@ -4,7 +4,7 @@
 // to the previous sound, n{...} scales by the nearest lower power of two over n, a two-note slur on one pitch is a tie,
 // |: ... :| repeats once, grace notes take a short slice before their main note.
 (() => {
-let ctx=null,playing=null;
+let ctx=null,playing=null,preparing=null,audioEpoch=0,previewTimer=null,previewEnd=null;
 let partBuses=new Map();
 
 // Metronome subdivisions of one beat. `span` beats per pattern; `notes` drive the icon; `clicks` are offsets in beats.
@@ -125,7 +125,8 @@ function metronomeGrid(all,s,from=0,until=all.writtenTotal){
 }
 
 // Timbre names shown in the settings; the sound models live in synth.js.
-const TIMBRES={flute:{label:'长笛'},dizi:{label:'竹笛'},erhu:{label:'二胡'},clarinet:{label:'单簧管'},piano:{label:'钢琴'},guzheng:{label:'古筝'},ocarina:{label:'陶笛'},organ:{label:'风琴'}};
+const TIMBRES={flute:{label:'长笛'},dizi:{label:'竹笛'},erhu:{label:'二胡'},clarinet:{label:'单簧管'},piano:{label:'钢琴'},guzheng:{label:'古筝'},yangqin:{label:'扬琴 · 现有'},ocarina:{label:'陶笛'},organ:{label:'风琴'}};
+for(const [id,p] of Object.entries(window.FaustEngine?.presets||{}))if(window.FaustEngine.available)TIMBRES[id]={label:p.label};
 let timbreName='flute';
 // Notes are rendered by synth.js into buffers and played through a dry path plus a shared room reverb.
 // Melody and metronome have their own buses so the balance slider can change them while playing.
@@ -181,19 +182,47 @@ function visibleTargets(token){
  return [];
 }
 function stop(){
- if(!playing)return;cancelAnimationFrame(playing.raf);clearInterval(playing.timer);for(const c of playing.cells)c.classList.remove('jp-playing');
- const done=playing.onEnd;playing=null;partBuses.clear();if(ctx){ctx.close();ctx=null;dry=wet=melodyBus=clickBus=null}if(done)done();
+ const pendingEnd=preparing?.onEnd;audioEpoch++;preparing=null;if(previewTimer!=null)clearTimeout(previewTimer);previewTimer=null;
+ const previewDone=previewEnd;previewEnd=null;if(previewDone)previewDone();
+ const done=playing?.onEnd||pendingEnd;
+ if(playing){cancelAnimationFrame(playing.raf);clearInterval(playing.timer);for(const c of playing.cells)c.classList.remove('jp-playing')}
+ playing=null;partBuses.clear();if(ctx){ctx.close();ctx=null;dry=wet=melodyBus=clickBus=null}if(done)done();
+}
+function renderPlans(events,s,sr){
+ const prev=new Map(),plans=[];
+ for(const e of events){const before=prev.get(e.part);prev.set(e.part,e);
+  const timbre=s.partTimbres?.[e.part] in TIMBRES?s.partTimbres[e.part]:s.timbre;
+  if(!Synth.MODELS[timbre]?.faust)continue;
+  const dur=e.grace?Math.max(.002,e.beats*60/s.tempo):Math.max(.06,e.beats*60/s.tempo*(e.stacc?.45:e.legato?1:.93));
+  for(const midi of e.midis||[e.midi])if(midi!=null)plans.push({at:e.start,timbre,midi,dur,sr,fromMidi:!e.midis&&before?.legato?before.midi:null,grace:!!e.grace});
+ }
+ return plans;
+}
+// Prepare the first sounding window in a worker, then retain the established Web Audio clock.
+async function playReady(lines,opts,onEnd){
+ const s={...DEFAULTS,...opts};
+ if(!window.FaustEngine?.available||![s.timbre,...Object.values(s.partTimbres||{})].some(id=>Synth.MODELS[id]?.faust))return play(lines,opts,onEnd);
+ stop();const mine=audioEpoch;ctx=new (window.AudioContext||window.webkitAudioContext)();const prepared=ctx;
+ if(ctx.state==='suspended')ctx.resume().catch(()=>{});preparing={mine,onEnd};opts.onPreparing?.();
+ try{
+  const plan=schedule(lines,{tempo:s.tempo});let at=0;
+  if(s.startToken){const e=plan.events.find(e=>e.token===s.startToken||e.token.src===s.startToken);if(e)at=(plan.events.find(g=>g.grace&&Math.abs(g.scoreStart-e.scoreStart)<1e-8)||e).start}
+  await Synth.prewarm(renderPlans(plan.events,s,ctx.sampleRate).filter(p=>p.at>=at-.1&&p.at<at+3.6*s.tempo/60));
+  if(mine!==audioEpoch||ctx!==prepared)return false;
+  preparing=null;return play(lines,{...opts,_preparedContext:prepared},onEnd);
+ }catch(e){if(mine===audioEpoch)stop();throw e}
 }
 
 // Returns false when there is nothing to play. opts: settings (see DEFAULTS) + onBeat(index, beatsPerBar).
 function play(lines,opts,onEnd){
- stop();
+ const reuse=opts._preparedContext&&ctx===opts._preparedContext;
+ if(!reuse)stop();
  const s={...DEFAULTS,...opts,...mix(opts.balance??DEFAULTS.balance)},all=schedule(lines,{tempo:s.tempo}),total=all.total;
  // Optional start point: a token of the converted score or of the original (source) score.
  let offset=0,writtenOffset=0;if(s.startToken){const hit=all.events.find(e=>e.token===s.startToken||e.token.src===s.startToken);if(hit){const first=all.events.find(e=>e.grace&&(e.mainToken===hit.token||Math.abs(e.scoreStart-hit.scoreStart)<1e-8))||hit;offset=first.start;writtenOffset=first.scoreStart}}
  const events=all.events.filter(e=>e.start>=offset-1e-9);
  if(!events.length)return false; // silent cursor-only playback is allowed (melody and metronome both off)
- if(ctx){ctx.close();}ctx=new (window.AudioContext||window.webkitAudioContext)();dry=wet=melodyBus=clickBus=null;
+ if(!reuse){if(ctx){ctx.close();}ctx=new (window.AudioContext||window.webkitAudioContext)()}dry=wet=melodyBus=clickBus=null;
  if(ctx.state==='suspended')ctx.resume().catch(()=>{});
  const audioContext=ctx;
  const spb=60/s.tempo,m=meter(s.time==='auto'?timeAt(all,writtenOffset):s.time),barBeats=m.beats*m.unit;
@@ -205,7 +234,10 @@ function play(lines,opts,onEnd){
  // timbre (s.partTimbres) or be muted (s.partMute); chords sound all their notes.
  for(const id of all.parts){const bus=ctx.createGain();bus.gain.value=s.partMute?.[id]?0:1;bus.connect(melodyBus);partBuses.set(id,bus)}
  const prevByPart=new Map(),timbreOf=p=>{const t=s.partTimbres?.[p];return t&&t in TIMBRES?t:timbreName};
- let si=0;const ahead=()=>{if(s.muteMelody)return;while(si<events.length&&start+events[si].start*spb<ctx.currentTime+1.2){const e=events[si++];
+ const plans=renderPlans(events,s,ctx.sampleRate);let wi=0;
+ let si=0;const ahead=()=>{if(s.muteMelody)return;
+  const warm=[];while(wi<plans.length&&start+plans[wi].at*spb<ctx.currentTime+3.6)warm.push(plans[wi++]);
+  if(warm.length)Synth.prewarm(warm).catch(()=>{});while(si<events.length&&start+events[si].start*spb<ctx.currentTime+1.2){const e=events[si++];
   const when=start+e.start*spb,now=ctx.currentTime,late=when<now-0.04,prev=prevByPart.get(e.part),bus=partBuses.get(e.part);
   // Never replay a backlog at the current instant. Resume only the tail of a still-sounding note.
   const resumeOffset=late?Math.max(0,now-when):0;
@@ -295,8 +327,33 @@ function referenceTone(midi,seconds=4){
  const timer=setTimeout(()=>{if(ctx===mine&&!playing){ctx.close();ctx=null;dry=wet=melodyBus=clickBus=null}},(seconds+0.5)*1000);
  return()=>{clearTimeout(timer);if(ctx===mine&&!playing){ctx.close();ctx=null;dry=wet=melodyBus=clickBus=null}};
 }
-// Plays a short phrase (1 3 5 1' 5 3 1) with a timbre so it can be heard before choosing.
-function previewTimbre(name,vol=0.8){stop();if(ctx){ctx.close();}ctx=new (window.AudioContext||window.webkitAudioContext)();dry=wet=melodyBus=clickBus=null;timbreName=name in TIMBRES?name:'flute';const t0=ctx.currentTime+0.08,notes=[72,76,79,84,79,76,72];notes.forEach((m,i)=>tone(t0+i*0.32,m,i===notes.length-1?0.9:0.3,i<notes.length-2,false,vol,i>0?notes[i-1]:null));setTimeout(()=>{if(!playing&&ctx){ctx.close();ctx=null;dry=wet=melodyBus=clickBus=null}},3600)}
+// The comparison phrases are original exercises and use identical pitch, articulation and timing.
+const PREVIEW_PHRASES={
+ melody:[[60,.3],[62,.3],[64,.3],[67,.3],[69,.6],[67,.3],[64,.3],[62,.3],[60,.9]],
+ range:[[55,.55],[60,.55],[67,.55],[72,.55],[79,.55],[84,.9]],
+ grace:[[62,.4],[69,.035,true],[64,.365],[64,.035,true],[67,.365],[62,.8],[60,.8]],
+};
+async function previewTimbre(name,vol=.8,{phrase='melody',dry:dryOnly=false,onEnd=null}={}){
+ stop();const mine=audioEpoch;
+ ctx=new (window.AudioContext||window.webkitAudioContext)();const audio=ctx;dry=wet=melodyBus=clickBus=null;
+ if(ctx.state==='suspended')ctx.resume().catch(()=>{});
+ timbreName=name in TIMBRES?name:'flute';previewEnd=onEnd;
+ try{
+  let at=0;const notes=(PREVIEW_PHRASES[phrase]||PREVIEW_PHRASES.melody).map(([midi,dur,grace])=>{const n={at,timbre:timbreName,midi,dur,sr:audio.sampleRate,grace:!!grace};at+=dur;return n});
+  await Synth.prewarm?.(notes);if(mine!==audioEpoch||ctx!==audio)return false;
+  // Render the whole phrase before starting: matched RMS and no buffer-render latency between notes.
+  const data=new Float32Array(Math.ceil((at+.35)*audio.sampleRate));
+  for(const n of notes){const b=Synth.note(n.timbre,n.midi,n.dur,n.sr,null,{grace:n.grace}),d=b.getChannelData(0),begin=Math.round(n.at*n.sr);for(let i=0;i<d.length&&begin+i<data.length;i++)data[begin+i]+=d[i]}
+  let sum=0,peak=0;for(const x of data){sum+=x*x;peak=Math.max(peak,Math.abs(x))}
+  const gain=Math.min(.16/(Math.sqrt(sum/data.length)||1),.85/(peak||1))*vol;
+  const buffer=audio.createBuffer(1,data.length,audio.sampleRate);buffer.copyToChannel(data,0);
+  setupMix();melodyBus.gain.value=gain;if(dryOnly)wet.gain.value=0;
+  const src=audio.createBufferSource();src.buffer=buffer;src.connect(melodyBus);src.start(audio.currentTime+.05);
+  previewTimer=setTimeout(()=>{if(mine===audioEpoch&&ctx===audio)stop()},(at+.6)*1000);
+  return true;
+ }catch(e){if(mine===audioEpoch)stop();console.warn('音色试听失败',e.message);return false}
+}
+
 const TIMBRE_LIST=Object.entries(TIMBRES).map(([id,t])=>[id,t.label]);
 // Changes the melody / metronome balance of the running playback without restarting it.
 function setBalance(b){
@@ -309,6 +366,6 @@ function setPartMute(id,muted){
  const bus=partBuses.get(id);if(!playing||!ctx||!bus)return;
  bus.gain.setTargetAtTime(muted?0:1,ctx.currentTime,0.008);
 }
-window.ScorePlayer={metronomeGrid,timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,TIMBRE_LIST,play,stop,schedule,isPlaying:()=>!!playing,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
+window.ScorePlayer={metronomeGrid,timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,PREVIEW_PHRASES,TIMBRE_LIST,play,playReady,stop,schedule,isPlaying:()=>!!playing||preparing!=null,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
 })();
-// Modified by AI on 2026-10-09 00:29:29
+// Modified by AI on 2026-10-10 13:56:00

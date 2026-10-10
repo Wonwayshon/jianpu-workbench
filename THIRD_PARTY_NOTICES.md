@@ -4,6 +4,7 @@
 
 | 依赖 | 许可证位置 |
 | --- | --- |
+| Faust 预编译音色与 Faust-STK 模型 | `web/vendor/faust/NOTICE.md`、`LICENSE-STK.txt`、`LIBRARY-NOTICES.txt` |
 | abcjs | `web/vendor/abcjs/LICENSE.md`（MIT） |
 | PDF.js | `web/vendor/pdfjs/LICENSE`（Apache-2.0） |
 | PDF.js 字符映射、字体与 WASM 组件 | `web/vendor/pdfjs/cmaps/LICENSE`、`standard_fonts/LICENSE_*`、`wasm/LICENSE_*` |

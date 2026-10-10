@@ -75,7 +75,7 @@ class El{
 }
 const elements=new Map(),$=id=>{if(!elements.has(id))elements.set(id,new El());return elements.get(id)};
 let stops=0,live=[],saved=0,played;
-const u=vm.createContext({console,$,document:{createElement:()=>new El()},Option:function(text,value){return {text,value}},settings:{},scoreParts:()=>p.parts,ScorePlayer:{TIMBRE_LIST:[['flute','长笛']],setPartMute:(id,m)=>live.push([id,m]),isPlaying:()=>true,play:src=>(played=src,true)},save:()=>saved++,restartIfPlaying:()=>stops++,syncTimingWarning(){},syncTempoLabel(){},partSel:'all',perform:false,floatAvailable:false,floatDismissed:false,window:{},Platform:{setImmersive:()=>Promise.resolve()},setTimeout(){},rebuild(){},vIndex:0,clearStaffCursor(){},clearViewerHighlight(){},showBeat(){}});
+const u=vm.createContext({console,$,document:{createElement:()=>new El()},Option:function(text,value){return {text,value}},settings:{},scoreParts:()=>p.parts,ScorePlayer:{TIMBRE_LIST:[['flute','长笛']],setPartMute:(id,m)=>live.push([id,m]),isPlaying:()=>true,playReady:src=>(played=src,true)},save:()=>saved++,restartIfPlaying:()=>stops++,syncTimingWarning(){},syncTempoLabel(){},partSel:'all',perform:false,floatAvailable:false,floatDismissed:false,window:{},Platform:{setImmersive:()=>Promise.resolve()},setTimeout(){},rebuild(){},vIndex:0,clearStaffCursor(){},clearViewerHighlight(){},showBeat(){}});
 const view=read('score-view.js');
 vm.runInContext(view.slice(view.indexOf('function applyPartMutes('),view.indexOf("for(const [id,label] of ScorePlayer.TIMBRE_LIST)$('timbreSelect')")),u);
 u.fillPartMixer();let box=$('partMixerInline');assert.equal(box.hidden,false);
@@ -84,7 +84,7 @@ assert.equal(u.settings.partMute['笛'],true);assert.ok(live.some(([id,m])=>id==
 box.children[4].children[2].onclick();assert.equal(u.settings.partMute['琴'],false);assert.equal(u.settings.partMute['笛'],true);assert.equal(stops,0);
 box.children[2].children[0].onclick();assert.deepEqual(Object.keys(u.settings.partMute),[]);assert.ok(saved>=3);
 vm.runInContext(view.slice(view.indexOf('function syncFloatPlayer()'),view.indexOf("$('floatClose').onclick")),u);
-vm.runInContext(view.slice(view.indexOf('function setPlaying('),view.indexOf('function startPlayback(')),u);
+vm.runInContext(view.slice(view.indexOf('function setPlaying('),view.indexOf('async function startPlayback(')),u);
 u.ScorePlayer.tempoName=()=>'';
 vm.runInContext(view.slice(view.indexOf('function setPerform('),view.indexOf("$('viewerPerform').onclick")),u);
 u.setPlaying(true);assert.equal($('floatPlayer').hidden,false);u.setPerform(true);assert.equal($('floatPlayer').hidden,true);
@@ -92,7 +92,7 @@ u.setPlaying(true);assert.equal($('floatPlayer').hidden,true);u.setPlaying(false
 u.setPerform(false);assert.equal($('floatPlayer').hidden,false);u.floatDismissed=true;u.setPerform(true);u.setPerform(false);assert.equal($('floatPlayer').hidden,true);
 $('scoreViewer').classList.contains=x=>x==='editing';u.floatDismissed=false;u.setPlaying(true);assert.equal($('floatPlayer').hidden,true,'editor toolbar replaces floating controls');$('scoreViewer').classList.contains=()=>false;u.setPlaying(true);assert.equal($('floatPlayer').hidden,false);
 const all=[{part:'笛'},{part:'琴'}];u.lastConverted={notes:[60],lines:all};u.transAllLines=[{part:'笛',trans:true},{part:'琴',trans:true}];u.viewerOpen=false;u.view='source';u.F=lines=>lines.filter(l=>l.part==='笛');
-vm.runInContext(view.slice(view.indexOf('function startPlayback('),view.indexOf('const toggle=')),u);
+vm.runInContext(view.slice(view.indexOf('async function startPlayback('),view.indexOf('const toggle=')),u);
 u.startPlayback();assert.equal(played,all);u.settings.partScope='visible';u.startPlayback();assert.equal(played.length,1);
 u.settings.partScope='all';u.viewerOpen=true;u.vView='trans';u.startPlayback();assert.equal(played,u.transAllLines);
 console.log('PASS: four scoped prompts; three-part simultaneous scheduling across systems; chords/percussion/live mute without restart; mixer controls; full/visible playback; performance floating-player lifecycle.');
@@ -123,4 +123,4 @@ assert.equal(hits.filter(h=>!h.node.buffer?.m).length,1,'no old percussion or cl
 const count=hits.length;raf();raf();assert.equal(hits.length,count,'visual frames never schedule sound');
 P.stop();assert.equal(timerActive,false);audioPump();assert.equal(hits.length,count,'stopped timer callback cannot revive audio');
 console.log('PASS: audio and metronome run with animation suspended; missed notes/clicks are not replayed in a burst; stop releases the audio timer.');
-// Modified by AI on 2026-10-09 00:37:16
+// Modified by AI on 2026-10-10 13:56:00

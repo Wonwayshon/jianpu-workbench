@@ -230,14 +230,15 @@ function setPlaying(on){
  $('floatInfo').innerHTML=`<b>♩=${settings.tempo}</b> <small>${ScorePlayer.tempoName(settings.tempo)}</small>`;
  if(!on){for(const id of ['beatDots','floatBeats'])$(id).replaceChildren();clearStaffCursor()}
 }
-function startPlayback(startToken){
+async function startPlayback(startToken){
  if(!(lastConverted?.notes.length||lastConverted?.percussionCount))return;
  const all=(viewerOpen?vView:view)==='trans'?transAllLines:lastConverted.lines;
  const src=settings.partScope==='visible'?F(all):all;
  syncTimingWarning(src);
  followHold=false;
- const ok=ScorePlayer.play(src,{...settings,startToken,followPart:partSel==='all'?undefined:visiblePartIds()[0],onBeat:showBeat},()=>{setPlaying(false);clearViewerHighlight()});
- if(ok)setPlaying(true);
+ try{const ok=await ScorePlayer.playReady(src,{...settings,startToken,followPart:partSel==='all'?undefined:visiblePartIds()[0],onBeat:showBeat,onPreparing:()=>{setPlaying(true);$('playScore').textContent='正在准备音色…'}},()=>{setPlaying(false);clearViewerHighlight()});
+ if(ok)setPlaying(true);else if(!ScorePlayer.isPlaying())setPlaying(false);
+ }catch{setPlaying(false);$('viewHint').textContent='音色准备失败，请切换到现有音色后重试。'}
 }
 const toggle=()=>ScorePlayer.isPlaying()?ScorePlayer.stop():startPlayback();
 $('playScore').onclick=()=>{floatDismissed=false;toggle()};$('floatStop').onclick=toggle;$('viewerPlay').onclick=toggle;
@@ -355,6 +356,7 @@ function fillPartMixer(){
 $('playPartScope').onchange=()=>{settings.partScope=$('playPartScope').value;save();fillPartMixer();restartIfPlaying()};
 for(const [id,label] of ScorePlayer.TIMBRE_LIST)$('timbreSelect').add(new Option(label,id));
 $('timbreSelect').onchange=()=>{settings.timbre=$('timbreSelect').value;save();syncTempoLabel();if(ScorePlayer.isPlaying())restartIfPlaying();else ScorePlayer.previewTimbre(settings.timbre)};
+document.addEventListener('score-timbre-choice',({detail})=>{if(!ScorePlayer.TIMBRE_LIST.some(([id])=>id===detail.id))return;ScorePlayer.stop();settings.timbre=detail.id;save();fillSettings();syncTempoLabel();});
 $('timbrePreview').onclick=()=>{if(ScorePlayer.isPlaying())ScorePlayer.stop();ScorePlayer.previewTimbre($('timbreSelect').value)};$('floatSettings').onclick=openSettings;
 $('tempoRange').oninput=()=>{$('tempoValue').textContent=$('tempoRange').value;$('tempoName').textContent=ScorePlayer.tempoName(Number($('tempoRange').value));$('playTempo').value=$('tempoRange').value};
 $('tempoRange').onchange=()=>setTempo($('tempoRange').value);
@@ -649,8 +651,8 @@ $('viewerBody').addEventListener('touchend',e=>{if(!swipe||vLayout==='width'||vE
 // In edit mode only a width change re-lays out (the on-screen keyboard changes the height while typing).
 let resizeTimer=0,lastW=innerWidth;addEventListener('resize',()=>{if(!viewerOpen)return;if(vEdit&&innerWidth===lastW)return;lastW=innerWidth;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{applyLayout();rebuild(vIndex)},250)});
 // Android back button closes the viewer first.
-window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open]')].at(-1);if(modal){modal.close();return true}if($('erhuPartDialog').open){$('erhuPartDialog').close();return true}if($('partDisplayDialog').open){$('partDisplayDialog').close();return true}if(dialog.open){dialog.close();return true}if(viewerOpen&&perform){setPerform(false);return true}if(viewerOpen){closeViewer();return true}if(!$('startHere').hidden){$('startHere').hidden=true;return true}return false};
+window.handleAppBack=()=>{if($('audioLabDialog')?.open){$('audioLabDialog').close();return true}const modal=[...document.querySelectorAll('dialog[open]')].at(-1);if(modal){modal.close();return true}if($('erhuPartDialog').open){$('erhuPartDialog').close();return true}if($('partDisplayDialog').open){$('partDisplayDialog').close();return true}if(dialog.open){dialog.close();return true}if(viewerOpen&&perform){setPerform(false);return true}if(viewerOpen){closeViewer();return true}if(!$('startHere').hidden){$('startHere').hidden=true;return true}return false};
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-09 00:13:28
+// Modified by AI on 2026-10-10 14:02:21
