@@ -4,25 +4,18 @@
 (() => {
 const RATE=48000,BLOCK=128,instances=new Map();let error='';
 const presets={
- faust_flute_clear:{model:'flute',color:0,attack:.025,release:.07,pre:.07,vibrato:.0018,base:'flute',label:'Faust 管笛 A · 清晰'},
- faust_flute_airy:{model:'flute',color:1,attack:.04,release:.085,pre:.07,vibrato:.0025,base:'flute',label:'Faust 管笛 B · 气息'},
- faust_erhu_warm:{model:'bowed',color:0,attack:.045,release:.08,pre:.08,vibrato:.0045,base:'erhu',label:'Faust 弓弦 A · 柔和'},
- faust_erhu_bright:{model:'bowed',color:1,attack:.03,release:.07,pre:.08,vibrato:.006,base:'erhu',label:'Faust 弓弦 B · 明亮'},
- faust_yangqin_soft:{model:'hammer',color:0,attack:.001,release:.12,pre:0,vibrato:0,base:'yangqin',label:'Faust 敲弦 A · 圆润'},
- faust_piano_soft:{model:'piano',color:0,attack:.009,release:.18,pre:0,vibrato:0,base:'piano',label:'Faust 钢琴 A · 柔软'},
- faust_piano_bright:{model:'piano',color:1,attack:.006,release:.15,pre:0,vibrato:0,base:'piano',label:'Faust 钢琴 B · 明亮'},
- faust_guzheng_round:{model:'guzheng',color:0,attack:.001,release:.2,pre:0,vibrato:0,base:'guzheng',label:'Faust 古筝 A · 圆润'},
- faust_guzheng_bright:{model:'guzheng',color:1,attack:.001,release:.15,pre:0,vibrato:0,base:'guzheng',label:'Faust 古筝 B · 明亮'},
- faust_oboe_soft:{model:'oboe',color:0,attack:.035,release:.07,pre:.035,vibrato:.003,vibRate:5.2,vibDelay:.18,base:'oboe',label:'Faust 双簧管 A · 柔和'},
- faust_oboe_bright:{model:'oboe',color:1,attack:.025,release:.065,pre:.035,vibrato:.0038,vibRate:5.3,vibDelay:.18,base:'oboe',label:'Faust 双簧管 B · 明亮'},
- faust_clarinet_wood:{model:'clarinet',color:0,attack:.038,release:.07,pre:.22,vibrato:.0008,vibRate:4.9,vibDelay:.14,base:'clarinet',label:'Faust 单簧管 A · 自然'},
- faust_clarinet_bright:{model:'clarinet',color:1,attack:.03,release:.06,pre:.24,vibrato:.0012,vibRate:5.1,vibDelay:.18,base:'clarinet',label:'Faust 单簧管 B · 明亮'},
- faust_yangqin_crisp:{model:'hammer',color:1,attack:.001,release:.1,pre:0,vibrato:0,base:'yangqin',label:'Faust 敲弦 B · 清脆'},
+ flute:{model:'flute',color:1,attack:.04,release:.085,pre:.07,vibrato:.0025,base:'flute',label:'笛子'},
+ erhu:{model:'bowed',color:0,attack:.045,release:.08,pre:.08,vibrato:.0045,base:'erhu',label:'二胡'},
+ yangqin:{model:'hammer',color:0,attack:.001,release:.12,pre:0,vibrato:0,base:'yangqin',label:'扬琴'},
+ guzheng:{model:'guzheng',color:0,attack:.001,release:.2,pre:0,vibrato:0,base:'guzheng',label:'古筝'},
+ piano:{model:'piano',color:1,attack:.006,release:.15,pre:0,vibrato:0,base:'piano',label:'钢琴'},
+ oboe:{model:'oboe',color:1,attack:.025,release:.065,pre:.035,vibrato:.0038,vibRate:5.3,vibDelay:.18,base:'oboe',label:'双簧管'},
+ clarinet:{model:'clarinet',color:0,attack:.038,release:.07,pre:.22,vibrato:.0008,vibRate:4.9,vibDelay:.14,base:'clarinet',label:'单簧管'},
 };
 // Faust's standalone WASM ABI exposes init/compute/setParamValue and linear memory.
 const env={_atan2f:Math.atan2,_log10f:Math.log10,_acosf:Math.acos,_asinf:Math.asin,_atanf:Math.atan,_sinf:Math.sin,_cosf:Math.cos,_expf:Math.exp,_logf:Math.log,_powf:Math.pow,_sqrtf:Math.sqrt,_tanf:Math.tan,_floorf:Math.floor,_ceilf:Math.ceil,_roundf:Math.round,_max_f:Math.max,_min_f:Math.min,_fmodf:(a,b)=>a%b};
 try{
- if(!window.FaustBank||typeof WebAssembly!=='object')throw Error('设备暂不支持 Faust 音色');
+ if(!window.FaustBank||typeof WebAssembly!=='object')throw Error('设备暂不支持当前音色');
  for(const [id,meta] of Object.entries(window.FaustBank.models)){
   const bytes=Uint8Array.from(atob(meta.code),c=>c.charCodeAt(0));
   const module=new WebAssembly.Module(bytes),api=new WebAssembly.Instance(module,{env}).exports;
@@ -31,8 +24,8 @@ try{
   new Int32Array(api.memory.buffer)[pointer>>2]=output;
   instances.set(id,{api,pointer,output,controls:Object.fromEntries(meta.controls.map(c=>[c.label,c.index]))});
  }
- for(const p of Object.values(presets))if(!instances.has(p.model))throw Error('Faust 音色文件版本不一致');
-}catch(e){instances.clear();error=e.message||'Faust 音色初始化失败'}
+ for(const p of Object.values(presets))if(!instances.has(p.model))throw Error('音色文件版本不一致');
+}catch(e){instances.clear();error=e.message||'音色初始化失败'}
 function render(id,midi,dur,sr,fromMidi,{grace=false,vibrato=true}={}){
  const p=presets[id],d=instances.get(p?.model);if(!d)throw Error(error||'Unknown Faust model');
  if(!Number.isFinite(midi)||!Number.isFinite(dur)||dur<=0||dur>120||sr<8000||sr>192000)throw Error('Invalid synthesis request');
@@ -61,7 +54,6 @@ function render(id,midi,dur,sr,fromMidi,{grace=false,vibrato=true}={}){
  }
  return out;
 }
-const recommended={flute:'faust_flute_airy',erhu:'faust_erhu_warm',yangqin:'faust_yangqin_soft',guzheng:'faust_guzheng_round',piano:'faust_piano_bright',oboe:'faust_oboe_bright',clarinet:'faust_clarinet_wood'};
-window.FaustEngine={render,presets,recommended,available:instances.size===Object.keys(window.FaustBank?.models||{}).length&&instances.size>0,error,bankBytes:Object.values(window.FaustBank?.models||{}).reduce((n,m)=>n+m.wasmBytes,0),sampleRate:RATE};
+window.FaustEngine={render,presets,available:instances.size===Object.keys(window.FaustBank?.models||{}).length&&instances.size>0,error,bankBytes:Object.values(window.FaustBank?.models||{}).reduce((n,m)=>n+m.wasmBytes,0),sampleRate:RATE};
 })();
-// Modified by AI on 2026-10-10 14:54:13
+// Modified by AI on 2026-10-10 15:12:04

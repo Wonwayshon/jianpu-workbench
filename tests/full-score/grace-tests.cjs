@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 class Buffer{constructor({length,sampleRate}){this.length=length;this.sampleRate=sampleRate;this.duration=length/sampleRate}copyToChannel(data){this.data=data}}
-const c=vm.createContext({window:{},AudioBuffer:Buffer});for(const f of ['jianpu','player','synth'])vm.runInContext(fs.readFileSync('web/'+f+'.js','utf8'),c);
+const c=vm.createContext({window:{},atob,WebAssembly,AudioBuffer:Buffer});for(const f of ['vendor/faust/models','faust-engine','jianpu','synth','player'])vm.runInContext(fs.readFileSync('web/'+f+'.js','utf8'),c);
 const J=c.window.Jianpu,P=c.window.ScorePlayer,S=c.window.Synth,near=(a,b)=>assert.ok(Math.abs(a-b)<1e-7,`${a} != ${b}`);
 const parse=text=>{const p=J.parse(text);for(const t of p.notes)t.midi=60+[0,2,4,5,7,9,11][t.degree-1]+12*t.octave+t.acc;return p};
 const text='@time 4/4\n@part A · 第一笛\n@part B · 第二笛\n[A] |: 2/ ^6//3/ ^3//5/2/ 1/2/ 6/5/ :| 1 - - - |\n[B] |: 2/2/ 5/5/ 6/3/ 1/3/ :| 1 - - - |';
@@ -24,4 +24,4 @@ for(const name of Object.keys(S.MODELS)){
  const tiny=S.note(name,72,.02,8000,null,{grace:true});assert.ok(tiny.duration<=.026);
 }
 console.log('PASS: two adjacent grace figures align both main attacks at 5 tempos; repeated occurrences and following bars retain duration; multiple graces/fast accompaniment/fermata holds; rapid audible grace envelopes across all timbres.');
-// Modified by AI on 2026-10-09 00:35:06
+// Modified by AI on 2026-10-10 15:14:48

@@ -24,12 +24,23 @@ const PATTERNS=[
  {id:'dotted-eighth-sixteenth',label:'附点八分 + 十六分',span:1,notes:[{d:.75,dot:true},{d:.25}],clicks:[0,.75]},
  {id:'sixteenth-dotted-eighth',label:'十六分 + 附点八分',span:1,notes:[{d:.25},{d:.75,dot:true}],clicks:[0,.25]},
 ];
-const DEFAULTS={tempo:80,metronome:false,accent:true,pattern:'quarter',time:'auto',countIn:false,balance:0.5,muteMelody:false,timbre:window.FaustEngine?.available?'faust_flute_airy':'flute'};
+const DEFAULTS={tempo:80,metronome:false,accent:true,pattern:'quarter',time:'auto',countIn:false,balance:0.5,muteMelody:false,timbre:'flute'};
 // One balance control: 0 = melody only, 1 = metronome only, 0.5 = both at full volume.
 const mix=b=>({melodyVol:Math.min(1,2*(1-b))*0.85,clickVol:Math.min(1,2*b)*0.8});
 const STORE='flute.player.v1';
-function loadSettings(){try{return {...DEFAULTS,...JSON.parse(localStorage.getItem(STORE)||'{}')}}catch{return {...DEFAULTS}}}
-function saveSettings(s){try{localStorage.setItem(STORE,JSON.stringify(s))}catch{}}
+// Available playback instruments. Removed or invalid IDs use the default.
+const INSTRUMENTS={flute:'笛子',erhu:'二胡',yangqin:'扬琴',guzheng:'古筝',piano:'钢琴',oboe:'双簧管',clarinet:'单簧管'};
+const timbreId=id=>typeof id==='string'&&Object.hasOwn(INSTRUMENTS,id)?id:'flute';
+function normalizeSettings(settings){
+ const s={...DEFAULTS,...(settings&&typeof settings==='object'&&!Array.isArray(settings)?settings:{})};s.timbre=timbreId(s.timbre);
+ if(s.partTimbres&&typeof s.partTimbres==='object'&&!Array.isArray(s.partTimbres)){
+  s.partTimbres=Object.fromEntries(Object.entries(s.partTimbres).filter(([,id])=>typeof id==='string'&&id&&Object.hasOwn(INSTRUMENTS,id)).map(([part,id])=>[part,timbreId(id)]));
+ }else delete s.partTimbres;
+ return s;
+}
+function loadSettings(){try{return normalizeSettings(JSON.parse(localStorage.getItem(STORE)||'{}'))}catch{return {...DEFAULTS}}}
+function saveSettings(s){try{localStorage.setItem(STORE,JSON.stringify(normalizeSettings(s)))}catch{}}
+
 
 // Build written rhythm first; all parts then share the same fermata holds.
 // A hold belongs to a musical boundary, never to a private clock for one part.
@@ -125,8 +136,7 @@ function metronomeGrid(all,s,from=0,until=all.writtenTotal){
 }
 
 // Timbre names shown in the settings; the sound models live in synth.js.
-const TIMBRES={flute:{label:'长笛'},dizi:{label:'竹笛'},erhu:{label:'二胡'},clarinet:{label:'单簧管'},oboe:{label:'双簧管'},piano:{label:'钢琴'},guzheng:{label:'古筝'},yangqin:{label:'扬琴 · 现有'},ocarina:{label:'陶笛'},organ:{label:'风琴'}};
-for(const [id,p] of Object.entries(window.FaustEngine?.presets||{}))if(window.FaustEngine.available)TIMBRES[id]={label:p.label+(Object.values(window.FaustEngine.recommended).includes(id)?'（推荐）':'')};
+const TIMBRES=Object.fromEntries(Object.entries(INSTRUMENTS).map(([id,label])=>[id,{label}]));
 let timbreName='flute';
 // Notes are rendered by synth.js into buffers and played through a dry path plus a shared room reverb.
 // Melody and metronome have their own buses so the balance slider can change them while playing.
@@ -200,7 +210,7 @@ function renderPlans(events,s,sr){
 }
 // Prepare the first sounding window in a worker, then retain the established Web Audio clock.
 async function playReady(lines,opts,onEnd){
- const s={...DEFAULTS,...opts};
+ const s=normalizeSettings(opts);
  if(!window.FaustEngine?.available||![s.timbre,...Object.values(s.partTimbres||{})].some(id=>Synth.MODELS[id]?.faust))return play(lines,opts,onEnd);
  stop();const mine=audioEpoch;ctx=new (window.AudioContext||window.webkitAudioContext)();const prepared=ctx;
  if(ctx.state==='suspended')ctx.resume().catch(()=>{});preparing={mine,onEnd};opts.onPreparing?.();
@@ -209,7 +219,7 @@ async function playReady(lines,opts,onEnd){
   if(s.startToken){const e=plan.events.find(e=>e.token===s.startToken||e.token.src===s.startToken);if(e)at=(plan.events.find(g=>g.grace&&Math.abs(g.scoreStart-e.scoreStart)<1e-8)||e).start}
   await Synth.prewarm(renderPlans(plan.events,s,ctx.sampleRate).filter(p=>p.at>=at-.1&&p.at<at+3.6*s.tempo/60));
   if(mine!==audioEpoch||ctx!==prepared)return false;
-  preparing=null;return play(lines,{...opts,_preparedContext:prepared},onEnd);
+  preparing=null;return play(lines,{...s,_preparedContext:prepared},onEnd);
  }catch(e){if(mine===audioEpoch)stop();throw e}
 }
 
@@ -217,7 +227,7 @@ async function playReady(lines,opts,onEnd){
 function play(lines,opts,onEnd){
  const reuse=opts._preparedContext&&ctx===opts._preparedContext;
  if(!reuse)stop();
- const s={...DEFAULTS,...opts,...mix(opts.balance??DEFAULTS.balance)},all=schedule(lines,{tempo:s.tempo}),total=all.total;
+ const s={...normalizeSettings(opts),...mix(opts.balance??DEFAULTS.balance)},all=schedule(lines,{tempo:s.tempo}),total=all.total;
  // Optional start point: a token of the converted score or of the original (source) score.
  let offset=0,writtenOffset=0;if(s.startToken){const hit=all.events.find(e=>e.token===s.startToken||e.token.src===s.startToken);if(hit){const first=all.events.find(e=>e.grace&&(e.mainToken===hit.token||Math.abs(e.scoreStart-hit.scoreStart)<1e-8))||hit;offset=first.start;writtenOffset=first.scoreStart}}
  const events=all.events.filter(e=>e.start>=offset-1e-9);
@@ -337,7 +347,7 @@ async function previewTimbre(name,vol=.8,{phrase='melody',dry:dryOnly=false,onEn
  stop();const mine=audioEpoch;
  ctx=new (window.AudioContext||window.webkitAudioContext)();const audio=ctx;dry=wet=melodyBus=clickBus=null;
  if(ctx.state==='suspended')ctx.resume().catch(()=>{});
- timbreName=name in TIMBRES?name:'flute';previewEnd=onEnd;
+ timbreName=timbreId(name);previewEnd=onEnd;
  try{
   let at=0;const notes=(PREVIEW_PHRASES[phrase]||PREVIEW_PHRASES.melody).map(([midi,dur,grace])=>{const n={at,timbre:timbreName,midi,dur,sr:audio.sampleRate,grace:!!grace};at+=dur;return n});
   await Synth.prewarm?.(notes);if(mine!==audioEpoch||ctx!==audio)return false;
@@ -366,6 +376,6 @@ function setPartMute(id,muted){
  const bus=partBuses.get(id);if(!playing||!ctx||!bus)return;
  bus.gain.setTargetAtTime(muted?0:1,ctx.currentTime,0.008);
 }
-window.ScorePlayer={metronomeGrid,timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,PREVIEW_PHRASES,TIMBRE_LIST,play,playReady,stop,schedule,isPlaying:()=>!!playing||preparing!=null,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
+window.ScorePlayer={normalizeSettings,metronomeGrid,timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,PREVIEW_PHRASES,TIMBRE_LIST,play,playReady,stop,schedule,isPlaying:()=>!!playing||preparing!=null,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
 })();
-// Modified by AI on 2026-10-10 14:25:57
+// Modified by AI on 2026-10-10 15:14:48
