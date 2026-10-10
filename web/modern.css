@@ -355,4 +355,18 @@ select.chip-source{display:none}
 .practice-settings .fields.practice-fields{display:flex;flex-wrap:wrap;gap:8px;grid-template-columns:none}
 .practice-settings .practice-fields select{width:auto}
 .practice-layout{align-items:stretch}
-/* Modified by AI on 2026-10-11 00:15:48 */
+
+/* Full-screen viewer and performance mode */
+.viewer{background:#E9EBEF}
+.viewer-bar{background:#fff;border-bottom:1px solid var(--line);box-shadow:none;gap:10px}
+.viewer-model{display:flex;align-items:center;gap:8px}
+.viewer-model .app-segments{margin:0;grid-template-columns:auto auto}
+.viewer-model .app-segments button{min-height:34px;padding:0 12px}
+.viewer-model select{min-height:36px;width:auto;font-weight:600;background-color:var(--accent-soft);color:var(--accent-ink)}
+.viewer-bar select,.viewer-bar input[type=number]{min-height:36px}
+.viewer-tools button,.viewer-nav button{min-height:36px}
+#viewerPerform{background:var(--ink);color:#fff}
+#viewerPlay{background:var(--accent);color:var(--on-accent,#fff);border-radius:999px;min-width:44px}
+.perform-exit{background:#0F1115bf;color:#fff;border-radius:12px;min-height:40px;min-width:40px}
+.perform-page{background:#0F1115b3;color:#fff;border-radius:999px;padding:4px 12px;font-size:12px}
+/* Modified by AI on 2026-10-11 00:17:25 */

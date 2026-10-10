@@ -97,5 +97,46 @@ input.focus();
 input.dispatchEvent(new Event('input', { bubbles: true }));
 };
 }
+
+// ---------- full-screen viewer: same notation × key model ----------
+(() => {
+const tabs = document.querySelector('.viewer-tabs');
+if (!tabs) return;
+const vp = (id) => $(id).getAttribute('aria-pressed') === 'true';
+const box = document.createElement('div');
+box.className = 'viewer-model';
+box.innerHTML = '<div class="app-segments viewer-notation" role="group" aria-label="记谱法"><button type="button" data-n="jp">简谱</button><button type="button" data-n="staff">五线谱</button></div>'
++ '<select id="viewerKey" aria-label="调"><option value="orig">原调</option><option value="fixed">音名谱 1=C</option><option value="trans">转调</option></select>';
+tabs.after(box); tabs.hidden = true;
+const sel = box.querySelector('select'), seg = box.querySelectorAll('[data-n]');
+let vKey = 'fixed';
+function state() {
+const trans = vp('viewerTrans');
+const staff = vp('viewerStaff') || (trans && $('transShow').value === 'staff');
+const key = trans ? 'trans' : vp('viewerFlute') ? 'fixed' : vp('viewerStaff') ? (vKey === 'trans' ? 'orig' : vKey) : 'orig';
+return { staff, key };
+}
+function sync() {
+const { staff, key } = state(); vKey = key;
+for (const b of seg) b.setAttribute('aria-pressed', String((b.dataset.n === 'staff') === staff));
+sel.value = key;
+const t = optText($('transKey')).replace(/^1\s*=\s*/, '');
+sel.options[2].textContent = t ? '转 1=' + t : '转调';
+}
+function go(staff, key) {
+vKey = key;
+if (key === 'trans') {
+const want = staff ? 'staff' : 'jianpu';
+if ($('transShow').value !== want) { $('transShow').value = want; if ($('transShow').onchange) $('transShow').onchange(); }
+$('viewerTrans').click();
+} else if (staff) $('viewerStaff').click();
+else $(key === 'fixed' ? 'viewerFlute' : 'viewerSource').click();
+sync();
+}
+for (const b of seg) b.onclick = () => go(b.dataset.n === 'staff', state().key);
+sel.onchange = () => go(state().staff, sel.value);
+for (const id of ['viewerFlute', 'viewerSource', 'viewerStaff', 'viewerTrans']) new MutationObserver(sync).observe($(id), { attributes: true, attributeFilter: ['aria-pressed'] });
+sync();
 })();
-// Modified by AI on 2026-10-11 00:12:55
+})();
+// Modified by AI on 2026-10-11 00:17:25
