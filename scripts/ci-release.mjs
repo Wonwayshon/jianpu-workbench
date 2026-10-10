@@ -50,16 +50,17 @@ async function main(){
   const metadata=api(`${endpoint}/contents/project.json?ref=${previous.tag_name}`),old=JSON.parse(Buffer.from(metadata.content,'base64').toString('utf8'));
   if(project.androidVersionCode<=old.androidVersionCode)throw Error('Android versionCode must increase to allow updates');
  }
- if(!existing)gh('release','create',tag,'--repo',repo,'--verify-tag','--draft','--title',`笛调之间 ${version}`,'--notes-file',`docs/releases/${tag}.md`);
+ let release=existing||api(`${endpoint}/releases`,'POST',{tag_name:tag,target_commitish:head,draft:true,name:`笛调之间 ${version}`,body:fs.readFileSync(path.join(root,'docs/releases',`${tag}.md`),'utf8')});
  gh('release','upload',tag,...files.map(f=>path.join(out,f.name)),'--repo',repo,'--clobber');
- let release=api(`${endpoint}/releases/tags/${tag}`);verifyAssets(release.assets,files);
+ release=api(`${endpoint}/releases/${release.id}`);verifyAssets(release.assets,files);
  release=api(`${endpoint}/releases/${release.id}`,'PATCH',{draft:false,make_latest:'true'});
  verifyAssets(release.assets,files);
- const latest=api(`${endpoint}/releases/latest`);if(latest.id!==release.id||latest.draft)throw Error('Latest release verification failed; preserve previous releases');
+ let latest;for(let attempt=0;attempt<5;attempt++){latest=api(`${endpoint}/releases/latest`);if(latest.id===release.id&&!latest.draft)break;if(attempt<4)await new Promise(resolve=>setTimeout(resolve,1000))}
+ if(latest.id!==release.id||latest.draft)throw Error('Latest release verification failed; preserve previous releases');
  verifyAssets(latest.assets,files);
  // Only prune strictly older stable versions after the new one is published and verified.
  for(const old of obsoleteReleases(api(`${endpoint}/releases?per_page=100`),tag))gh('release','delete',old.tag_name,'--repo',repo,'--yes','--cleanup-tag');
  console.log(`Published and verified ${release.html_url} (${files.length} assets)`);
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))await main();
-// Modified by AI on 2026-10-10 16:07:26
+// Modified by AI on 2026-10-10 16:22:16
