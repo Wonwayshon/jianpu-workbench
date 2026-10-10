@@ -753,7 +753,7 @@ input[type=checkbox][role=switch]:focus-visible{outline:2px solid var(--accent);
  #scorePanel .score-controls>.error-inline{margin:8px 12px}
  #scorePanel .score-controls>.sym-bar{padding:10px 12px;border-top:1px solid #F0F1F4;margin:0}
  #scorePanel .score-controls>.sym-bar::before{content:"点按插入符号";grid-column:1/-1;font-size:11px;color:var(--faint)}
- #scorePanel .score-work>.output-card{background:var(--bg);border-radius:0;padding:0;overflow:hidden}
+ #scorePanel .score-work>.output-card{background:var(--bg);border-radius:0;padding:0;overflow:visible;z-index:2}
  #scorePanel .output-card>.out-bar{height:52px;flex:none;box-sizing:border-box;padding:0 16px;margin:0;border-bottom:1px solid var(--line);background:var(--bg)}
  #scorePanel .output-card>.score{margin:24px auto 16px;width:calc(100% - 48px);max-width:900px;box-sizing:border-box;min-height:0!important}
  #scorePanel .output-card>.play-bar{border-radius:0;box-shadow:0 -1px 0 var(--line);margin:0;position:relative;bottom:auto}
@@ -771,4 +771,126 @@ input[type=checkbox][role=switch]:focus-visible{outline:2px solid var(--accent);
 .viewer-disp-menu .viewer-reflow,.viewer-disp-menu .viewer-measures{background:transparent!important;border:0!important;padding:0!important;height:auto!important}
 .viewer-disp-menu>button{justify-content:flex-start}
 .viewer-bar .viewer-options{flex-wrap:nowrap}
-/* Modified by AI on 2026-10-11 06:17:18 */
+/* 换算 (design): summary in the card head, one-row hole strip 「吹孔 ●●●○○○○ 笛尾」, calibrate link top right, 对照表 beside the CTA. */
+#diziExplanation b{color:var(--ink)}#diziExplanation b.accent{color:var(--accent-text)}
+.conv-inputs .card{position:relative}
+.chips-cards .chip-minor[data-value=custom]{position:absolute;top:18px;right:18px;min-height:30px;padding:0 6px}
+.chips-cards .chip-minor[data-value=custom] .chip-sub{display:none}
+.chips-cards .chip-minor[data-value=holes]:not([aria-checked=true]){display:none}
+.flute-box .fingering{grid-template-columns:auto repeat(7,minmax(0,1fr)) auto;align-items:start}
+.flute-box .fingering .edge:first-child{grid-column:1;grid-row:1;margin:12px 8px 0 4px;text-align:left}
+.flute-box .fingering .edge:last-child{grid-column:9;grid-row:1;margin:12px 4px 0 8px;text-align:right}
+.flute-box .flute-legend{display:none}
+.conv-cta{display:flex;gap:8px}
+.conv-cta #toScore{flex:1}
+.conv-table-btn{flex:none;min-height:48px;padding:0 16px;border-radius:12px;background:#1C1F26;color:#fff}
+/* 调音器 (design): large gauge with the note inside the arc, compact dark start button, columns fill the height. */
+.tuner-card{display:grid;justify-items:center;align-content:start;row-gap:10px}
+.tuner-card>.tuner-gauge{grid-area:1/1;width:min(100%,600px);height:auto;max-width:none}
+.tuner-card>.tuner-readout{grid-area:1/1;align-self:end;margin-bottom:4%;text-align:center;z-index:1;pointer-events:none}
+.tuner-card .tuner-note strong{font:500 clamp(56px,7vw,88px)/1 "Times New Roman",serif}
+.tuner-card>.toolbar{justify-content:center;margin-top:auto}
+#tunerToggle{background:var(--ink);color:#fff;min-height:48px;border-radius:14px;padding:0 28px}
+#tunerToggle:hover{background:#2A2E37}
+.tuner-card>p.subtle{text-align:center;font-size:12px;max-width:560px}
+@media screen and (min-width:1000px){
+ .tuner-layout{align-items:stretch;min-height:calc(100dvh - 190px)}
+ .tuner-layout .tuner-card{align-content:space-between}
+ .tuner-side .tuner-side-card:last-child{flex:1}
+ .tuner-side .tuner-steady{flex:1;display:flex;flex-direction:column}
+ .tuner-side .tuner-steady-bars{flex:1;min-height:120px}
+}
+/* 设置 → 播放 (design): timbre pills, the current one dark. */
+.settings-col{flex-direction:column;align-items:flex-start!important;gap:10px}
+.timbre-chips{display:flex;flex-wrap:wrap;gap:6px}
+.timbre-chip{min-height:34px;height:34px;padding:0 12px;border-radius:999px;background:var(--fill);font-size:13px;font-weight:500}
+.timbre-chip[aria-checked=true]{background:var(--ink);color:#fff}
+/* 指法表 (design): instrument switch top right; one table card with register tabs + legend, header row and compact rows. */
+#fingeringPanel{position:relative}
+@media screen and (min-width:900px){
+ #fingeringPanel>.app-segments:first-child{position:absolute;top:0;right:0;margin:0;display:inline-grid;grid-auto-flow:column;grid-template-columns:none}
+ #fingeringPanel>.app-segments:first-child button{padding:0 16px;min-height:36px}
+ #fingeringPanel>div>h1,#fingeringPanel>div>.intro{padding-right:380px}
+}
+#shinoChartView .fingering-groups{background:#fff;border-radius:20px;box-shadow:0 0 0 1px var(--line-soft);gap:0;overflow:hidden}
+.finger-bar{display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid #F0F1F4}
+.finger-bar .finger-regs{margin:0}
+.finger-bar .chart-legend{gap:6px 14px}
+.finger-bar .chart-legend>span{font-size:12px;color:var(--muted);gap:5px}
+.finger-bar .legend-hole{width:13px;height:13px}
+#shinoChartView .fingering-group{background:transparent;box-shadow:none;border-radius:0;padding:0 8px 8px}
+#shinoChartView .fingering-group>h2{display:none}
+.chart-head{display:grid;grid-template-columns:64px 268px minmax(0,1fr);gap:0 12px;align-items:center;padding:8px 8px;font-size:11px;color:var(--faint);border-bottom:1px solid #F0F1F4}
+.chart-head-hands{display:grid;grid-template-columns:116px 152px;text-align:center}
+#shinoChartView .chart-row{grid-template-columns:64px minmax(0,1fr);gap:0 12px;padding:0 8px;border-top:0;border-bottom:1px solid #F3F4F6}
+#shinoChartView .chart-note{font:600 20px/1.2 -apple-system,"PingFang SC",sans-serif;text-align:left}
+#shinoChartView .chart-fingering{display:grid;grid-template-columns:268px minmax(0,1fr);gap:12px;align-items:center;padding:6px 8px;margin:2px 0;border-radius:10px}
+#shinoChartView .chart-holes{width:268px;max-height:36px}
+#shinoChartView .chart-technique{text-align:left;font-size:13px;color:var(--ink)}
+.chart-holes circle[fill="#294459"]{fill:#0F1115}.chart-holes path[fill="#294459"]{fill:#0F1115}
+@media(max-width:599px){
+ .chart-head{grid-template-columns:40px minmax(0,1fr)}.chart-head>span:last-child{display:none}.chart-head-hands{grid-template-columns:3fr 4fr}
+ #shinoChartView .chart-row{grid-template-columns:40px minmax(0,1fr)}
+ #shinoChartView .chart-fingering{grid-template-columns:minmax(0,1fr);gap:2px}
+ #shinoChartView .chart-holes{width:100%}
+ #shinoChartView .chart-technique{font-size:11px;color:var(--muted)}
+}
+/* 二胡定弦 (design): dark board with the current key and two string tiles; key chips and a memo card below. */
+.erhu-tuning{display:grid!important;grid-template-columns:minmax(200px,1fr) minmax(0,1.4fr) minmax(0,1.4fr);gap:16px;align-items:stretch;background:var(--dark);border-radius:20px;padding:22px;margin:16px 0 8px}
+.erhu-current{display:flex;flex-direction:column;justify-content:center;gap:4px;color:#fff;padding:0 8px}
+.erhu-current small{font-size:12px;color:#A7ADBA}
+.erhu-current strong{font-size:34px;font-weight:700;line-height:1.1}
+.erhu-current b{font-size:20px;color:#C7CBFF}
+.erhu-current span{font-size:12px;color:#D7DAE1}
+.erhu-tuning .erhu-tone{background:#1C1F26;border:0;box-shadow:none;color:#fff;border-radius:16px}
+.erhu-tuning .erhu-tone small,.erhu-tuning .erhu-tone span{color:#D7DAE1}
+.erhu-tuning .erhu-tone strong{color:#fff}
+#erhuToneHint{font-size:12px}
+.erhu-board{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:stretch;margin:12px 0 16px}
+.erhu-keys,.erhu-memo{padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.erhu-keys h2,.erhu-memo h2{margin:0;font-size:15px}
+.erhu-keys-head{display:flex;justify-content:space-between;align-items:baseline}
+.erhu-keys-head .subtle{font-size:12px}
+.erhu-keys .erhu-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px;margin:0}
+.erhu-keys .erhu-card{min-height:58px;padding:6px 4px;border-radius:12px;background:var(--fill);box-shadow:none;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer}
+.erhu-keys .erhu-card h2{font-size:15px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:0;margin:0}
+.erhu-keys .erhu-card .pill{background:none;padding:0;font-size:11px;color:var(--muted);font-weight:500}
+.erhu-keys .erhu-card .erhu-pair,.erhu-keys .erhu-card .erhu-caption,.erhu-keys .erhu-card>p{display:none}
+.erhu-keys .erhu-chip b{font-size:15px}.erhu-keys .erhu-chip small{font-size:11px;color:var(--muted)}
+.erhu-keys .erhu-card.selected{background:var(--accent);color:var(--on-accent,#fff)}
+.erhu-keys .erhu-card.selected .pill,.erhu-keys .erhu-card.selected small{color:color-mix(in srgb,var(--on-accent,#fff) 80%,transparent)}
+.erhu-keys>p.subtle{font-size:12px;margin:0}
+.erhu-memo p{margin:0;font-size:13px;color:var(--ink)}
+.erhu-memo p+p{color:var(--muted);font-size:12px}
+@media(max-width:899px){.erhu-tuning{grid-template-columns:1fr 1fr}.erhu-current{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 12px}.erhu-board{grid-template-columns:1fr}}
+.erhu-keys .erhu-card.selected{box-shadow:none}
+.erhu-tuning .erhu-current span,.erhu-tuning .erhu-tone span{background:none;padding:0;border-radius:0}
+/* 谱库 desktop (design): list and detail cards fill the window and scroll inside. */
+@media screen and (min-width:1100px) and (min-height:560px){
+ #pdfLibraryView .archive-split{height:calc(100dvh - 150px);align-items:stretch}
+ #pdfLibraryView .archive-split-list{display:flex;flex-direction:column;min-height:0}
+ #pdfLibraryView .archive-split-list>.pdf-archive-list{flex:1;min-height:0;overflow-y:auto}
+ #pdfLibraryView .archive-detail{position:static;min-height:0;overflow-y:auto}
+}
+/* 转谱 header on phones (design): icon import, short save label, one row. */
+@media(max-width:599px){
+ #scorePanel>.ws-head{flex-wrap:nowrap;gap:8px}
+ #scorePanel .ws-title{min-width:0;flex-direction:column;align-items:flex-start;gap:0}
+ #scorePanel .ws-title h1{font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+ #scorePanel .ws-meta{display:none}
+ #scorePanel .ws-actions{width:auto!important;flex:none;flex-wrap:nowrap}
+ #openImport{font-size:0;width:40px;padding:0!important;justify-content:center}
+ #openImport svg{width:18px;height:18px}
+ #archiveScore{font-size:0}#archiveScore::after{content:"存档";font-size:15px}
+}
+.export-menu>[hidden]{display:none!important}
+@media(max-width:899px){
+ .conv-grid .result>.conv-cta{grid-column:2;grid-row:1;margin:0}
+ .conv-grid .result .conv-table-btn{display:none}
+ .conv-grid .result .big-row{flex-wrap:nowrap}
+}
+.finger-regs button{white-space:nowrap}
+@media(max-width:599px){.finger-bar .finger-regs{max-width:100%;overflow-x:auto}.finger-regs button{padding:0 10px;font-size:13px}}
+.parts-menu .part-mixer .part-row{display:grid!important;align-items:center}
+.parts-menu .part-mixer .part-row select{width:100%}
+/* Modified by AI on 2026-10-11 06:25:46 */

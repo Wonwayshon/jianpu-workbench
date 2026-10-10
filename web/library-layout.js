@@ -38,7 +38,7 @@ new MutationObserver(wire).observe(list, { childList: true, subtree: true });
 wide.addEventListener('change', () => { if (wide.matches) wire(); else { release(); pane.replaceChildren(empty); } });
 wire();
 })();
-// Header actions (design): recycle bin, backup and WebDAV open as sheets; their original <details> move inside intact.
+// Header actions (design): recycle bin, backup and WebDAV open as sheets (also from 设置); their original <details> move inside intact.
 (() => {
 const $ = (id) => document.getElementById(id);
 function sheet(id, title) {
@@ -52,7 +52,7 @@ const h = document.createElement('h2'); h.textContent = title;
 const close = document.createElement('button'); close.type = 'button'; close.className = 'small-btn'; close.textContent = '关闭';
 close.onclick = () => dlg.close();
 head.append(h, close); body.append(head);
-panel.before(dlg); body.append(panel); dlg.append(body);
+document.body.append(dlg); body.append(panel); dlg.append(body);
 dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 return () => { if (!panel.open) panel.open = true; if (!dlg.open) dlg.showModal(); };
 }
@@ -61,6 +61,7 @@ const openBackup = sheet('backupPanel', '备份 / 恢复');
 const openDav = sheet('davPanel', 'WebDAV 同步');
 if ($('libRecovery') && openRecovery) $('libRecovery').onclick = openRecovery;
 if ($('libBackup') && openBackup) $('libBackup').onclick = openBackup;
+for (const [id, open] of [['settingsDav', openDav], ['settingsBackup', openBackup], ['settingsRecovery', openRecovery]]) if ($(id) && open) $(id).onclick = open;
 if ($('libImport')) $('libImport').onclick = () => $('pdfImportTab').click();
 function davState() {
 let on = false;
@@ -74,4 +75,4 @@ $('davPanel').closest('dialog').addEventListener('close', davState);
 davState();
 }
 })();
-// Modified by AI on 2026-10-11 05:55:14
+// Modified by AI on 2026-10-11 06:25:46

@@ -17,7 +17,9 @@ $(m).addEventListener('click', (e) => e.stopPropagation());
 }
 document.addEventListener('click', () => closeMenus());
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(); });
-for (const id of ['copyScore', 'downloadScore', 'printScore']) if ($(id)) $(id).addEventListener('click', () => closeMenus());
+// Header keeps 导入 / 导出 / 存入谱库 (design); 另存为新存档 and 取消存档关联 live in the export menu.
+for (const id of ['archiveScoreAs', 'archiveDetach']) if ($(id) && $('exportMenu')) { $(id).classList.add('menu-item'); $('exportMenu').append($(id)); }
+for (const id of ['copyScore', 'downloadScore', 'printScore', 'archiveScoreAs', 'archiveDetach']) if ($(id)) $(id).addEventListener('click', () => closeMenus());
 
 // ---------- notation × key ----------
 function current() {
@@ -290,9 +292,20 @@ meta.textContent = [key && '1=' + key, time, tempo && '♩=' + tempo, notes && n
 }
 for (const id of ['scorePreview', 'scoreOutput']) if ($(id)) new MutationObserver(info).observe($(id), { childList: true });
 info();
+// 设置 → 播放: default timbre as chips over the player's own select.
+const tsel = $('timbreSelect'), tbox = $('settingsTimbres');
+if (tsel && tbox) {
+const paint = () => { for (const b of tbox.children) b.setAttribute('aria-checked', String(b.dataset.value === tsel.value)); };
+for (const o of tsel.options) {
+const b = document.createElement('button'); b.type = 'button'; b.className = 'timbre-chip'; b.setAttribute('role', 'radio'); b.dataset.value = o.value; b.textContent = o.textContent;
+b.onclick = () => { if (tsel.value === o.value) return; tsel.value = o.value; tsel.dispatchEvent(new Event('change', { bubbles: true })); paint(); };
+tbox.append(b);
+}
+tsel.addEventListener('change', paint); $('settingsTab').addEventListener('click', paint); paint();
+}
 // Sidebar version tag (release builds only).
 const ver = (document.querySelector('meta[name="app-version"]') || {}).content || '';
 if ($('navVersion') && /^\d+\.\d+/.test(ver)) $('navVersion').textContent = ver.match(/^\d+\.\d+/)[0];
 })();
 })();
-// Modified by AI on 2026-10-11 06:17:18
+// Modified by AI on 2026-10-11 06:25:46

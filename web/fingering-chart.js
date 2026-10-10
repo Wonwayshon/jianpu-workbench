@@ -4,9 +4,11 @@ const groups=[["吕 · 低音区", "呂（りょ）", [["筒音", null, [["11111
 
 const ns='http://www.w3.org/2000/svg';
 function element(name,attrs={}){const e=document.createElementNS(ns,name);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v);return e;}
-function diagram(pattern){
- const svg=element('svg',{viewBox:'0 0 252 36',class:'chart-holes','aria-hidden':'true'});
- [...pattern].forEach((state,i)=>{const x=18+i*36;svg.append(element('circle',{cx:x,cy:18,r:11,fill:state==='1'?'#294459':'white',stroke:'#294459','stroke-width':1.6}));
+// split=true leaves a gap between the left-hand (3) and right-hand (4) holes, as in the table design.
+function diagram(pattern,split=false){
+ const svg=element('svg',{viewBox:split?'0 0 268 36':'0 0 252 36',class:'chart-holes','aria-hidden':'true'});
+ if(split)svg.append(element('line',{x1:116,y1:6,x2:116,y2:30,stroke:'#D9DCE2','stroke-width':1.5}));
+ [...pattern].forEach((state,i)=>{const x=18+i*36+(split&&i>=3?16:0);svg.append(element('circle',{cx:x,cy:18,r:11,fill:state==='1'?'#294459':'white',stroke:'#294459','stroke-width':1.6}));
  if(state==='s')svg.append(element('path',{d:`M ${x+3} 7.4 A 11 11 0 1 0 ${x+3} 28.6 Z`,fill:'#294459'}));
  if(state==='h')svg.append(element('path',{d:`M ${x-11} 18 A 11 11 0 0 1 ${x+11} 18 Z`,fill:'#294459'}));
  });return svg;
@@ -15,7 +17,10 @@ const TIPS=[[/カリ/,'カリ · 外转升音','把笛子略向外转，使音�
 const host=document.getElementById('fingeringGroups');
 const tabs=document.createElement('div');tabs.className='app-segments finger-regs';tabs.setAttribute('role','group');tabs.setAttribute('aria-label','音区');
 const detail=document.createElement('aside');detail.className='finger-detail';detail.id='fingerDetail';detail.setAttribute('aria-live','polite');
-const split=document.createElement('div');split.className='finger-split';host.before(tabs);host.before(split);split.append(host,detail);
+const split=document.createElement('div');split.className='finger-split';host.before(split);split.append(host,detail);
+// One table card (design): register tabs and the legend on top, then a header row and compact rows.
+const bar=document.createElement('div');bar.className='finger-bar';bar.append(tabs);const legend=document.querySelector('#shinoChartView .chart-legend');if(legend)bar.append(legend);host.append(bar);
+const guide=document.querySelector('#shinoChartView .chart-guide');if(guide){const h=guide.querySelector('h2');if(h)h.textContent='关于这张表';split.after(guide)}
 const sections=[];let current=null;
 function select(button,info){
  if(current)current.classList.remove('selected');current=button;button.classList.add('selected');
@@ -32,7 +37,7 @@ function select(button,info){
 groups.forEach(([heading,japanese,rows],gi)=>{
  const section=document.createElement('section');section.className='card fingering-group';section.hidden=gi!==0;
  const h=document.createElement('h2');h.textContent=heading;const jp=document.createElement('span');jp.className='subtle';jp.textContent=japanese;h.append(jp);section.append(h);
- const direction=document.createElement('p');direction.className='chart-direction';direction.textContent='吹口侧　左手：食指 / 中指 / 无名指　→　右手：食指 / 中指 / 无名指 / 小指';section.append(direction);
+ const direction=document.createElement('div');direction.className='chart-head';direction.setAttribute('aria-hidden','true');direction.innerHTML='<span>谱号</span><span class="chart-head-hands"><span>左手 食 中 无</span><span>右手 食 中 无 小</span></span><span>吹法</span>';section.append(direction);
  for(const [label,pitch,variants] of rows){
  const row=document.createElement('div');row.className='chart-row';
  const name=document.createElement('strong');name.className='chart-note';name.textContent=label;row.append(name);
@@ -41,7 +46,7 @@ groups.forEach(([heading,japanese,rows],gi)=>{
  const button=document.createElement('button');button.className='chart-fingering';button.type='button';
  const description=[...pattern].map((v,i)=>`${i+1}孔${{'1':'按住','0':'打开',s:'微开',h:'半开'}[v]}`).join('，');
  button.setAttribute('aria-label',`${heading} ${label}，第 ${index+1} 种指法，${description}${technique?'，'+technique:''}。查看详情`);
- button.append(diagram(pattern));const text=document.createElement('span');text.className='chart-technique';text.textContent=(technique||'基本指法')+' · '+(pitch===null?'带入校准':'作 1');button.append(text);
+ button.append(diagram(pattern,true));const text=document.createElement('span');text.className='chart-technique';text.textContent=(technique||'基本指法')+' · '+(pitch===null?'带入校准':'作 1');button.append(text);
  const info={pattern,pitch,heading,label,technique};
  button.onclick=()=>select(button,info);list.append(button);
  if(gi===0&&!current)queueMicrotask(()=>{if(!current){select(button,info);detail.classList.remove('open')}});
@@ -52,4 +57,4 @@ groups.forEach(([heading,japanese,rows],gi)=>{
  t.onclick=()=>{sections.forEach((s,i)=>s.hidden=i!==gi);for(const b of tabs.children)b.setAttribute('aria-pressed',String(b===t))};tabs.append(t);
 });
 })();
-// Modified by AI on 2026-10-11 02:00:04
+// Modified by AI on 2026-10-11 06:25:46

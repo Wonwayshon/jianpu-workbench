@@ -71,10 +71,10 @@ nav{flex-wrap:wrap}.erhu-tuning{display:flex;flex-wrap:wrap;gap:12px;margin:20px
 <div class="conv-pick-only"><div class="eyebrow">推荐篠笛</div><div class="big-row"><div class="big"><span id="honResult">8</span><small>本</small></div><span class="key-pill" id="convSongKey"></span></div><p id="honLabel"></p>
 <ol class="conv-chain" id="convChain"></ol><div class="equation" id="equation"></div><p class="subtle" id="resultExplanation"></p></div>
 <div class="conv-own-only"><div class="eyebrow" id="reverseBase"></div><div class="big reverse-big" id="reverseResult"></div><p id="reverseText" class="subtle"></p></div>
-<button id="toScore" type="button">用这个调转换简谱</button>
+<div class="conv-cta"><button id="toScore" type="button">用这个调转换简谱</button><button id="convTable" type="button" class="conv-table-btn">对照表</button></div>
 <p class="subtle result-foot">只匹配调性，不代表每个音的手指动作都相同；音区、半孔与叉指仍需按曲谱调整。</p></div>
 </div>
-<details><summary>展开 1–12 本对照表与计算方法</summary><div class="table-wrap"><table><thead><tr><th>篠笛</th><th>标准「一」音</th><th>当前指法作 1</th></tr></thead><tbody id="honTable"></tbody></table></div><p class="subtle">竹笛筒音 = 标注调名 + 7 半音；乐曲主音 = 筒音 −“筒音作几”的音程。简谱 1–7 的音程为 0、2、4、5、7、9、11 半音。篠笛本数每增加 1，整体升高半音，八本的标准「一」音为 C；上三孔作 1 使用四度关系，即再加 5 半音。计算调性时按 12 半音循环。</p></details>
+<details id="honTableBox"><summary>展开 1–12 本对照表与计算方法</summary><div class="table-wrap"><table><thead><tr><th>篠笛</th><th>标准「一」音</th><th>当前指法作 1</th></tr></thead><tbody id="honTable"></tbody></table></div><p class="subtle">竹笛筒音 = 标注调名 + 7 半音；乐曲主音 = 筒音 −“筒音作几”的音程。简谱 1–7 的音程为 0、2、4、5、7、9、11 半音。篠笛本数每增加 1，整体升高半音，八本的标准「一」音为 C；上三孔作 1 使用四度关系，即再加 5 半音。计算调性时按 12 半音循环。</p></details>
 <div class="smallprint"><p>适用范围：常见六孔竹笛，以及七孔唄用／ドレミ调篠笛。古典调、囃子用的音阶不一定符合本表，不能直接据此选笛。点孔只记录全按或全开；半孔和吹奏力度请用实测校准。自定义校准仅修正所选主音，不能把非平均律音阶整体校正。</p><p>上三孔指法以八本篠笛的 F 音位置为基准。部分制作者的准确 F 需要加按笛尾小指孔或使用叉指；请以厂家指法表、调音器为准。本数对应的是标准「一」音，与你另选指法作 1 的乐曲调名是两回事。</p></div>
 </section>
 <section id="scorePanel" role="tabpanel" aria-labelledby="scoreTab" hidden>
@@ -169,13 +169,13 @@ nav{flex-wrap:wrap}.erhu-tuning{display:flex;flex-wrap:wrap;gap:12px;margin:20px
 </div><aside class="tuner-side"><section class="card tuner-side-card"><h2><label for="tunerA4">标准音</label></h2><div class="tuner-a4"><button type="button" id="tunerA4Down" aria-label="降低 1 Hz">−</button><select id="tunerA4"></select><button type="button" id="tunerA4Up" aria-label="提高 1 Hz">+</button></div><p class="subtle">430–446 Hz，合奏时跟随乐队</p></section><section class="card tuner-side-card"><h2><label for="tunerKey">首调显示</label></h2><select id="tunerKey" data-chips="keys6"></select></section><section class="card tuner-side-card"><div class="tuner-steady" aria-labelledby="tunerSteadyTitle"><div class="tuner-steady-head"><span id="tunerSteadyTitle">长音稳定度</span><span id="tunerSteadyNote">吹一个长音，这里显示最近 8 秒的音分偏差</span></div><div id="tunerSteadyBars" class="tuner-steady-bars" aria-hidden="true"></div></div>
 </section></aside></div></section>
 <section id="erhuPanel" role="tabpanel" aria-labelledby="erhuTab" hidden>
-<h1>二胡定弦速查</h1><p class="intro">按普通二胡标准 D–A 定弦速查：左边内弦，右边外弦。</p>
-<div class="erhu-tuning"><button type="button" id="erhuInnerTone" class="erhu-tone"><small>内弦 · 点击发音</small><strong id="erhuInnerDeg">1</strong><span id="erhuInnerHz">D4 · 293.66 Hz</span></button><button type="button" id="erhuOuterTone" class="erhu-tone"><small>外弦 · 点击发音</small><strong id="erhuOuterDeg">5</strong><span id="erhuOuterHz">A4 · 440 Hz</span></button></div><p class="subtle" id="erhuToneHint">下方选一个调，上面显示该调的空弦音级；点方块发出标准音（跟随调音器的 A4 设置），再点一下停止。</p>
-<p class="callout">换调时，空弦通常仍是 D4、A4，改变的是简谱里的音级叫法。例如 D 调叫“15弦”，G 调叫“52弦”，不用因此重新拧弦轴。</p>
-<h2 class="spaced">常用六个调 · 二泉调</h2><div id="erhuCommon" class="erhu-cards"></div>
-<p class="subtle spaced">数字下方的点表示低八度；“15弦”等简称通常省略高低音点。这里统一以各调第 4 组主音为中音 1（如 G4），具体谱子的八度标法可能不同。</p>
+<h1>二胡定弦</h1><p class="intro">标准 D–A 定弦。换调时空弦音不变，变的是简谱里的叫法。</p>
+<div class="erhu-tuning"><div class="erhu-current"><small>当前</small><strong id="erhuCurKey">1 = D</strong><b id="erhuCurStr">15弦</b><span id="erhuCurNote">空弦仍是 D4、A4，不用拧弦轴</span></div><button type="button" id="erhuInnerTone" class="erhu-tone"><small>内弦 · 点击发音</small><strong id="erhuInnerDeg">1</strong><span id="erhuInnerHz">D4 · 293.66 Hz</span></button><button type="button" id="erhuOuterTone" class="erhu-tone"><small>外弦 · 点击发音</small><strong id="erhuOuterDeg">5</strong><span id="erhuOuterHz">A4 · 440 Hz</span></button></div><p class="subtle" id="erhuToneHint">下方选一个调，上面显示该调的空弦音级；点方块发出标准音（跟随调音器的 A4 设置），再点一下停止。</p>
+<div class="erhu-board"><div class="card erhu-keys"><div class="erhu-keys-head"><h2>常用</h2><span class="subtle">点选切换上方读数</span></div><div id="erhuCommon" class="erhu-cards"></div><h2>其他调（含升降号）</h2><div id="erhuOther" class="erhu-cards erhu-other"></div>
+<p class="subtle">数字下方的点表示低八度；“15弦”等简称通常省略高低音点。这里统一以各调第 4 组主音为中音 1（如 G4），具体谱子的八度标法可能不同。</p>
+</div><div class="card erhu-memo"><h2>怎样记住这些弦法</h2><p>先记实际空弦：内 D、外 A。再看它们在当前调里是第几级。例如 1=G 时，G A B C D E F♯ 对应 1 2 3 4 5 6 7，所以 D 是 5、A 是 2，叫“52弦”。</p><p>弦法简称的前一个数字是内弦，后一个数字是外弦；不是手指序号。♭、♯ 表示把该调的对应音级降、升半音。以 6 为主音的小调仍按谱面 1= 的调号查询。</p><p>本页只记标准 D4–A4 定弦下的音级。若曲谱另写特殊定弦，或使用二泉琴等不同定弦乐器，以曲谱指定的实际空弦音为准。</p></div></div>
 <details id="erhuAll"><summary>完整十二调对照表（含升降号）</summary><div class="table-wrap"><table><thead><tr><th scope="col">乐曲调号</th><th scope="col">内弦 D4</th><th scope="col">外弦 A4</th><th scope="col">弦法简称</th></tr></thead><tbody id="erhuTable"></tbody></table></div><p class="subtle">按各调的音级关系计算。F♯ 与 G♭ 调音高相同，但音级写法不同，因此分别列出。其他含升降号的行是空弦音级描述，不代表额外调弦方案。</p></details>
-<details><summary>怎样记住这些弦法？</summary><p>先记实际空弦：内 D、外 A。再看它们在当前调里是第几级。例如 1=G 时，G A B C D E F♯ 对应 1 2 3 4 5 6 7，所以 D 是 5、A 是 2，叫“52弦”。</p><p>弦法简称的前一个数字是内弦，后一个数字是外弦；不是手指序号。♭、♯ 表示把该调的对应音级降、升半音。以 6 为主音的小调仍按谱面 1= 的调号查询。</p><p>本页只记标准 D4–A4 定弦下的音级。若曲谱另写特殊定弦，或使用二泉琴等不同定弦乐器，以曲谱指定的实际空弦音为准。</p></details>
+
 <p class="smallprint">定弦音高参考：<a href="https://toneandtempo.cc/tuner/erhu" target="_blank" rel="noopener">二胡标准 D4–A4 定弦</a>。各调音级由上述空弦音与调号推算。</p>
 </section>
 <section id="pdfPanel" role="tabpanel" aria-labelledby="pdfTab" hidden>
@@ -194,6 +194,8 @@ nav{flex-wrap:wrap}.erhu-tuning{display:flex;flex-wrap:wrap;gap:12px;margin:20px
 <section class="settings-group" aria-labelledby="setLook"><h2 id="setLook">外观</h2><div class="settings-card"><div class="settings-row"><div><strong>主题色</strong><p id="themeCurrent" class="subtle"></p></div></div><div id="themeSwatches" class="theme-swatches" role="radiogroup" aria-label="主题色"></div><div class="settings-row theme-custom"><label for="themeCustom">自定义颜色</label><input id="themeCustom" type="color" value="#4f46e5"><span class="grow"></span><button id="themeReset" type="button" class="small-btn">恢复默认</button></div></div></section>
 <section class="settings-group" aria-labelledby="setApp"><h2 id="setApp">应用</h2><div class="settings-card"><div class="settings-row"><div><strong>笛调之间</strong><p id="appVersion" class="subtle"></p></div><button id="appUpdate" type="button" class="primary">检查更新</button></div><button id="appReleases" type="button" class="settings-link"><span>打开 GitHub 发布页<small>从 GitHub 获取新版，下载后按系统提示安装</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div></section>
 <section class="settings-group" aria-labelledby="setOcr"><h2 id="setOcr">识谱模型</h2><div class="settings-card"><button id="settingsModels" type="button" class="settings-link"><span>管理模型配置<small>DeepSeek 官方服务，或其他支持图片的兼容接口</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div></section>
+<section class="settings-group" aria-labelledby="setPlay"><h2 id="setPlay">播放</h2><div class="settings-card"><div class="settings-row settings-col"><strong>默认音色</strong><div id="settingsTimbres" class="timbre-chips" role="radiogroup" aria-label="默认音色"></div></div></div></section>
+<section class="settings-group" aria-labelledby="setLib"><h2 id="setLib">谱库与同步</h2><div class="settings-card"><button id="settingsDav" type="button" class="settings-link"><span>WebDAV 同步<small>坚果云 / Nextcloud / 群晖</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><button id="settingsBackup" type="button" class="settings-link"><span>备份与恢复<small>zip，含原文件</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><button id="settingsRecovery" type="button" class="settings-link"><span>回收站与历史版本<small>每份保留最近 3 个</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div></section>
 <section class="settings-group settings-privacy" aria-labelledby="setPriv"><h2 id="setPriv">数据与隐私</h2><div class="settings-card settings-text"><p>乐谱处理与谱库保存在本机。图片识谱会把所选图片和提示文字发给你配置的服务商；WebDAV 同步会把谱库发往你的网盘；检查更新会访问本项目的 GitHub 发布接口。</p><p>API Key 和网盘密码不包含在谱库备份、二维码中。导出的曲谱、二维码和备份本身不加密；换设备、卸载或清除数据前请导出备份。</p></div></section>
 </div></section>
 
@@ -260,7 +262,7 @@ function updateInstruments(){
  const dizi=Number($('diziKey').value),degree=Number($('diziDegree').value),bottom=mod(dizi+7),o=offset();
  currentSong=mod(bottom-degree);
  $('customBox').hidden=!needsCalibration();renderHoles();
- $('diziExplanation').textContent=`筒音的音名是 ${keyName(bottom)}；筒音当 ${STEPS.indexOf(degree)+1} 时，乐曲为 1=${keyName(currentSong)}。`;
+ {const b=(t,c)=>Object.assign(document.createElement('b'),{textContent:t,className:c||''});$('diziExplanation').replaceChildren('筒音 ',b(keyName(bottom)),` · 作 ${STEPS.indexOf(degree)+1} → 乐曲 `,b('1='+keyName(currentSong),'accent'));$('diziExplanation').title=`筒音的音名是 ${keyName(bottom)}；筒音当 ${STEPS.indexOf(degree)+1} 时，乐曲为 1=${keyName(currentSong)}。`}
  $('equation').textContent=`${keyName(dizi)} 调竹笛 · 筒音作 ${STEPS.indexOf(degree)+1} ＝ 1=${keyName(currentSong)}`;$('convSongKey').textContent=`1 = ${keyName(currentSong)}`;const chain=[['竹笛',`${keyName(dizi)} 调`],['筒音',`${keyName(bottom)} 作 ${STEPS.indexOf(degree)+1}`],['乐曲',`1=${keyName(currentSong)}`],['篠笛',o===null?'待校准':`${cn[mod(mod(currentSong-o)-5)+1]}本`]];$('convChain').replaceChildren(...chain.map(([k,v])=>{const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('strong');a.textContent=k;b.textContent=v;li.append(a,b);return li}));
  const existing=Number($('existingHon').value);
  $('reverseBase').textContent=`${cn[existing]}本 · 本调 ${keyName(honBase(existing))}`;
@@ -289,7 +291,7 @@ for(const name of TAB_NAMES){$(name+'Tab').onclick=()=>showTab(name);$(name+'Tab
 function syncConvCta(){const key=convOwnMode()?currentOwn:currentSong;$('toScore').disabled=key===null||key===undefined;$('toScore').textContent=key===null||key===undefined?'需先校准孔位':`用 1=${keyName(key)} 去转谱`}
 function setConvMode(mode){$('instrumentPanel').dataset.mode=mode;$('convPick').setAttribute('aria-pressed',String(mode==='pick'));$('convOwn').setAttribute('aria-pressed',String(mode==='own'));syncConvCta()}
 $('convPick').onclick=()=>setConvMode('pick');$('convOwn').onclick=()=>setConvMode('own');
-$('toScore').onclick=()=>{const key=convOwnMode()?currentOwn:currentSong;if(key===null||key===undefined)return;$('songKey').value=key;showTab('score');updateScore();$('scoreTab').focus()};
+$('convTable').onclick=()=>{const d=$('honTableBox');d.open=true;d.scrollIntoView({behavior:'smooth',block:'start'})};$('toScore').onclick=()=>{const key=convOwnMode()?currentOwn:currentSong;if(key===null||key===undefined)return;$('songKey').value=key;showTab('score');updateScore();$('scoreTab').focus()};
 const DIGITS_FLAT=['1','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
 const DIGITS_SHARP=['1','♯1','2','♯2','3','4','♯4','5','♯5','6','♯6','7'];
 const NAMES_FLAT=['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
@@ -422,18 +424,22 @@ function renderErhu(){
  for(const key of ERHU_KEYS){const inner=erhuNote(key,62,1),outer=erhuNote(key,69,5),row=document.createElement('tr');for(const [i,value] of [`1=${key.name}`,inner.display,outer.display,`${inner.numeral}、${outer.numeral} 弦`].entries()){const cell=document.createElement(i===0?'th':'td');if(i===0)cell.scope='row';if(i===1||i===2){cell.className='erhu-table-note';cell.setAttribute('aria-label',(i===1?'内弦，':'外弦，')+(i===1?inner.spoken:outer.spoken))}cell.textContent=value;row.append(cell)}$('erhuTable').append(row)}
 }
 renderErhu();
+// 其他调 (design): the remaining keys as small chips; each selects like a common key.
+for(const key of ERHU_KEYS){if(['D','G','F','B♭','C','A'].includes(key.name))continue;const inner=erhuNote(key,62,1),outer=erhuNote(key,69,5),b=document.createElement('button');b.type='button';b.className='erhu-card erhu-chip';b.dataset.key=key.name;const n=document.createElement('b');n.textContent=key.name;const t=document.createElement('small');t.textContent=inner.numeral+outer.numeral+'弦';b.append(n,t);b.onclick=()=>selectErhuKey(key.name);$('erhuOther').append(b)}
 // Selecting a common key shows its open-string degrees on the two tone buttons; tapping a button sounds the string.
 let erhuOpen=[62,69];
 function selectErhuKey(name){
- for(const c of document.querySelectorAll('#erhuCommon .erhu-card'))c.classList.toggle('selected',c.dataset.key===name);
+ for(const c of document.querySelectorAll('#erhuCommon .erhu-card, #erhuOther .erhu-card'))c.classList.toggle('selected',c.dataset.key===name);
  if(name==='erquan'){
+  $('erhuCurKey').textContent='1 = G';$('erhuCurStr').textContent='二泉调 · 15弦';$('erhuCurNote').textContent='内弦 G3、外弦 D4，比标准低纯五度';
   erhuOpen=[55,62];$('erhuInnerDeg').textContent='1';$('erhuOuterDeg').textContent='5';syncErhuHz();
   $('erhuToneHint').textContent='二泉调：阿炳演奏《二泉映月》的原定弦，1=G，内弦 G3、外弦 D4（1–5 弦），比标准 D–A 低纯五度。现代细弦定这么低偏松，也常用标准 D–A 定弦按 1=G 的 5–2 弦演奏。点方块发出标准音，再点停止。';
   try{localStorage.setItem('flute.erhuKey','erquan')}catch{}return;
  }
  erhuOpen=[62,69];syncErhuHz();
  const key=ERHU_KEYS.find(k=>k.name===name)||ERHU_KEYS.find(k=>k.name==='D'),inner=erhuNote(key,62,1),outer=erhuNote(key,69,5);
- for(const c of document.querySelectorAll('#erhuCommon .erhu-card'))c.classList.toggle('selected',c.dataset.key===key.name);
+ for(const c of document.querySelectorAll('#erhuCommon .erhu-card, #erhuOther .erhu-card'))c.classList.toggle('selected',c.dataset.key===key.name);
+ $('erhuCurKey').textContent='1 = '+key.name;$('erhuCurStr').textContent=inner.numeral+outer.numeral+'弦';$('erhuCurNote').textContent='空弦仍是 D4、A4，不用拧弦轴';
  $('erhuInnerDeg').textContent=inner.display;$('erhuOuterDeg').textContent=outer.display;
  $('erhuToneHint').textContent=`1=${key.name}：内弦是 ${inner.spoken}，外弦是 ${outer.spoken}（${inner.numeral}${outer.numeral}弦）。点方块发出标准音，再点一下停止。`;
  try{localStorage.setItem('flute.erhuKey',key.name)}catch{}
@@ -460,4 +466,4 @@ showTab(TAB_NAMES.includes(location.hash.slice(1))?location.hash.slice(1):'instr
 </script>
 </body>
 </html>
-<!-- Modified by AI on 2026-10-11 06:17:18 -->
+<!-- Modified by AI on 2026-10-11 06:25:46 -->

@@ -411,6 +411,7 @@ async function openEditor(){
 }
 const editLines=()=>$('scoreInput').value.replace(/\r\n?/g,'\n').split('\n');
 function buildEditor(){
+ if(!lastConverted)return; // text currently has an error: keep the last good preview and lines
  const body=$('viewerBody');body.className='viewer-body edit-body';body.replaceChildren();
  const scroll=document.createElement('div');scroll.className='edit-scroll';const grid=document.createElement('div');grid.className='edit-grid';
  const left=document.createElement('div');left.className='jp-score viewer-sheet edit-left';const right=document.createElement('div');right.className='edit-right';
@@ -451,7 +452,9 @@ function buildEditor(){
   inp.onkeyup=inp.onclick=()=>caretFlash(inp);
  }
  if(editFocus){const inp=inputs[editFocus.i];if(inp){inp.focus({preventScroll:true});inp.setSelectionRange(editFocus.pos,editFocus.pos)}editFocus=null}
- $('viewerEditStatus').textContent='点右边谱面上的音，左边对应的文字会选中；改完自动重排';$('viewerEditStatus').classList.remove('error');
+ $('viewerEditStatus').textContent='点右边谱面上的音，左边对应的文字会选中；改完自动重排';$('viewerEditStatus').classList.remove('error','jump');
+ // A rebuild (resize, view switch) while the text has an error keeps the error visible.
+ if(!$('scoreError').hidden&&$('scoreError').textContent){$('viewerEditStatus').textContent=$('scoreError').textContent;$('viewerEditStatus').classList.add('error');markEditError()}
 }
 // Each text line sits in a row that shows its line number (as in the workbench text pane).
 function numbered(inp,i){const row=document.createElement('div');row.className='edit-row';row.dataset.n=i+1;row.append(inp);return row}
@@ -677,4 +680,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 06:17:18
+// Modified by AI on 2026-10-11 06:25:46
