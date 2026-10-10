@@ -79,7 +79,7 @@ const u=vm.createContext({console,$,document:{createElement:()=>new El()},Option
 const view=read('score-view.js');
 vm.runInContext(view.slice(view.indexOf('function applyPartMutes('),view.indexOf("for(const [id,label] of ScorePlayer.TIMBRE_LIST)$('timbreSelect')")),u);
 u.fillPartMixer();let box=$('partMixerInline');assert.equal(box.hidden,false);
-box.children[3].children[0].children[0].checked=false;box.children[3].children[0].children[0].onchange();
+box.children[3].children[3].children[0].checked=false;box.children[3].children[3].children[0].onchange();
 assert.equal(u.settings.partMute['笛'],true);assert.ok(live.some(([id,m])=>id==='笛'&&m));assert.equal(stops,0);
 box.children[4].children[2].onclick();assert.equal(u.settings.partMute['琴'],false);assert.equal(u.settings.partMute['笛'],true);assert.equal(stops,0);
 box.children[2].children[0].onclick();assert.deepEqual(Object.keys(u.settings.partMute),[]);assert.ok(saved>=3);
@@ -123,4 +123,4 @@ assert.equal(hits.filter(h=>!h.node.buffer?.m).length,1,'no old percussion or cl
 const count=hits.length;raf();raf();assert.equal(hits.length,count,'visual frames never schedule sound');
 P.stop();assert.equal(timerActive,false);audioPump();assert.equal(hits.length,count,'stopped timer callback cannot revive audio');
 console.log('PASS: audio and metronome run with animation suspended; missed notes/clicks are not replayed in a burst; stop releases the audio timer.');
-// Modified by AI on 2026-10-10 13:56:00
+// Modified by AI on 2026-10-11 06:17:18

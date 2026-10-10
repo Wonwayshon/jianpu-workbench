@@ -117,7 +117,28 @@ if (!line) return;
 insertSym(line, b.dataset.ins, document.activeElement === line ? [line.selectionStart, line.selectionEnd] : lineSel || [line.value.length, line.value.length]);
 };
 }
-bar.querySelector('.viewer-middle').before(vsym);
+bar.closest('.viewer').append(vsym);
+})();
+
+// ---------- full-screen viewer: display options in one pop-over (design: 「显示：小节号 · 二胡」) ----------
+(() => {
+const opts = document.querySelector('.viewer-options');
+if (!opts) return;
+const wrap = document.createElement('div'); wrap.className = 'menu-wrap viewer-disp';
+const btn = document.createElement('button'); btn.type = 'button'; btn.id = 'viewerDispBtn'; btn.setAttribute('aria-haspopup', 'true'); btn.setAttribute('aria-expanded', 'false');
+const menu = document.createElement('div'); menu.id = 'viewerDispMenu'; menu.className = 'pop-menu viewer-disp-menu'; menu.hidden = true;
+for (const el of [document.querySelector('.viewer-reflow:not(#viewerErhuWrap)'), document.querySelector('.viewer-measures'), $('viewerErhuWrap'), $('viewerErhuParts'), $('viewerParts')]) if (el) menu.append(el);
+wrap.append(btn, menu); opts.append(wrap);
+function label() {
+const on = [$('viewerReflow') && $('viewerReflow').checked && '连续排版', $('viewerMeasureNumbers') && $('viewerMeasureNumbers').checked && '小节号', $('viewerErhu') && $('viewerErhu').checked && !$('viewerErhuWrap').hidden && '二胡'].filter(Boolean);
+btn.textContent = '显示' + (on.length ? '：' + on.join(' · ') : '');
+}
+btn.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); label(); };
+menu.addEventListener('click', (e) => e.stopPropagation());
+menu.addEventListener('change', label);
+document.addEventListener('click', () => { if (!menu.hidden) { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); } });
+new MutationObserver(label).observe($('viewerErhuWrap'), { attributes: true, attributeFilter: ['hidden'] });
+label();
 })();
 
 // ---------- full-screen viewer: same notation × key model ----------
@@ -164,6 +185,15 @@ sync();
 // ---------- parse errors: mirror into the text pane with a jump-to-line action ----------
 (() => {
 const err = $('scoreError'), inline = $('scoreErrorInline'), ta = $('scoreInput');
+// Red band behind the faulty line (the textarea is transparent over it), kept in place while scrolling.
+const band = document.createElement('div'); band.className = 'err-band'; band.hidden = true; band.ariaHidden = 'true';
+if (ta.closest('.editor-wrap')) ta.closest('.editor-wrap').prepend(band);
+function place() {
+if (band.hidden) return;
+const cs = getComputedStyle(ta), lh = parseFloat(cs.lineHeight) || 28;
+band.style.top = (parseFloat(cs.paddingTop) + (band.line - 1) * lh - ta.scrollTop) + 'px'; band.style.height = lh + 'px';
+}
+ta.addEventListener('scroll', place);
 function jump(n) {
 const lines = ta.value.split('\n'); let start = 0;
 for (let i = 0; i < n - 1 && i < lines.length; i++) start += lines[i].length + 1;
@@ -176,9 +206,10 @@ function sync() {
 const msg = err.hidden ? '' : err.textContent.trim();
 ta.classList.toggle('has-error', !!msg);
 inline.hidden = !msg; inline.replaceChildren();
+const m = msg.match(/第\s*(\d+)\s*行/);
+band.hidden = !m; if (m) { band.line = Number(m[1]); place(); }
 if (!msg) return;
 const text = document.createElement('span'); text.textContent = msg; inline.append(text);
-const m = msg.match(/第\s*(\d+)\s*行/);
 if (m) { const b = document.createElement('button'); b.type = 'button'; b.className = 'small-btn'; b.textContent = '跳到第 ' + m[1] + ' 行'; b.onclick = () => jump(Number(m[1])); inline.append(b); }
 }
 new MutationObserver(sync).observe(err, { attributes: true, attributeFilter: ['hidden'], childList: true, characterData: true, subtree: true });
@@ -246,9 +277,22 @@ let timer; ta.addEventListener('input', () => { clearTimeout(timer); timer = set
 new MutationObserver(status).observe(src, { childList: true, characterData: true, subtree: true });
 setInterval(() => { if (!document.hidden) title(); }, 1500);
 title(); status();
+// Header meta (design): 1=F · 4/4 · ♩=80 · N 个音; the view hint moves to the right end of the score toolbar.
+const meta = document.createElement('span'); meta.className = 'ws-meta'; chip.after(meta);
+const hint = $('viewHint'), pitch = $('pitchSummary');
+if (hint && pitch) { pitch.hidden = true; pitch.after(hint); }
+function info() {
+const key = (optText($('songKey')).match(/^[^（(\s]+/) || [''])[0];
+const time = (ta.value.match(/^@time[ \t]+(\S+)/m) || [])[1], tempo = (ta.value.match(/^@tempo[ \t]+(?:\S+[ \t]+)?(\d+)/m) || [])[1];
+const notes = ((pitch && pitch.textContent) || '').match(/\d+/);
+if (hint) hint.title = hint.textContent;
+meta.textContent = [key && '1=' + key, time, tempo && '♩=' + tempo, notes && notes[0] + ' 个音'].filter(Boolean).join(' · ');
+}
+for (const id of ['scorePreview', 'scoreOutput']) if ($(id)) new MutationObserver(info).observe($(id), { childList: true });
+info();
 // Sidebar version tag (release builds only).
 const ver = (document.querySelector('meta[name="app-version"]') || {}).content || '';
 if ($('navVersion') && /^\d+\.\d+/.test(ver)) $('navVersion').textContent = ver.match(/^\d+\.\d+/)[0];
 })();
 })();
-// Modified by AI on 2026-10-11 05:55:14
+// Modified by AI on 2026-10-11 06:17:18

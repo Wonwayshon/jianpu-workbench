@@ -343,14 +343,15 @@ function fillPartMixer(){
   for(const p of parts){
    const row=document.createElement('div');row.className='part-row';
    const name=p.name===p.id?p.id:`${p.id} · ${p.name}`;
-   const mute=document.createElement('label');mute.className='switch-row part-name';mute.title=name;
-   const cb=Object.assign(document.createElement('input'),{type:'checkbox',checked:!settings.partMute[p.id]});cb.setAttribute('aria-label',`${name}发声`);
-   cb.onchange=()=>applyPartMutes({...settings.partMute,[p.id]:!cb.checked});mute.append(cb,name);
+   const label=Object.assign(document.createElement('span'),{className:'part-name',textContent:name,title:name});
+   const mute=document.createElement('label');mute.className='part-switch';mute.title='发声';
+   const cb=Object.assign(document.createElement('input'),{type:'checkbox',checked:!settings.partMute[p.id]});cb.setAttribute('role','switch');cb.setAttribute('aria-label',`${name}发声`);
+   cb.onchange=()=>applyPartMutes({...settings.partMute,[p.id]:!cb.checked});mute.append(cb);
    const sel=document.createElement('select');sel.setAttribute('aria-label',`${name}音色`);sel.add(new Option('默认音色',''));for(const [tid,label] of ScorePlayer.TIMBRE_LIST)sel.add(new Option(label,tid));sel.value=settings.partTimbres[p.id]||'';
    sel.onchange=()=>{if(sel.value)settings.partTimbres[p.id]=sel.value;else delete settings.partTimbres[p.id];save();fillPartMixer();restartIfPlaying()};
    const solo=document.createElement('button');solo.type='button';solo.textContent='只听';solo.setAttribute('aria-label',`只听${name}`);
    solo.onclick=()=>applyPartMutes(Object.fromEntries(parts.map(x=>[x.id,x.id!==p.id])));
-   row.append(mute,sel,solo);box.append(row);
+   row.append(label,sel,solo,mute);box.append(row);
   }
  }
 }
@@ -400,13 +401,13 @@ $('printScore').onclick=()=>{
 };
 
 // ---------- edit mode (full-screen, side by side) ----------
-// Left: the original score rendered row by row; right: its text, each text line beside the row it draws (@page
-// separators line up too). Tapping a note selects its text on the right and flashes it; moving the caret on the
-// right flashes the note on the left. Edits re-render the left side live; playback works as in the viewer.
+// Text on the left, each line beside the row it draws (@page separators line up too); the preview on the right
+// follows the viewer's notation × key (a staff preview is not row-aligned). Tapping a note selects its text and
+// flashes it; moving the caret flashes the note. Edits re-render the preview live; playback works as in the viewer.
 let vEdit=false,editTimer=0,editFocus=null;
 async function openEditor(){
  if(!lastConverted)return;vEdit=true;$('scoreViewer').classList.add('editing');syncFloatPlayer();
- await openViewer();vView='source';
+ await openViewer();
 }
 const editLines=()=>$('scoreInput').value.replace(/\r\n?/g,'\n').split('\n');
 function buildEditor(){
@@ -414,10 +415,19 @@ function buildEditor(){
  const scroll=document.createElement('div');scroll.className='edit-scroll';const grid=document.createElement('div');grid.className='edit-grid';
  const left=document.createElement('div');left.className='jp-score viewer-sheet edit-left';const right=document.createElement('div');right.className='edit-right';
  grid.append(left,right);scroll.append(grid);body.append(scroll);
- const src=lastConverted.source.lines;Jianpu.render(left,src,erhuOpts(src,'source',{minFont:12}));
+ // The preview follows the viewer's notation × key. Converted lines drop @octave rows, so map them back to text lines.
+ const src=lastConverted.source.lines,v=vView,trans=v==='trans'&&transAllLines,lines=trans?transAllLines:v==='source'?src:lastConverted.lines;
+ const srcIndex=src.map((l,i)=>i).filter(i=>!(src[i].kind==='meta'&&src[i].name==='octave')),indexOf=l=>{const k=lines.indexOf(l);return k<0?-1:lines===src?k:srcIndex[k]??-1};
  const text=editLines();
+ if(isStaff(v)){
+  left.classList.remove('jp-score');left.classList.add('edit-staff');
+  Staff.render(left,lines,{keyLabel:staffKey(v),partNames:scoreParts(),...scoreDisplayOptions(lines,v==='trans'?'trans':'staff')}).catch(error=>{left.textContent='五线谱无法显示：'+error.message});
+  buildEditorFromText(text,true);$('viewerEditStatus').textContent='五线谱预览不与文字逐行对齐；改完自动重排';$('viewerEditStatus').classList.remove('error');return;
+ }
+ Jianpu.render(left,lines,erhuOpts(lines,v,{minFont:12}));
+ if(lines!==src)for(const l of lines)if(l.kind==='music')for(const t of l.tokens){for(const n of t.t==='chord'?t.notes:[t])if(n.src)n.src._editCell=n._cell}
  // Blocks: each rendered row with the text lines it came from; lines that draw nothing join the block before them.
- const blocks=[...left.children].filter(el=>el._src&&!el.classList.contains('jp-overlay')).map(el=>({el,idx:el._src.map(l=>src.indexOf(l)).filter(i=>i>=0)})).filter(b=>b.idx.length).sort((a,b)=>Math.min(...a.idx)-Math.min(...b.idx));
+ const blocks=[...left.children].filter(el=>el._src&&!el.classList.contains('jp-overlay')).map(el=>({el,idx:el._src.map(indexOf).filter(i=>i>=0)})).filter(b=>b.idx.length).sort((a,b)=>Math.min(...a.idx)-Math.min(...b.idx));
  if(!blocks.length)return;
  const owner=new Array(text.length);
  for(let i=0;i<text.length;i++){let k=0;for(let j=0;j<blocks.length;j++)if(Math.min(...blocks[j].idx)<=i)k=j;owner[i]=k}
@@ -427,7 +437,7 @@ function buildEditor(){
   b.box=document.createElement('div');b.box.className='edit-block';right.append(b.box);
   for(const i of b.lines){const inp=document.createElement('input');inp.className='edit-line';inp.value=text[i];inp.dataset.i=i;inp.spellcheck=false;inp.autocomplete='off';inp.setAttribute('autocapitalize','off');
    if(/^\s*$/.test(text[i]))inp.classList.add('blank');else if(/^\s*@/.test(text[i]))inp.classList.add('meta');
-   b.box.append(inp);inputs[i]=inp}
+   b.box.append(numbered(inp,i));inputs[i]=inp}
  }
  // Align: a row is as tall as the taller side; then place each text block at its row's top.
  const lineH=30;
@@ -441,8 +451,10 @@ function buildEditor(){
   inp.onkeyup=inp.onclick=()=>caretFlash(inp);
  }
  if(editFocus){const inp=inputs[editFocus.i];if(inp){inp.focus({preventScroll:true});inp.setSelectionRange(editFocus.pos,editFocus.pos)}editFocus=null}
- $('viewerEditStatus').textContent='点左边的音定位到右边，改完自动重排';$('viewerEditStatus').classList.remove('error');
+ $('viewerEditStatus').textContent='点右边谱面上的音，左边对应的文字会选中；改完自动重排';$('viewerEditStatus').classList.remove('error');
 }
+// Each text line sits in a row that shows its line number (as in the workbench text pane).
+function numbered(inp,i){const row=document.createElement('div');row.className='edit-row';row.dataset.n=i+1;row.append(inp);return row}
 function editText(){return [...$('viewerBody').querySelectorAll('.edit-line')].sort((a,b)=>a.dataset.i-b.dataset.i).map(i=>i.value).join('\n')}
 // Writes the edited text back to the score input; on a format error the left side keeps the last good version.
 function flushEdit(){
@@ -450,7 +462,7 @@ function flushEdit(){
  const text=editText();if(text===$('scoreInput').value)return;
  const a=document.activeElement;if(a?.classList?.contains('edit-line'))editFocus={i:Number(a.dataset.i),pos:a.selectionStart};
  $('scoreInput').value=text;updateScore();
- if(!$('scoreError').hidden&&$('scoreError').textContent){$('viewerEditStatus').textContent=$('scoreError').textContent;$('viewerEditStatus').classList.add('error');editFocus=null;return}
+ if(!$('scoreError').hidden&&$('scoreError').textContent){$('viewerEditStatus').textContent=$('scoreError').textContent;$('viewerEditStatus').classList.add('error');editFocus=null;markEditError();return}
  if(ScorePlayer.isPlaying())ScorePlayer.stop();buildEditor();
 }
 // Enter splits a line, Backspace at the start joins it to the previous one, ↑ / ↓ move between lines.
@@ -464,16 +476,24 @@ function editKey(e,inp){
 function commitLines(lines){
  clearTimeout(editTimer);const keep=editFocus;$('scoreInput').value=lines.join('\n');updateScore();
  if(!$('scoreError').hidden&&$('scoreError').textContent){$('viewerEditStatus').textContent=$('scoreError').textContent;$('viewerEditStatus').classList.add('error')}
- editFocus=keep;buildEditorFromText(lines);
+ editFocus=keep;buildEditorFromText(lines);markEditError();
 }
+// Format error: mark its text line red (as in the design); tapping the status jumps to it.
+function markEditError(){
+ const body=$('viewerBody');for(const e of body.querySelectorAll('.edit-line.has-error'))e.classList.remove('has-error');
+ const msg=$('scoreError').hidden?'':$('scoreError').textContent,m=msg.match(/第\s*(\d+)\s*行/),inp=m&&body.querySelector(`.edit-line[data-i="${Number(m[1])-1}"]`);
+ if(inp)inp.classList.add('has-error');$('viewerEditStatus').classList.toggle('jump',!!inp);
+}
+$('viewerEditStatus').addEventListener('click',()=>{const inp=$('viewerBody').querySelector('.edit-line.has-error');if(inp){inp.focus();inp.scrollIntoView({block:'center'})}});
 // When the text does not parse, still rebuild the right side so lines match what was typed.
-function buildEditorFromText(lines){
- if($('scoreError').hidden||!$('scoreError').textContent){buildEditor();return}
+function buildEditorFromText(lines,force=false){
+ if(!force&&($('scoreError').hidden||!$('scoreError').textContent)){buildEditor();return}
  const right=$('viewerBody').querySelector('.edit-right');if(!right)return;
  const box=document.createElement('div');box.className='edit-block plain';
- lines.forEach((t,i)=>{const inp=document.createElement('input');inp.className='edit-line';inp.value=t;inp.dataset.i=i;inp.spellcheck=false;inp.oninput=()=>{clearTimeout(editTimer);editTimer=setTimeout(flushEdit,450)};inp.onkeydown=e=>editKey(e,inp);box.append(inp)});
+ lines.forEach((t,i)=>{const inp=document.createElement('input');inp.className='edit-line';inp.value=t;inp.dataset.i=i;inp.spellcheck=false;inp.oninput=()=>{clearTimeout(editTimer);editTimer=setTimeout(flushEdit,450)};inp.onkeydown=e=>editKey(e,inp);box.append(numbered(inp,i))});
+ box.querySelectorAll('.edit-line').forEach(inp=>{inp.onkeyup=inp.onclick=()=>caretFlash(inp)});
  right.replaceChildren(box);right.style.height='auto';
- if(editFocus){const inp=box.children[editFocus.i];inp?.focus();inp?.setSelectionRange(editFocus.pos,editFocus.pos);editFocus=null}
+ if(editFocus){const inp=box.querySelector(`.edit-line[data-i="${editFocus.i}"]`);inp?.focus();inp?.setSelectionRange(editFocus.pos,editFocus.pos);editFocus=null}
 }
 // Source tokens of a text line, in column order (spaces dropped).
 function lineTokens(i){
@@ -487,13 +507,14 @@ function editSelect(token){
  const toks=lineTokens(i),k=toks.indexOf(src),end=k>=0&&k+1<toks.length?toks[k+1].col:inp.value.length;
  let stop=end;while(stop>src.col&&/\s/.test(inp.value[stop-1]))stop--;
  inp.focus({preventScroll:true});inp.setSelectionRange(src.col,stop);inp.scrollIntoView({block:'nearest'});
- flash(inp);flash(src._cell,'edit-flash-note');
+ flash(inp);flash(token._cell||src._cell,'edit-flash-note');
 }
 // Caret moved on the right: flash the note under it on the left.
 function caretFlash(inp){
  const i=Number(inp.dataset.i),toks=lineTokens(i),pos=inp.selectionStart;let hit=null;
  for(const t of toks)if(t.col<=pos)hit=t;else break;
- if(hit?._cell){flash(hit._cell,'edit-flash-note',1500);hit._cell.scrollIntoView({block:'nearest'})}
+ const cell=[hit?._editCell,hit?._cell].find(c=>c?.isConnected&&$('viewerBody').contains(c));
+ if(cell){flash(cell,'edit-flash-note',1500);cell.scrollIntoView({block:'nearest'})}
 }
 $('viewerBody').addEventListener('click',e=>{if(!vEdit)return;const t=tokenAt(e.target);if(t&&t.t!=='bar')editSelect(t)});
 
@@ -617,7 +638,7 @@ function pageOf(token){
 }
 let turning=false;
 async function followInViewer(token){
- if(vEdit){const el=token.src?._cell||token._cell;clearViewerHighlight();if(el?.isConnected){el.classList.add('jp-playing');vHighlight.push(el);if(!followHold)el.scrollIntoView({block:'nearest'})}return}
+ if(vEdit){const el=[token._cell,token.src?._editCell,token.src?._cell].find(c=>c?.isConnected&&$('viewerBody').contains(c));clearViewerHighlight();if(el?.isConnected){el.classList.add('jp-playing');vHighlight.push(el);if(!followHold)el.scrollIntoView({block:'nearest'})}return}
  if(vLayout==='width'){const el=(vView==='source'?token.src?._cell:isStaff(vView)?token._staffEls?.[0]:token._cell);el?.scrollIntoView?.({block:'center',behavior:'smooth'});return}
  const p=pageOf(token);if(p<0||turning)return;
  const step=vLayout==='two'?2:1,onScreen=p>=vIndex&&p<vIndex+step;
@@ -656,4 +677,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 05:55:14
+// Modified by AI on 2026-10-11 06:17:18

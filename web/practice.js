@@ -450,7 +450,7 @@ function syncMods(){const hint=$('practiceKeyboardHint');if(hint)hint.textConten
 function showStats(){
  const pct=(a,b)=>b?Math.round(a/b*100)+'%':'—';
  $('practiceSession').textContent=`本次 ${session.n} 个音 · 正确率 ${pct(session.ok,session.n)} · 平均 ${session.n?(session.time/session.n/1000).toFixed(1)+' 秒':'—'}`;
- $('practiceTotal').textContent=`累计 ${stats.total} 个音 · 正确率 ${pct(stats.correct,stats.total)}`;
+ $('practiceTotal').textContent=`累计 ${stats.total} 个音 · 正确率 ${pct(stats.correct,stats.total)}`;$('practiceSession').title=$('practiceTotal').textContent;
  const weak=Object.entries(stats.notes).filter(([,v])=>v[1]>0&&v[0]>=2).sort((a,b)=>b[1][1]/b[1][0]-a[1][1]/a[1][0]||b[1][1]-a[1][1]).slice(0,6);
  $('practiceWeak').textContent=weak.length?'常错：'+weak.map(([k,v])=>{const [c,n]=k.split('|');return `${c==='treble'?'高':'低'}音谱号 ${n}（错 ${v[1]}/${v[0]}）`}).join('，'):'';
 }
@@ -501,4 +501,4 @@ function bind(){
 bind();
 window.Practice={keyboardAnswer,buildPad,padOctaves,pressedMidi,cfg,makeExercise,toAbc,expected,reason,newExercise,answer,midiOf,RANGES,TUNES,engrave,keyInfo,get current(){return ex}};
 })();
-// Modified by AI on 2026-10-11 00:15:48
+// Modified by AI on 2026-10-11 06:17:18

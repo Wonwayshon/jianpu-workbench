@@ -540,17 +540,19 @@ body[data-tab=score] #floatPlayer{display:none!important}
 .viewer-bar>.viewer-middle{flex:1 1 0;min-width:0}
 .viewer-bar>.viewer-tools{margin-left:auto}
 .viewer-sym{display:none}
-.viewer.editing .viewer-model{display:none}
-.viewer.editing .viewer-sym{display:flex;gap:4px;margin:0;padding:0;overflow-x:auto;scrollbar-width:none;flex:0 1 auto;min-width:0}
-.viewer.editing .viewer-sym::-webkit-scrollbar{display:none}
-.viewer.editing .viewer-sym button{flex:0 0 46px;min-height:40px;height:40px;padding:0;border-radius:10px}
-.viewer.editing .viewer-sym small{font-size:10px}
+/* Edit mode: text on the left with the symbol keys under it, preview (following 简谱/五线谱 + 调) on the right. */
+.viewer.editing .edit-grid{grid-template-columns:minmax(0,44fr) minmax(0,56fr)}
+.viewer.editing .edit-right{order:-1;border-right:1px solid var(--line);padding-bottom:76px}
+.viewer.editing .edit-left{border-right:0;padding-bottom:76px}
+.viewer.editing .edit-staff{padding:16px;overflow-x:auto}
+.viewer.editing .viewer-sym{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;position:absolute;left:0;bottom:0;width:44%;box-sizing:border-box;margin:0;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line);border-right:1px solid var(--line);z-index:3}
+.viewer.editing .viewer-sym button{min-height:44px;height:44px;padding:0;border-radius:8px;min-width:0}
+.viewer.editing .viewer-sym small{font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 .viewer.editing .viewer-middle{flex:1 1 120px}
+@media(max-width:820px){.viewer.editing .viewer-sym{grid-template-columns:repeat(5,minmax(0,1fr))}.viewer.editing .edit-right,.viewer.editing .edit-left{padding-bottom:124px}}
 @media(max-width:680px){
  .viewer-bar{flex-wrap:wrap}
  .viewer-bar>.viewer-middle{order:3;flex-basis:100%}
- .viewer.editing .viewer-sym{order:3;flex-basis:100%}
- .viewer.editing .viewer-bar>.viewer-middle{order:4}
 }
 /* Sidebar (design: full-width rows, long names); a little larger than the mock for tablet reading distance. */
 nav[aria-label="工具"] .nav-l{display:none}
@@ -581,14 +583,14 @@ nav[aria-label="工具"] .nav-l{display:none}
 /* Every select draws its own chevron at the right; older rules with "padding:0 12px" let text run under it. */
 select{padding-right:34px!important}
 /* 练习 header (design): title + one-line hint on the left, score pill + reset on the right; settings sit on the page. */
-.practice-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;margin-bottom:16px}
-.practice-head .practice-stats{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.practice-head #practiceSession,.practice-head #practiceTotal{height:40px;display:flex;align-items:center;padding:0 14px;border-radius:12px;background:#fff;box-shadow:0 0 0 1px var(--line);white-space:nowrap;font-size:14px;color:var(--ink)}
-.practice-head #practiceTotal{color:var(--muted);font-size:13px}
-.practice-head #practiceTotal:empty{display:none}
-.practice-head #practiceWeak{flex-basis:100%;text-align:right;font-size:12px}
-.practice-head #practiceWeak:empty{display:none}
-.practice-head #practiceReset{height:40px;min-height:40px;background:transparent;box-shadow:none;color:var(--muted)}
+.practice-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;margin-bottom:16px}
+.practice-top .practice-stats{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.practice-top #practiceSession,.practice-top #practiceTotal{height:40px;display:flex;align-items:center;padding:0 14px;border-radius:12px;background:#fff;box-shadow:0 0 0 1px var(--line);white-space:nowrap;font-size:14px;color:var(--ink)}
+.practice-top #practiceTotal{color:var(--muted);font-size:13px}
+.practice-top #practiceTotal:empty{display:none}
+.practice-top #practiceWeak{flex-basis:100%;text-align:right;font-size:12px}
+.practice-top #practiceWeak:empty{display:none}
+.practice-top #practiceReset{height:40px;min-height:40px;background:transparent;box-shadow:none;color:var(--muted)}
 .practice-settings{padding:0;background:transparent;box-shadow:none;border-radius:0}
 /* 谱库 (design): title + view switch + actions on one row; list card with compact filters; sheets for backup / WebDAV / recovery. */
 .library-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
@@ -650,4 +652,123 @@ body:has(#floatPlayer:not([hidden])) main{padding-bottom:calc(150px + env(safe-a
 @media(max-width:599px){.play-bar{padding:0 12px;gap:8px;min-height:64px}.play-bar #fullView{margin-left:0}.play-bar #fullView::before{display:none}}
 #scorePanel .output-card>.play-bar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
 #scorePanel .output-card>.play-bar::-webkit-scrollbar{display:none}
-/* Modified by AI on 2026-10-11 05:55:14 */
+/* Switch (design): 44×26 track, white knob; used for each part's sound in the 声部 panel. */
+.part-switch{display:inline-flex;margin:0;cursor:pointer}
+.part-switch input,input[type=checkbox][role=switch]{-webkit-appearance:none;appearance:none;width:44px;height:26px;margin:0;border-radius:13px;background:#D9DCE2;position:relative;cursor:pointer;transition:background .15s;flex:none}
+input[type=checkbox][role=switch]::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0003;transition:transform .15s}
+input[type=checkbox][role=switch]:checked{background:var(--accent)}
+input[type=checkbox][role=switch]:checked::after{transform:translateX(18px)}
+input[type=checkbox][role=switch]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.parts-menu .part-mixer .part-row{grid-template-columns:minmax(0,1fr) 150px auto auto;padding:0 10px;border-radius:10px;background:#FAFAFB}
+/* Edit mode errors (design): the faulty line gets a red band with a left bar; the status pill is red and jumps to it. */
+.edit-line.has-error,.edit-line.has-error:focus{background:#FEF1F1;border-color:transparent;box-shadow:inset 3px 0 0 #D92D20;color:#8F1D1D}
+.viewer.editing .edit-status.error{display:block;padding:6px 12px;border-radius:9px;background:#FEF1F1;color:#8F1D1D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.viewer.editing .edit-status.error.jump{cursor:pointer}
+.viewer.editing .edit-status.error.jump::after{content:"  · 点此跳到出错行";font-weight:600}
+/* Edit mode text column (design text pane): white editor surface, monospace rows with line numbers. */
+.viewer.editing .edit-right{background:#FBFBFC;counter-reset:none}
+.viewer.editing .edit-block{padding:0 10px 0 0;border-bottom:1px dashed #EEF0F3}
+.viewer.editing .edit-line{height:30px;font:15px/1.4 ui-monospace,"SF Mono",Menlo,Consolas,monospace;padding:2px 10px 2px 48px;border-radius:0;background-image:none}
+.viewer.editing .edit-line:focus{background:#fff;border-color:transparent;box-shadow:inset 0 0 0 1.5px var(--accent)}
+.viewer.editing .edit-block{counter-increment:none}
+.edit-row{position:relative}
+.edit-row::before{content:attr(data-n);position:absolute;left:0;top:0;width:36px;height:30px;line-height:30px;text-align:right;font:13px/30px ui-monospace,"SF Mono",Menlo,monospace;color:#A3A8B3;pointer-events:none;z-index:1}
+.edit-row:has(.has-error)::before{color:#D92D20;font-weight:600}
+.editor-wrap{position:relative}
+.editor-wrap>.err-band{position:absolute;left:0;right:0;background:#FEF1F1;box-shadow:inset 3px 0 0 #D92D20;pointer-events:none}
+.editor-wrap>.err-band[hidden]{display:none}
+.editor-wrap>.line-gutter,.editor-wrap>#scoreInput{position:relative}
+/* Chip-like selects size to their current value (design), not to their longest option. */
+.practice-fields select,.archive-filter-grid select,.viewer-bar select{field-sizing:content;max-width:240px}
+/* 谱库 list (design): date groups as small grey labels; flat rows, selected row tinted. */
+.archive-month{border:0;margin:0;background:transparent;border-radius:0}
+.archive-month>summary{padding:12px 10px 6px;background:transparent!important;border:0!important;border-radius:0!important;font-size:12px;font-weight:600;color:var(--faint);list-style:none}
+.archive-month>summary::-webkit-details-marker{display:none}
+.archive-month-grid{padding:0;gap:2px}
+.archive-entry{box-shadow:none;background:transparent;border-radius:12px}
+.archive-entry:hover{background:#F7F8FA}
+.archive-entry>summary::before{display:none}
+.archive-entry>summary{grid-template-columns:none}
+.archive-filters .archive-list-toolbar button{min-width:0}
+@media(max-width:599px){
+ .library-head{gap:10px}
+ .library-actions{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+ .library-actions::-webkit-scrollbar{display:none}
+ .library-actions button{flex:none;white-space:nowrap}
+ #libImport{position:fixed;right:16px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:20;height:48px;padding:0 20px;border-radius:24px;box-shadow:0 8px 20px color-mix(in srgb,var(--accent) 35%,transparent)}
+ #libImport::before{content:"+ "}
+ .archive-split-list>.archive-filters{padding:12px}
+ .archive-filters .archive-filter-grid{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;flex-basis:100%;scrollbar-width:none;margin:0 -12px;padding:0 12px}
+ .archive-filters .archive-filter-grid::-webkit-scrollbar{display:none}
+ .archive-filters .archive-filter-grid>div{flex:none}
+ .archive-filters .archive-list-toolbar{flex-wrap:wrap}
+ .archive-filters .archive-list-toolbar .toolbar{width:auto}
+ .archive-filters .archive-list-toolbar button{flex:none}
+}
+/* 练习 on phones (design): compact header with the score as a subtitle, settings as one scrolling chip row above the exercise. */
+@media(max-width:899px){
+ .practice-main{order:0}
+ .practice-settings{order:-1}
+}
+@media(max-width:599px){
+ .practice-top{position:static;background:transparent;margin-bottom:10px;align-items:center}
+ .practice-top .practice-stats{margin:0;flex-wrap:nowrap}
+ .practice-top #practiceSession{height:auto;padding:0;background:none;box-shadow:none;font-size:13px;color:var(--muted);white-space:normal}
+ .practice-top #practiceTotal,.practice-top #practiceWeak{display:none}
+ .practice-top #practiceReset{height:32px;min-height:32px;padding:0 8px;font-size:13px}
+ .practice-fields{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 2px}
+ .practice-fields::-webkit-scrollbar{display:none}
+ .practice-fields .field{flex:none}
+ .practice-settings .check-row{font-size:12px}
+}
+.practice-top .practice-stats{margin-top:0;padding-top:0;border-top:0}
+.practice-top #practiceTotal{display:none}
+/* 练习 card order (design): staff, feedback, then listen / speed / next, keyboard last. */
+.practice-main{display:flex;flex-direction:column}
+.practice-main>.practice-actions{order:1;margin:8px 0 12px}
+.practice-main>#practicePadBox{order:2}
+.practice-actions .chips-seg{display:inline-grid;width:auto}
+.practice-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.practice-actions #practiceNext{margin-left:auto}
+.archive-entry,.archive-month-grid,.pdf-archive-list{border:0!important}
+.archive-month>summary::after{opacity:.5;transform:scale(.8)}
+@media(max-width:599px){
+ .practice-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .practice-actions .chips-seg{grid-column:1/-1;width:100%}
+ .practice-actions #practiceNext{margin:0}
+}
+/* 转谱 desktop (design): edge-to-edge workbench — white header bar, flush text pane, grey preview with a paper sheet, flush play bar. */
+@media screen and (min-width:900px) and (min-height:560px){
+ body[data-tab=score] main{padding:0!important}
+ #scorePanel:not([hidden]){height:100dvh}
+ #scorePanel>.ws-head{height:64px;margin:0;padding:0 20px;background:#fff;border-bottom:1px solid var(--line);box-sizing:border-box;align-items:center}
+ #scorePanel>.ws-head h1{font-size:18px}
+ #scorePanel .score-work{gap:0;grid-template-columns:420px minmax(0,1fr)}
+ #scorePanel .score-work>.score-controls{border-radius:0;box-shadow:none;border-right:1px solid var(--line);padding:0;gap:0;background:#fff;overflow:hidden}
+ #scorePanel .score-controls>.pane-head{height:52px;box-sizing:border-box;padding:0 12px 0 16px;border-bottom:1px solid #F0F1F4;margin:0}
+ #scorePanel .score-controls>.src-row{padding:12px 16px;border-bottom:1px solid #F0F1F4;margin:0}
+ #scorePanel .score-controls>.src-image{margin:12px 16px}
+ #scorePanel .editor-wrap{border-radius:0;box-shadow:none;background:#FBFBFC;margin:0}
+ #scorePanel .editor-wrap:focus-within{box-shadow:inset 0 0 0 1.5px var(--accent)}
+ #scorePanel .score-controls>.error-inline{margin:8px 12px}
+ #scorePanel .score-controls>.sym-bar{padding:10px 12px;border-top:1px solid #F0F1F4;margin:0}
+ #scorePanel .score-controls>.sym-bar::before{content:"点按插入符号";grid-column:1/-1;font-size:11px;color:var(--faint)}
+ #scorePanel .score-work>.output-card{background:var(--bg);border-radius:0;padding:0;overflow:hidden}
+ #scorePanel .output-card>.out-bar{height:52px;flex:none;box-sizing:border-box;padding:0 16px;margin:0;border-bottom:1px solid var(--line);background:var(--bg)}
+ #scorePanel .output-card>.score{margin:24px auto 16px;width:calc(100% - 48px);max-width:900px;box-sizing:border-box;min-height:0!important}
+ #scorePanel .output-card>.play-bar{border-radius:0;box-shadow:0 -1px 0 var(--line);margin:0;position:relative;bottom:auto}
+ #scorePanel .output-card>#viewHint,#scorePanel .output-card>#rangeNote,#scorePanel .output-card>#playbackWarning{margin:10px 24px 0}
+}
+.ws-meta{font-size:12px;color:var(--faint);white-space:nowrap}
+.out-bar #viewHint{margin:0 0 0 auto;font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+@media(max-width:899px){.out-bar #viewHint{display:none}}
+/* 演奏视图 bar (design): 单页 / 双页 / 连续 segments and one 「显示」 pop-over for the options. */
+.viewer-bar .viewer-layout-controls .chips-seg{display:inline-grid;width:auto;height:40px;box-sizing:border-box}
+.viewer-bar .viewer-layout-controls .chips-seg .chip{min-height:32px;height:32px;padding:0 12px;font-size:14px}
+.viewer-disp>button{height:40px;min-height:40px;padding:0 12px;border-radius:10px;background:var(--fill);font-size:14px;font-weight:500;white-space:nowrap}
+.viewer-disp-menu{left:auto;right:0;min-width:280px;padding:12px;gap:10px}
+.viewer-disp-menu>*{margin:0!important}
+.viewer-disp-menu .viewer-reflow,.viewer-disp-menu .viewer-measures{background:transparent!important;border:0!important;padding:0!important;height:auto!important}
+.viewer-disp-menu>button{justify-content:flex-start}
+.viewer-bar .viewer-options{flex-wrap:nowrap}
+/* Modified by AI on 2026-10-11 06:17:18 */
