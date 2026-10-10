@@ -651,8 +651,8 @@ $('viewerBody').addEventListener('touchend',e=>{if(!swipe||vLayout==='width'||vE
 // In edit mode only a width change re-lays out (the on-screen keyboard changes the height while typing).
 let resizeTimer=0,lastW=innerWidth;addEventListener('resize',()=>{if(!viewerOpen)return;if(vEdit&&innerWidth===lastW)return;lastW=innerWidth;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{applyLayout();rebuild(vIndex)},250)});
 // Android back button closes the viewer first.
-window.handleAppBack=()=>{if($('audioLabDialog')?.open){$('audioLabDialog').close();return true}const modal=[...document.querySelectorAll('dialog[open]')].at(-1);if(modal){modal.close();return true}if($('erhuPartDialog').open){$('erhuPartDialog').close();return true}if($('partDisplayDialog').open){$('partDisplayDialog').close();return true}if(dialog.open){dialog.close();return true}if(viewerOpen&&perform){setPerform(false);return true}if(viewerOpen){closeViewer();return true}if(!$('startHere').hidden){$('startHere').hidden=true;return true}return false};
+window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open]')].at(-1);if(modal){modal.close();return true}if($('erhuPartDialog').open){$('erhuPartDialog').close();return true}if($('partDisplayDialog').open){$('partDisplayDialog').close();return true}if(dialog.open){dialog.close();return true}if(viewerOpen&&perform){setPerform(false);return true}if(viewerOpen){closeViewer();return true}if(!$('startHere').hidden){$('startHere').hidden=true;return true}return false};
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-10 14:02:21
+// Modified by AI on 2026-10-10 15:20:21

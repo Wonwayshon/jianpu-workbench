@@ -75,7 +75,8 @@ function pitch(data,f,sr){
  E.render=render;
  assert.equal(await P.previewTimbre('yangqin',.85,{dry:true}),true);const preview=audio.at(-1).nodes.find(n=>n.buffer);
  assert.ok(preview.buffer.duration>3);assert.ok(preview.buffer.getChannelData().every(Number.isFinite));P.stop();
- // Exercise the visible instrument chooser without a device-specific browser.
+ assert.ok(!/audioLabDialog|settingsAudioLab|playAudioLab|audio-lab\.js/.test(fs.readFileSync('web/index.html','utf8')),'app contains no audition page, dialog or entry');
+ // Exercise the standalone developer audition tool without a device-specific browser.
  class El{
   constructor(){this.children=[];this.dataset={};this.attributes={};this.textContent='';this.listeners={}}
   append(...children){this.children.push(...children)}replaceChildren(...children){this.children=children}
@@ -87,7 +88,7 @@ function pitch(data,f,sr){
  elements.audioLabPhrase.value='melody';elements.audioLabDry.checked=true;
  let stored=JSON.stringify({timbre:'flute'});c.localStorage={getItem:()=>stored,setItem:(key,value)=>stored=value};c.CustomEvent=class{constructor(type,{detail}){this.type=type;this.detail=detail}};
  c.document={getElementById:id=>elements[id],createElement:()=>new El(),dispatchEvent:e=>P.saveSettings({...P.loadSettings(),timbre:e.detail.id})};
- vm.runInContext(fs.readFileSync('web/audio-lab.js','utf8'),c);c.AudioLab.open();
+ vm.runInContext(fs.readFileSync('scripts/audition-ui.js','utf8'),c);c.AudioLab.open();
  const menu=()=>elements.audioLabChoices.children;
  assert.equal(menu().length,7);assert.equal(JSON.stringify(menu().map(el=>el.children[0].textContent)),JSON.stringify(['笛子','二胡','扬琴','古筝','钢琴','双簧管','单簧管']));
  const text=el=>el.textContent+el.children.map(text).join('');assert.ok(!/Faust|A\/B|推荐|现有|候选/.test(text(elements.audioLabChoices)),'chooser exposes ordinary instrument names only');
@@ -95,4 +96,4 @@ function pitch(data,f,sr){
  elements.audioLabDialog.close();assert.equal(elements.audioLabDialog.open,false);assert.equal(P.isPlaying(),false);
  console.log(`PASS: 7 compiled DSPs / 7 selected instruments; source hashes and <128 KiB bank; pitch within 20 cents at 44.1/48 kHz, high register at 96 kHz; brief audible grace envelopes; deduplicated prewarm/cache; cancel and Context reuse; ensemble grace clock; seven-option chooser and saved-selection fallback; portable audition (${Math.round(performance.now()-started)} ms).`);
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-10 15:17:21
+// Modified by AI on 2026-10-10 15:20:21

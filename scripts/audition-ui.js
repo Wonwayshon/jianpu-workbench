@@ -34,4 +34,4 @@ $('audioLabStop').onclick=()=>{stop();status('已停止。')};
 for(const id of ['audioLabPhrase','audioLabDry'])$(id).onchange=()=>{stop();status('已切换试听设置，点乐器重新试听。')};
 window.AudioLab={open};
 })();
-// Modified by AI on 2026-10-10 15:13:29
+// Modified by AI on 2026-10-10 15:20:21
