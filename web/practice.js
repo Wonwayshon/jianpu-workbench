@@ -495,10 +495,10 @@ function bind(){
   if(e.key==='-'){mod=mod===-1?0:-1;syncMods()}else if(e.key==='+'||e.key==='='){mod=mod===1?0:1;syncMods()}
   else if(e.key==='Enter'&&ex&&idx>=ex.notes.length)newExercise();
   else if(cfg.answer==='letter'&&LETTERS.includes(k))answer(k,mod);else if(cfg.answer!=='letter'&&/^[1-7]$/.test(k))answer(k,mod)});
- new MutationObserver(()=>{if(!$('practicePanel').hidden&&!ex)newExercise()}).observe($('practicePanel'),{attributes:true,attributeFilter:['hidden']});
+ new MutationObserver(()=>{if(!$('practicePanel').hidden&&!ex)newExercise()}).observe($('practicePanel'),{attributes:true,attributeFilter:['hidden']});if(!$('practicePanel').hidden&&!ex)newExercise();
  syncSettings();syncMods();showStats();
 }
 bind();
 window.Practice={keyboardAnswer,buildPad,padOctaves,pressedMidi,cfg,makeExercise,toAbc,expected,reason,newExercise,answer,midiOf,RANGES,TUNES,engrave,keyInfo,get current(){return ex}};
 })();
-// Modified by AI on 2026-10-10 16:04:40
+// Modified by AI on 2026-10-11 00:15:48

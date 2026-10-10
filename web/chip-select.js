@@ -11,6 +11,8 @@ function parts(opt) {
 const t = opt.dataset.chipLabel || opt.textContent.trim();
 const sub = opt.dataset.chipSub;
 if (sub !== undefined) return [t, sub];
+const k = t.match(/^1\s*=\s*(\S+)$/);
+if (k) return [k[1], ''];
 const m = t.match(/^(.+?)[（(](.+)[）)]$/);
 return m ? [m[1].trim(), m[2].trim()] : [t, ''];
 }
@@ -60,4 +62,4 @@ function init(root = document) { for (const s of root.querySelectorAll('select[d
 document.addEventListener('DOMContentLoaded', () => { init(); setTimeout(sync, 0); });
 window.ChipSelect = { init, sync };
 })();
-// Modified by AI on 2026-10-10 19:48:00
+// Modified by AI on 2026-10-11 00:15:48
