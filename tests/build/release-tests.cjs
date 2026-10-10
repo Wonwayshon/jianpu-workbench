@@ -1,6 +1,7 @@
 const assert=require('node:assert/strict');
 (async()=>{
- const {expectedFiles,verifyTag,verifyAssets,obsoleteReleases,project}=await import('../../scripts/ci-release.mjs');
+ const {expectedFiles,verifyTag,verifyAssets,obsoleteReleases,compareVersions,project}=await import('../../scripts/ci-release.mjs');
+ assert.equal(compareVersions('v1.21.4','v1.21.3'),1);assert.equal(compareVersions('v1.21.4','v1.22.0'),-1);assert.equal(compareVersions('v1.21.4','v1.21.4'),0);assert.throws(()=>compareVersions('nightly','v1.0.0'));
  assert.equal(expectedFiles().length,8);assert.equal(new Set(expectedFiles()).size,8);
  assert.equal(verifyTag(`v${project.version}`),`v${project.version}`);assert.throws(()=>verifyTag('v0.0.1'));
  const files=expectedFiles().map(name=>({name,size:10,hash:'a'.repeat(64)})),assets=files.map(f=>({...f,state:'uploaded',digest:`sha256:${f.hash}`}));
@@ -9,4 +10,4 @@ const assert=require('node:assert/strict');
  assert.deepEqual(obsoleteReleases(releases,'v1.21.4').map(x=>x.tag_name),['v1.21.3']);
  console.log('PASS: tag/version mismatch fails; all asset counts/sizes/digests required; only strictly older stable releases removed');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-10 16:02:39
+// Modified by AI on 2026-10-10 16:07:26

@@ -11,10 +11,12 @@ export function verifyAssets(assets,files){
  if(assets.length!==files.length)throw Error('Unexpected Release asset count');
  for(const f of files){const a=assets.find(x=>x.name===f.name);if(!a||a.state!=='uploaded'||a.size!==f.size||a.digest!==`sha256:${f.hash}`)throw Error(`Release asset verification failed: ${f.name}`)}
 }
+export function compareVersions(a,b){
+ const number=t=>{if(!/^v\d+\.\d+\.\d+$/.test(t))throw Error('Invalid stable version');return t.slice(1).split('.').map(Number)};
+ const x=number(a),y=number(b);for(let i=0;i<3;i++)if(x[i]!==y[i])return Math.sign(x[i]-y[i]);return 0;
+}
 export function obsoleteReleases(releases,current){
- const number=t=>/^v\d+\.\d+\.\d+$/.test(t)?t.slice(1).split('.').map(Number):null;
- const now=number(current);if(!now)throw Error('Invalid current version');
- return releases.filter(r=>!r.draft&&!r.prerelease&&r.tag_name!==current).filter(r=>{const old=number(r.tag_name);return old&&old.some((n,i)=>n<now[i]&&old.slice(0,i).every((v,j)=>v===now[j]))});
+ return releases.filter(r=>!r.draft&&!r.prerelease&&/^v\d+\.\d+\.\d+$/.test(r.tag_name)&&compareVersions(r.tag_name,current)<0);
 }
 function command(cmd,args,input){const r=spawnSync(cmd,args,{cwd:root,input,encoding:'utf8',maxBuffer:32*1024*1024});if(r.status!==0)throw Error(`${cmd} failed: ${r.stderr}`);return r.stdout.trim()}
 const gh=(...args)=>command('gh',args);
@@ -42,6 +44,12 @@ async function main(){
  if(resolved!==head)throw Error('Remote tag changed since the build');
  const releases=JSON.parse(gh('api',`${endpoint}/releases?per_page=100`)),existing=releases.find(r=>r.tag_name===tag);
  if(existing&&!existing.draft){verifyAssets(existing.assets,files);console.log('Release already published and verified');return}
+ const previous=releases.filter(r=>!r.draft&&!r.prerelease&&/^v\d+\.\d+\.\d+$/.test(r.tag_name)).sort((a,b)=>compareVersions(b.tag_name,a.tag_name))[0];
+ if(previous){
+  if(compareVersions(tag,previous.tag_name)<=0)throw Error('Refuse to replace a newer stable release with an older version');
+  const metadata=api(`${endpoint}/contents/project.json?ref=${previous.tag_name}`),old=JSON.parse(Buffer.from(metadata.content,'base64').toString('utf8'));
+  if(project.androidVersionCode<=old.androidVersionCode)throw Error('Android versionCode must increase to allow updates');
+ }
  if(!existing)gh('release','create',tag,'--repo',repo,'--verify-tag','--draft','--title',`笛调之间 ${version}`,'--notes-file',`docs/releases/${tag}.md`);
  gh('release','upload',tag,...files.map(f=>path.join(out,f.name)),'--repo',repo,'--clobber');
  let release=api(`${endpoint}/releases/tags/${tag}`);verifyAssets(release.assets,files);
@@ -54,4 +62,4 @@ async function main(){
  console.log(`Published and verified ${release.html_url} (${files.length} assets)`);
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))await main();
-// Modified by AI on 2026-10-10 16:01:39
+// Modified by AI on 2026-10-10 16:07:26
