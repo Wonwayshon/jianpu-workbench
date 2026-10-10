@@ -20,7 +20,16 @@ r.classList.add('selected'); r.open = false;
 const head = document.createElement('div'); head.className = 'archive-detail-head';
 const icon = r.querySelector('.archive-icon'), title = r.querySelector('.archive-head'), status = r.querySelector('.archive-status');
 for (const n of [icon, title, status]) if (n) head.append(n.cloneNode(true));
-pane.replaceChildren(head, bodyOf(r));
+// Multi-page archives: how many recognised pages have been checked against the original (design: 校对进度).
+const m = ((title && title.textContent) || '').match(/(\d+) 页 · (\d+) 页已校对/);
+const parts = [head];
+if (m && Number(m[1]) > 1) {
+const prog = document.createElement('div'); prog.className = 'archive-progress';
+const label = document.createElement('div'); label.innerHTML = '<span>校对进度</span><b></b>'; label.querySelector('b').textContent = m[2] + ' / ' + m[1] + ' 页';
+const bar = document.createElement('div'); bar.className = 'archive-progress-bar'; const fill = document.createElement('i'); fill.style.width = Math.round(Number(m[2]) / Number(m[1]) * 100) + '%'; bar.append(fill);
+prog.append(label, bar); parts.push(prog);
+}
+pane.replaceChildren(...parts, bodyOf(r));
 }
 function wire() {
 for (const r of list.querySelectorAll('details.archive-entry')) {
@@ -75,4 +84,4 @@ $('davPanel').closest('dialog').addEventListener('close', davState);
 davState();
 }
 })();
-// Modified by AI on 2026-10-11 06:25:46
+// Modified by AI on 2026-10-11 06:31:32

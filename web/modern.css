@@ -893,4 +893,56 @@ input[type=checkbox][role=switch]:focus-visible{outline:2px solid var(--accent);
 @media(max-width:599px){.finger-bar .finger-regs{max-width:100%;overflow-x:auto}.finger-regs button{padding:0 10px;font-size:13px}}
 .parts-menu .part-mixer .part-row{display:grid!important;align-items:center}
 .parts-menu .part-mixer .part-row select{width:100%}
-/* Modified by AI on 2026-10-11 06:25:46 */
+/* 练习 phone keypad (design): 第 N 组 switch, ♭ ♯, seven note keys. Wider screens keep the full piano. */
+.compact-pad{display:none}
+@media(max-width:599px){
+ #practicePadBox .piano-pad,#practiceKeyboardHint{display:none}
+ .compact-pad{display:flex;flex-direction:column;gap:8px}
+ .compact-top{display:flex;gap:6px}
+ .compact-octs{flex:1;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:2px;padding:3px;border-radius:10px;background:var(--fill-2)}
+ .compact-octs button{min-height:36px;padding:0;border-radius:8px;background:transparent;color:var(--muted);font-size:13px;font-weight:500}
+ .compact-octs button[aria-pressed=true]{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px #0F11151a}
+ .compact-acc{width:44px;min-height:42px;padding:0;border-radius:10px;background:var(--fill);font-size:18px}
+ .compact-acc[aria-pressed=true]{background:var(--accent);color:var(--on-accent,#fff)}
+ .compact-keys{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+ .compact-key{min-height:56px;padding:0;border-radius:10px;background:var(--fill);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1.2}
+ .compact-key b{font-size:18px}.compact-key small{font-size:10px;color:var(--muted);font-weight:400}
+ .compact-key:active{background:var(--accent-soft)}
+ /* keypad and actions sit at the bottom, near the thumb */
+ .practice-main>#practicePadBox{order:1}.practice-main>.practice-actions{order:2;margin:10px 0 0}
+}
+/* 转谱 phone play bar (design): dark floating bar above the tab bar — play, tempo · timbre, full-screen icon. */
+@media(max-width:599px){
+ #scorePanel .output-card>.play-bar{background:var(--dark);box-shadow:0 8px 24px #0F11152e;border-radius:18px;margin:12px 0 0;min-height:68px;padding:10px 10px 10px 10px;gap:10px}
+ #scorePanel .play-bar #playScore{border-radius:14px;width:48px;height:48px}
+ #scorePanel .play-bar #beatDots{display:none}
+ #scorePanel .play-bar #playSettings{flex:1;justify-content:flex-start;background:transparent;color:#fff;font-size:15px;padding:0 4px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+ #scorePanel .play-bar #editView{display:none}
+ #scorePanel .play-bar #fullView{margin:0;width:44px;min-width:44px;padding:0;font-size:0;background:#1C1F26;display:grid;place-items:center}
+ #scorePanel .play-bar #fullView::before{content:"";position:static;width:18px;height:18px;background:#fff;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'/%3E%3C/svg%3E") center/contain no-repeat}
+}
+#playSettings::after{content:"";width:12px;height:12px;margin-left:6px;background:currentColor;opacity:.6;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='m6 15 6-6 6 6'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='m6 15 6-6 6 6'/%3E%3C/svg%3E") center/contain no-repeat}
+#playSettings{display:inline-flex;align-items:center}
+/* 转谱 on desktop (design): a 72px icon rail — 转谱 / 谱库 / 练习 / 工具 / 设置 — leaves room for the workbench. */
+@media screen and (min-width:900px){
+ body[data-tab=score]{--rail-width:72px}
+ body[data-tab=score] nav[aria-label="工具"]{padding:16px 6px;align-items:center;gap:4px}
+ body[data-tab=score] nav[aria-label="工具"] .nav-brand,body[data-tab=score] nav[aria-label="工具"] .nav-group{display:none}
+ body[data-tab=score] #instrumentTab,body[data-tab=score] #fingeringTab,body[data-tab=score] #tunerTab,body[data-tab=score] #erhuTab{display:none}
+ body[data-tab=score] #toolsTab{display:flex}
+ body[data-tab=score] nav[aria-label="工具"] button{flex-direction:column;justify-content:center;width:58px;height:56px;min-height:56px;padding:0;gap:2px;font-size:11px;border-radius:12px}
+ body[data-tab=score] nav[aria-label="工具"] .nav-l{display:none}
+ body[data-tab=score] nav[aria-label="工具"] .nav-s{display:inline}
+ body[data-tab=score] nav[aria-label="工具"] button svg{width:21px;height:21px}
+}
+.archive-progress{display:flex;flex-direction:column;gap:6px}
+.archive-progress>div:first-child{display:flex;justify-content:space-between;font-size:13px}.archive-progress span{color:var(--muted)}
+.archive-progress-bar{height:6px;border-radius:3px;background:var(--fill-2);overflow:hidden}
+.archive-progress-bar i{display:block;height:100%;background:#2E9D5B;border-radius:3px}
+@media(max-width:599px){
+ #scorePanel .output-card>.play-bar{position:fixed!important;left:10px;right:10px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:25;margin:0}
+ #scorePanel[data-pane=score]{padding-bottom:90px}
+ #scorePanel .play-bar #fullView::before{display:block!important}
+ .practice-actions .chips-seg{order:-1}
+}
+/* Modified by AI on 2026-10-11 06:31:32 */

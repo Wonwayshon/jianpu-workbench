@@ -220,7 +220,7 @@ function setView(v){
 $('viewTrans').onclick=()=>setView('trans');$('viewFlute').onclick=()=>setView('flute');$('viewSource').onclick=()=>setView('source');$('viewStaff').onclick=()=>setView('staff');
 
 // ---------- playback ----------
-function syncTempoLabel(){const t=ScorePlayer.TIMBRE_LIST.find(x=>x[0]===settings.timbre);$('playTempoLabel').textContent=`♩=${settings.tempo}${settings.muteMelody?' · 无旋律':t&&settings.timbre!=='flute'?' · '+t[1]:''}${settings.metronome?' · 节拍器':''}`}
+function syncTempoLabel(){const t=ScorePlayer.TIMBRE_LIST.find(x=>x[0]===settings.timbre);$('playTempoLabel').textContent=`♩=${settings.tempo}${settings.muteMelody?' · 无旋律':t?' · '+t[1]:''}${settings.metronome?' · 节拍器':''}`}
 function showBeat(index,count,signature){
  for(const id of ['beatDots','floatBeats']){const box=$(id);if(signature)box.title=`节拍器 ${signature}${settings.time==='auto'?' · 跟随谱面':' · 手动拍号'}`;if(box.childElementCount!==count){box.replaceChildren(...Array.from({length:count},()=>document.createElement('i')))}
   [...box.children].forEach((d,i)=>{d.classList.toggle('on',i===index);d.classList.toggle('first',i===0)})}
@@ -680,4 +680,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 06:25:46
+// Modified by AI on 2026-10-11 06:31:32

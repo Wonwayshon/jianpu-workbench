@@ -445,6 +445,27 @@ function buildPad(){
   for(const i of [0,1,3,4,5])add(i,1,true);
   section.append(title,row);pad.append(section);
  }
+ buildCompact();
+}
+// Phones (design): one row of seven note keys, an octave switch and one-shot ♭ / ♯, instead of stacked pianos.
+let cOct=null,cAcc=0;
+function buildCompact(){
+ const box=$('practiceCompact');if(!box)return;
+ const octs=padOctaves().slice().sort((a,b)=>a-b);if(!octs.includes(cOct))cOct=octs.includes(4)?4:octs[Math.floor(octs.length/2)];
+ const top=document.createElement('div');top.className='compact-top';
+ const seg=document.createElement('div');seg.className='compact-octs';seg.setAttribute('role','group');seg.setAttribute('aria-label','八度');
+ for(const o of octs){const b=document.createElement('button');b.type='button';b.textContent=`第 ${o} 组`;b.setAttribute('aria-pressed',String(o===cOct));b.onclick=()=>{cOct=o;buildCompact()};seg.append(b)}
+ top.append(seg);
+ for(const [sign,v,name] of [['♭',-1,'降半音'],['♯',1,'升半音']]){const b=document.createElement('button');b.type='button';b.className='compact-acc';b.textContent=sign;b.setAttribute('aria-label',name);b.setAttribute('aria-pressed',String(cAcc===v));b.onclick=()=>{cAcc=cAcc===v?0:v;buildCompact()};top.append(b)}
+ const keys=document.createElement('div');keys.className='compact-keys';keys.setAttribute('role','group');keys.setAttribute('aria-label',`第 ${cOct} 组音名键`);
+ for(let i=0;i<7;i++){
+  const acc=cAcc,label=ex?expected(ex,{L:LETTERS[i],acc,oct:cOct,d:i+7*cOct}):{label:LETTERS[i]+accSign(acc)+cOct,base:LETTERS[i],acc,oct:cOct};
+  const b=document.createElement('button');b.type='button';b.className='compact-key';b.setAttribute('aria-label',label.label);
+  const main=document.createElement('b');main.textContent=cfg.answer==='letter'?accSign(acc)+LETTERS[i]:accSign(label.acc)+label.base;
+  const small=document.createElement('small');small.textContent=cfg.answer==='letter'?String(cOct):octWord(label.oct-4).slice(1,-1);
+  b.append(main,small);b.onclick=()=>{const m=12*(cOct+1)+PC[i]+acc;cAcc=0;keyboardAnswer(m);buildCompact()};keys.append(b);
+ }
+ box.replaceChildren(top,keys);
 }
 function syncMods(){const hint=$('practiceKeyboardHint');if(hint)hint.textContent='点击琴键回答，黑键可直接输入升降音。电脑也可用音名 / 数字键，− / + 切换升降号。'+(mod?' 当前电脑输入：'+(mod>0?'升半音':'降半音'):'')}
 function showStats(){
@@ -501,4 +522,4 @@ function bind(){
 bind();
 window.Practice={keyboardAnswer,buildPad,padOctaves,pressedMidi,cfg,makeExercise,toAbc,expected,reason,newExercise,answer,midiOf,RANGES,TUNES,engrave,keyInfo,get current(){return ex}};
 })();
-// Modified by AI on 2026-10-11 06:17:18
+// Modified by AI on 2026-10-11 06:31:32
