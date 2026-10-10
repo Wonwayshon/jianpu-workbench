@@ -18,7 +18,7 @@ c.checkedRecord=r=>structuredClone(r);c.newId=()=> 'score-new-'+(++next);c.getSe
 c.prompt=()=>{throw new Error('prompt is unsupported in desktop WebView')};c.AppDialogs={confirm:async()=>true,askName:async()=>{prompts++;return '副本'}};c.confirm=()=>true;c.refreshArchives=async()=>{};c.renderResults=()=>{};c.setLibraryView=()=>{};c.showTab=()=>{};c.window.scrollTo=()=>{};
 vm.runInContext(source.slice(source.indexOf('  // Workbench association'),source.indexOf('  // Share-code import')),c);
 (async()=>{
- await c.loadToScore(record);assert.equal(c.loadedSettings.key,'5');assert.match(c.byId('archiveScore').textContent,/保存修改到原存档/);
+ await c.loadToScore(record);assert.equal(c.loadedSettings.key,'5');assert.match(c.byId('archiveScore').textContent,/保存到原存档/);
  c.byId('scoreInput').value=c.byId('scoreInput').value.replace('3 4','3 6');await c.saveScoreArchive();assert.equal(db.size,1);assert.equal(db.get(record.id).results[1].text,'3 6 |');assert.equal(prompts,0);
  c.byId('scoreInput').value=c.byId('scoreInput').value.replace('3 6','3 7');await c.saveScoreArchive();assert.equal(db.size,1);assert.equal(db.get(record.id).results[1].text,'3 7 |');
  await c.saveScoreArchive(true);assert.equal(db.size,2);assert.equal(prompts,1);assert.equal(db.get('score-new-1').results[0].text,c.byId('scoreInput').value);assert.equal(db.get(record.id).results[1].text,'3 7 |');
