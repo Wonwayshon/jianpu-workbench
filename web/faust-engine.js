@@ -9,14 +9,14 @@ const presets={
  faust_erhu_warm:{model:'bowed',color:0,attack:.045,release:.08,pre:.08,vibrato:.0045,base:'erhu',label:'Faust 弓弦 A · 柔和'},
  faust_erhu_bright:{model:'bowed',color:1,attack:.03,release:.07,pre:.08,vibrato:.006,base:'erhu',label:'Faust 弓弦 B · 明亮'},
  faust_yangqin_soft:{model:'hammer',color:0,attack:.001,release:.12,pre:0,vibrato:0,base:'yangqin',label:'Faust 敲弦 A · 圆润'},
- faust_piano_soft:{model:'piano',color:0,attack:.001,release:.18,pre:0,vibrato:0,base:'piano',label:'Faust 钢琴 A · 柔软'},
- faust_piano_bright:{model:'piano',color:1,attack:.001,release:.15,pre:0,vibrato:0,base:'piano',label:'Faust 钢琴 B · 明亮'},
+ faust_piano_soft:{model:'piano',color:0,attack:.009,release:.18,pre:0,vibrato:0,base:'piano',label:'Faust 钢琴 A · 柔软'},
+ faust_piano_bright:{model:'piano',color:1,attack:.006,release:.15,pre:0,vibrato:0,base:'piano',label:'Faust 钢琴 B · 明亮'},
  faust_guzheng_round:{model:'guzheng',color:0,attack:.001,release:.2,pre:0,vibrato:0,base:'guzheng',label:'Faust 古筝 A · 圆润'},
  faust_guzheng_bright:{model:'guzheng',color:1,attack:.001,release:.15,pre:0,vibrato:0,base:'guzheng',label:'Faust 古筝 B · 明亮'},
  faust_oboe_soft:{model:'oboe',color:0,attack:.035,release:.07,pre:.035,vibrato:.003,vibRate:5.2,vibDelay:.18,base:'oboe',label:'Faust 双簧管 A · 柔和'},
  faust_oboe_bright:{model:'oboe',color:1,attack:.025,release:.065,pre:.035,vibrato:.0038,vibRate:5.3,vibDelay:.18,base:'oboe',label:'Faust 双簧管 B · 明亮'},
- faust_clarinet_wood:{model:'clarinet',color:0,attack:.025,release:.07,pre:.08,vibrato:.0035,vibRate:4.9,vibDelay:.14,base:'clarinet',label:'Faust 单簧管 A · 自然'},
- faust_clarinet_bright:{model:'clarinet',color:1,attack:.02,release:.06,pre:.08,vibrato:.0048,vibRate:5.1,vibDelay:.18,base:'clarinet',label:'Faust 单簧管 B · 明亮'},
+ faust_clarinet_wood:{model:'clarinet',color:0,attack:.038,release:.07,pre:.22,vibrato:.0008,vibRate:4.9,vibDelay:.14,base:'clarinet',label:'Faust 单簧管 A · 自然'},
+ faust_clarinet_bright:{model:'clarinet',color:1,attack:.03,release:.06,pre:.24,vibrato:.0012,vibRate:5.1,vibDelay:.18,base:'clarinet',label:'Faust 单簧管 B · 明亮'},
  faust_yangqin_crisp:{model:'hammer',color:1,attack:.001,release:.1,pre:0,vibrato:0,base:'yangqin',label:'Faust 敲弦 B · 清脆'},
 };
 // Faust's standalone WASM ABI exposes init/compute/setParamValue and linear memory.
@@ -61,7 +61,7 @@ function render(id,midi,dur,sr,fromMidi,{grace=false,vibrato=true}={}){
  }
  return out;
 }
-const recommended={flute:'faust_flute_airy',erhu:'faust_erhu_warm',yangqin:'faust_yangqin_soft',guzheng:'faust_guzheng_round'};
+const recommended={flute:'faust_flute_airy',erhu:'faust_erhu_warm',yangqin:'faust_yangqin_soft',guzheng:'faust_guzheng_round',piano:'faust_piano_bright',oboe:'faust_oboe_bright',clarinet:'faust_clarinet_wood'};
 window.FaustEngine={render,presets,recommended,available:instances.size===Object.keys(window.FaustBank?.models||{}).length&&instances.size>0,error,bankBytes:Object.values(window.FaustBank?.models||{}).reduce((n,m)=>n+m.wasmBytes,0),sampleRate:RATE};
 })();
-// Modified by AI on 2026-10-10 14:28:10
+// Modified by AI on 2026-10-10 14:54:13

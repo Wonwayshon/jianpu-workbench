@@ -5,15 +5,15 @@ import("instruments.lib");
 import("piano-tables.lib");
 declare name "piano";
 declare author "Romain Michon; Jianpu Workbench contributors";
-declare license "STK-4.3";
+declare license "STK-4.3; GPL-3.0-only felt-spectrum additions";
 freq=hslider("freq",440,30,8000,.001);
 gate=button("gate");
 color=hslider("color",0,0,1,1);
-gain=.62+color*.22;
-brightnessFactor=.08+color*.35;
-detuningFactor=.5;
-stiffnessFactor=.8;
-hammerHardness=.014-color*.006;
+gain=.38+color*.12;
+brightnessFactor=.015+color*.12;
+detuningFactor=.18;
+stiffnessFactor=.22;
+hammerHardness=.02-color*.005;
 //==================== COMMUTED PIANO PARAMETERS ================
 
 //variables to set keybord splitting zone
@@ -56,7 +56,7 @@ soundBoard = dryTapAmp*no.noise+pedalEnv*no.noise:*(0.5)
         pedalEnvCutOffTime = 1.4;
         noteCutOffTime = freqn:dryTapAmpT60*gain;
         pedalEnvValue = freqn:sustainPedalLevel*0.2;
-        noteEnvValue = 0.15;
+        noteEnvValue = 0.09;
         dryTapAmp = asympT60(noteEnvValue, 0, noteCutOffTime, gate);
         pedalEnv = asympT60pedal(pedalEnvValue, pedalEnvCutOffTime);
     };
@@ -241,4 +241,22 @@ stereo = stereoizer(ma.SR/freq);
 conditionLowNote = freqn<FIRST_HIGH_NOTE;
 conditionHighNote = freqn>=FIRST_HIGH_NOTE;
 
-process = soundBoard<:(*(conditionLowNote)*6:hammer:dcBlock1:coupledStrings<:+(eq)), (*(conditionHighNote):hiPass:dcBlock1:hammer:dcBlock2a:highBqs:dcBlock2b):>+:fi.dcblocker;
+// Original felt-spectrum layer: smooth compression/rebound, strong low
+// partials and faster loss of upper partials. No pluck-position comb or click.
+age=ba.time/ma.SR;
+feltPartial(k,side)=os.oscrs(hz)*weight*attack*decay
+ with {
+  stiffness=.000025+color*.000008;
+  hz=freq*k*sqrt((1+stiffness*k*k)/(1+stiffness))*(1+(2*side-1)*.00018);
+  weight=exp(0-k*k*(.025-color*.007))/pow(k,1.5-color*.2)*max(0,1-hz/(ma.SR*.45));
+  attack=1-exp(0-age/(.008+.006/k));
+  tau=(2.3-color*.2)/pow(max(.5,freq/220),.38)/(1+(k-1)*.3);
+  decay=.58*exp(0-age/(tau*.32))+.42*exp(0-age/tau);
+ };
+felt=sum(side,2,sum(i,9,feltPartial(i+1,side)))*.18;
+waveguide = soundBoard<:(*(conditionLowNote)*6:hammer:dcBlock1:coupledStrings),
+ (*(conditionHighNote):hiPass:dcBlock1:hammer:dcBlock2a:highBqs:dcBlock2b):>+
+ :fi.lowpass(2,3800+color*1400):*(6);
+// Fade in the small waveguide layer after the felt impact, removing the dry
+// tap that previously dominated matched-volume auditions.
+process=(felt+waveguide*.75*min(1,age/.04)):fi.dcblocker;

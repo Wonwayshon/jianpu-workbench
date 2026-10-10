@@ -8,7 +8,8 @@ vm.runInContext('window=globalThis',c);
 for(const file of ['vendor/faust/models','faust-engine','synth','jianpu','player'])vm.runInContext(fs.readFileSync('web/'+file+'.js','utf8'),c);
 const E=c.FaustEngine,S=c.Synth,P=c.ScorePlayer,J=c.Jianpu;
 for(const [file,hash] of Object.entries(c.FaustBank.libraries))assert.equal(hash,crypto.createHash('sha256').update(fs.readFileSync('web/vendor/faust/source/'+file)).digest('hex'),'parameter curves match the generated bank');
-assert.ok(E.available,E.error);assert.ok(E.bankBytes<80*1024);
+assert.ok(E.available,E.error);
+assert.equal(JSON.stringify(E.recommended),JSON.stringify({flute:'faust_flute_airy',erhu:'faust_erhu_warm',yangqin:'faust_yangqin_soft',guzheng:'faust_guzheng_round',piano:'faust_piano_bright',oboe:'faust_oboe_bright',clarinet:'faust_clarinet_wood'}),'confirmed audition choices are marked as recommended');assert.ok(E.bankBytes<80*1024);
 assert.ok(fs.statSync('web/vendor/faust/models.js').size<128*1024);
 for(const [id,m] of Object.entries(c.FaustBank.models))assert.equal(m.sourceSha256,crypto.createHash('sha256').update(fs.readFileSync('web/vendor/faust/source/'+id+'.dsp')).digest('hex'),'precompiled model matches editable source');
 function pitch(data,f,sr){
@@ -27,6 +28,22 @@ function pitch(data,f,sr){
   }
   for(const duration of [.02,.06]){const b=S.note(id,72,duration,48000,null,{grace:true});assert.ok(b.duration<=duration+.0081);assert.ok(b.getChannelData().some(x=>Math.abs(x)>.1));assert.ok(b.getChannelData().every(x=>Math.abs(x)<=.901))}
   const high=S.note(id,96,.08,96000);assert.ok(high.getChannelData().every(Number.isFinite));
+ }
+ // Timbre regressions: a felt-piano impact should not dwarf the ringing
+ // tone, and the two reed instruments should keep their intended spectra.
+ const rms=(data,a,b)=>{let sum=0;for(let i=a;i<b;i++)sum+=data[i]*data[i];return Math.sqrt(sum/(b-a))};
+ const harmonic=(data,n)=>{let re=0,im=0;for(let i=12000;i<36000;i++){const phase=2*Math.PI*440*n*i/48000;re+=data[i]*Math.cos(phase);im+=data[i]*Math.sin(phase)}return Math.hypot(re,im)};
+ for(const id of ['faust_piano_soft','faust_piano_bright']){
+  const data=E.render(id,69,1.2,48000,null,{vibrato:false});
+  assert.ok(rms(data,0,1440)/rms(data,4800,14400)<1.3,id+' has a restrained impact instead of a loud key click');
+ }
+ for(const id of ['faust_oboe_soft','faust_oboe_bright']){
+  const data=E.render(id,69,1.2,48000,null,{vibrato:false}),fund=harmonic(data,1);
+  assert.ok(harmonic(data,2)/fund>.65&&harmonic(data,3)/fund>.4,id+' retains the broad nasal reed formant');
+ }
+ for(const id of ['faust_clarinet_wood','faust_clarinet_bright']){
+  const data=E.render(id,69,1.2,48000,null,{vibrato:false});
+  assert.ok(harmonic(data,9)/harmonic(data,1)<.06,id+' avoids the bright square-wave tail');
  }
  const jobs=[{timbre:'faust_flute_clear',midi:67,dur:.345,sr:48000,grace:false},{timbre:'faust_erhu_warm',midi:74,dur:.035,sr:48000,grace:true}];
  let renders=0;const render=E.render;E.render=(...a)=>{renders++;return render(...a)};
@@ -55,4 +72,4 @@ function pitch(data,f,sr){
  assert.ok(preview.buffer.duration>3);assert.ok(preview.buffer.getChannelData().every(Number.isFinite));P.stop();
  console.log(`PASS: 7 compiled DSPs / 14 presets; source hashes and <128 KiB bank; pitch within 20 cents at 44.1/48 kHz, high register at 96 kHz; brief audible grace envelopes; deduplicated prewarm/cache; cancel and Context reuse; ensemble grace clock; portable audition (${Math.round(performance.now()-started)} ms).`);
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-10 14:28:10
+// Modified by AI on 2026-10-10 14:54:13
