@@ -1112,7 +1112,7 @@ dependencies = [
 
 [[package]]
 name = "flute-key-lab-desktop"
-version = "1.21.4"
+version = "1.22.0"
 dependencies = [
  "arboard",
  "base64 0.22.1",
