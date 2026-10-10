@@ -1,0 +1,108 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+concurrency:
+  group: release
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.repository == 'Wonwayshon/jianpu-workbench' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - run: npm ci
+      - run: node scripts/ci-release.mjs validate
+      - run: npm run security:check
+      - run: npm test
+      - run: npm run release:source
+      - run: npm run build:audition
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-source
+          path: |
+            outputs/flute-key-lab-project-*.zip
+            outputs/instrument-audition.html
+          if-no-files-found: error
+  android:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - run: sdkmanager 'platforms;android-35' 'build-tools;36.0.0'
+      - name: Build and verify original release signature
+        run: node scripts/ci-android.mjs
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_CERT_SHA256: ${{ secrets.ANDROID_CERT_SHA256 }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: outputs/flute-key-lab-*.apk
+          if-no-files-found: error
+  desktop:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            bundle: app
+          - os: windows-latest
+            bundle: nsis
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - run: npm ci
+      - run: rustup update stable
+      - run: npm run check:desktop
+      - run: npm run build:desktop -- --bundles ${{ matrix.bundle }}
+      - name: Package Mac DMG and ZIP
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          npm run package:mac
+          VERSION=$(node -p 'require("./project.json").version')
+          ditto -c -k --sequesterRsrc --keepParent 'desktop/src-tauri/target/release/bundle/macos/笛调之间.app' "outputs/flute-key-lab-macos-arm64-$VERSION.zip"
+      - name: Collect Windows installer
+        if: runner.os == 'Windows'
+        run: node scripts/ci-release.mjs windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ runner.os }}
+          path: |
+            outputs/flute-key-lab-macos-arm64-*.dmg
+            outputs/flute-key-lab-macos-arm64-*.zip
+            outputs/flute-key-lab-windows-x64-*.exe
+          if-no-files-found: error
+  publish:
+    needs: [verify, android, desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: outputs
+      - name: Verify assets, publish and retain the latest Release
+        run: node scripts/ci-release.mjs publish
+        env:
+          GH_TOKEN: ${{ github.token }}

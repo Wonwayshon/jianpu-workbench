@@ -3,7 +3,7 @@
 // strong beats, stepwise connections, cadence to the tonic), etude-style figures (scales, broken thirds, arpeggios,
 // turns, Alberti) sequenced over I–IV–V–I, and a small library of public-domain tunes (moved to a key from the chosen
 // key-signature pool and an octave that fits). Ranges come from an instrument list or generic staff / ledger ranges.
-// The player names each note (pitch name, fixed-do digit or movable-do degree, octave included) on a key pad; wrong
+// The player names each note (pitch name, fixed-do digit or movable-do degree, octave included) on a piano keyboard; wrong
 // answers explain why (key signature, accidental, accidental carried through the bar, natural sign). Rounds of N
 // snippets end with a summary. Stats stay in localStorage.
 (() => {
@@ -318,7 +318,7 @@ const midiOf=n=>12*(n.oct+1)+PC[LETTERS.indexOf(n.L)]+n.acc;
 // ---------- answers ----------
 // Expected answer, octave included. Letter / fixed-do: the absolute octave (C4–B4 is the middle row).
 // Movable do: octave counted from the tonic in octave 4 (that row is the middle one).
-const accSign=a=>a>0?'♯':a<0?'♭':'';
+const accSign=a=>a>0?'♯'.repeat(a):a<0?'♭'.repeat(-a):'';
 const octWord=o=>o===0?'（中音）':o===1?'（高音）':o===2?'（倍高音）':o===-1?'（低音）':o===-2?'（倍低音）':o>0?`（高 ${o} 个八度）`:`（低 ${-o} 个八度）`;
 function expected(ex,n){
  if(cfg.answer==='letter')return {base:n.L,acc:n.acc,oct:n.oct,label:n.L+accSign(n.acc)+n.oct};
@@ -327,11 +327,20 @@ function expected(ex,n){
  const oct=4+Math.floor((n.d-(ex.tonic+28))/7);
  return {base:String(deg),acc,oct,label:accSign(acc)+deg+octWord(oct-4)};
 }
-// Rows of keys: every octave the current range can produce (highest on top).
+// Physical piano octaves cover the configured range, including enharmonic boundary notes.
 function padOctaves(){
  let lo=99,hi=-99;if(ex?.library){lo=Math.min(ex.lo,STAFF[ex.clef][0]);hi=Math.max(ex.hi,STAFF[ex.clef][1])}else for(const c of clefsNow()){const [a,b]=rangeDef().r[c];lo=Math.min(lo,a);hi=Math.max(hi,b)}
- const base=cfg.answer==='movable'&&ex?ex.tonic+28:28,o=d=>4+Math.floor((d-base)/7);
- const out=[];for(let k=o(hi);k>=o(lo);k--)out.push(k);return out;
+ const out=[];let low=Math.floor(lo/7),high=Math.floor(hi/7);
+ for(const n of ex?.notes||[]){const o=Math.floor(midiOf(n)/12)-1;low=Math.min(low,o);high=Math.max(high,o)}
+ for(let o=high;o>=low;o--)out.push(o);return out;
+}
+// Piano keys represent sounding pitches. C♯ / D♭ and B♯ / C are the same key.
+function keyboardAnswer(midi){
+ if(!ex||locked||idx>=ex.notes.length)return;
+ const n=ex.notes[idx],want=midiOf(n),e=expected(ex,n);
+ if((midi-want)%12===0){answer(e.base,e.acc,e.oct+(midi-want)/12);return}
+ const pc=((midi%12)+12)%12,i=PC.reduce((last,v,j)=>v<=pc?j:last,0),oct=Math.floor(midi/12)-1;
+ const pressed=expected(ex,{L:LETTERS[i],acc:pc-PC[i],oct,d:i+7*oct});answer(pressed.base,pressed.acc,pressed.oct);
 }
 function reason(ex,n){
  const name=n.L+(n.acc>0?'♯':n.acc<0?'♭':'');
@@ -417,27 +426,27 @@ function answer(base,acc,oct){
   setTimeout(()=>{locked=false;idx++;mark()},1300)}
 }
 function buildPad(){
- const pad=$('practicePad');pad.replaceChildren();
- const labels=cfg.answer==='letter'?[...LETTERS]:['1','2','3','4','5','6','7'];
- // Each key also shows its solfège syllable (C / 1 = do … B / 7 = si); one row per octave, highest on top.
- const SOLFA=['do','re','mi','fa','sol','la','si'],rows=padOctaves();pad.classList.toggle('compact',rows.length>3);
- for(const oct of rows){
-  const rel=oct-4,row=document.createElement('div');row.className='pad-row'+(rel===0?' mid':'');
-  const name=document.createElement('span');name.className='pad-oct';
-  name.textContent=cfg.answer==='letter'?`C${oct}–B${oct}`:octWord(rel).slice(1,-1);row.append(name);
-  labels.forEach((l,i)=>{const b=document.createElement('button');b.type='button';
-   b.setAttribute('aria-label',`${cfg.answer==='letter'?l+oct:l+octWord(rel)} ${SOLFA[i]}`);
-   const big=document.createElement('span');big.className='pad-main';big.textContent=l;
-   if(cfg.answer==='letter'){const sub=document.createElement('sub');sub.textContent=oct;big.append(sub)}
-   const small=document.createElement('span');small.className='pad-sub';small.textContent=SOLFA[i];
-   // Digits carry jianpu octave dots above / below; letters show the octave number instead.
-   const dots=k=>{const d=document.createElement('span');d.className='pad-dots';d.textContent='•'.repeat(k);return d};
-   if(cfg.answer!=='letter')b.append(dots(Math.max(0,rel)),big,dots(Math.max(0,-rel)),small);else b.append(big,small);
-   b.onclick=()=>answer(l,mod,oct);row.append(b)});
-  pad.append(row);
+ const pad=$('practicePad');pad.replaceChildren();pad.className='practice-pad piano-pad';
+ for(const oct of padOctaves()){
+  const section=document.createElement('div');section.className='piano-octave';
+  const title=document.createElement('div');title.className='piano-octave-name';title.textContent=`C${oct}–B${oct}`;
+  const row=document.createElement('div');row.className='piano-keyboard';row.setAttribute('role','group');row.setAttribute('aria-label',`第 ${oct} 组钢琴键`);
+  const add=(i,acc,black)=>{
+   const midi=12*(oct+1)+PC[i]+acc,b=document.createElement('button');b.type='button';b.className='piano-key '+(black?'black':'white');b.dataset.midi=String(midi);
+   if(black)b.style.left=`${(i+1)/7*100}%`;
+   const label=ex?expected(ex,{L:LETTERS[i],acc,oct,d:i+7*oct}):{label:LETTERS[i]+accSign(acc)+oct};
+   b.setAttribute('aria-label',label.label);b.title=label.label;
+   const main=document.createElement('span');main.className='piano-key-label';
+   main.textContent=cfg.answer==='letter'?LETTERS[i]+accSign(acc):accSign(label.acc)+label.base;
+   const small=document.createElement('span');small.className='piano-key-octave';small.textContent=cfg.answer==='letter'?String(oct):octWord(label.oct-4).slice(1,-1);
+   b.append(main,small);b.onclick=()=>keyboardAnswer(midi);row.append(b);
+  };
+  for(let i=0;i<7;i++)add(i,0,false);
+  for(const i of [0,1,3,4,5])add(i,1,true);
+  section.append(title,row);pad.append(section);
  }
 }
-function syncMods(){$('practiceFlat').setAttribute('aria-pressed',String(mod===-1));$('practiceSharp').setAttribute('aria-pressed',String(mod===1))}
+function syncMods(){const hint=$('practiceKeyboardHint');if(hint)hint.textContent='点击琴键回答，黑键可直接输入升降音。电脑也可用音名 / 数字键，− / + 切换升降号。'+(mod?' 当前电脑输入：'+(mod>0?'升半音':'降半音'):'')}
 function showStats(){
  const pct=(a,b)=>b?Math.round(a/b*100)+'%':'—';
  $('practiceSession').textContent=`本次 ${session.n} 个音 · 正确率 ${pct(session.ok,session.n)} · 平均 ${session.n?(session.time/session.n/1000).toFixed(1)+' 秒':'—'}`;
@@ -479,7 +488,6 @@ function bind(){
   if(f==='answer'&&ex){mod=0;syncMods();buildPad();const fb=$('practiceFeedback');if(idx<ex.notes.length){fb.textContent=`回答方式已改为「${el.selectedOptions[0].text}」，谱面不变，从高亮的音继续。`;fb.className='practice-feedback'}return}
   if(f==='source'&&cfg.source==='library')libPassages=null;if(f==='rounds')newRound();newExercise()}}
  $('pr_sound').checked=cfg.sound;$('pr_sound').onchange=()=>{cfg.sound=$('pr_sound').checked;save('cfg',cfg)};
- $('practiceFlat').onclick=()=>{mod=mod===-1?0:-1;syncMods()};$('practiceSharp').onclick=()=>{mod=mod===1?0:1;syncMods()};
  $('practiceNext').onclick=newExercise;$('practicePlay').onclick=playAll;
  $('practiceReset').onclick=()=>{if(!confirm('清空累计成绩和常错记录？'))return;stats={total:0,correct:0,time:0,notes:{}};save('stats',stats);showStats()};
  // Computer keyboard: letters / digits (octave not checked), - for flat, + or = for sharp, Enter for the next snippet.
@@ -488,9 +496,9 @@ function bind(){
   else if(e.key==='Enter'&&ex&&idx>=ex.notes.length)newExercise();
   else if(cfg.answer==='letter'&&LETTERS.includes(k))answer(k,mod);else if(cfg.answer!=='letter'&&/^[1-7]$/.test(k))answer(k,mod)});
  new MutationObserver(()=>{if(!$('practicePanel').hidden&&!ex)newExercise()}).observe($('practicePanel'),{attributes:true,attributeFilter:['hidden']});
- syncSettings();showStats();
+ syncSettings();syncMods();showStats();
 }
 bind();
-window.Practice={pressedMidi,cfg,makeExercise,toAbc,expected,reason,newExercise,answer,midiOf,RANGES,TUNES,engrave,keyInfo,get current(){return ex}};
+window.Practice={keyboardAnswer,buildPad,padOctaves,pressedMidi,cfg,makeExercise,toAbc,expected,reason,newExercise,answer,midiOf,RANGES,TUNES,engrave,keyInfo,get current(){return ex}};
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-10 16:04:40
