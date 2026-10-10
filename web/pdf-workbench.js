@@ -281,7 +281,7 @@
   // Workbench association is independent of the PDF reader's currently open archive.
   let scoreSource=null,scoreSaving=false;
   function syncScoreSource(){
-    byId('archiveScore').textContent=scoreSource?'保存修改到原存档':'存档这份简谱';
+    byId('archiveScore').textContent=scoreSource?'保存到原存档':'存入谱库';
     byId('archiveScoreAs').hidden=!scoreSource;byId('archiveDetach').hidden=!scoreSource;
     byId('scoreArchiveSource').textContent=scoreSource?'当前关联：'+scoreSource.title+' · '+(scoreSource.rows.length===1?'第 '+scoreSource.rows[0].page+' 页':scoreSource.rows.length+' 页')+'；保存将更新这份存档。':'尚未关联存档，首次保存会新建。';
     byId('archiveScore').disabled=byId('archiveScoreAs').disabled=scoreSaving;
@@ -482,4 +482,4 @@
   window.PdfWorkbenchCore={parsePages,joinText,usableText,checkedRecord};
   syncControls();refreshArchives();
 })();
-// Modified by AI on 2026-10-08 23:41:38
+// Modified by AI on 2026-10-11 00:12:55
