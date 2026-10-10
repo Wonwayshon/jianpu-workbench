@@ -369,4 +369,42 @@ select.chip-source{display:none}
 #viewerPlay{background:var(--accent);color:var(--on-accent,#fff);border-radius:999px;min-width:44px}
 .perform-exit{background:#0F1115bf;color:#fff;border-radius:12px;min-height:40px;min-width:40px}
 .perform-page{background:#0F1115b3;color:#fff;border-radius:999px;padding:4px 12px;font-size:12px}
-/* Modified by AI on 2026-10-11 00:17:25 */
+
+/* 谱库: archive rows, filters as pills, list + detail on wide screens */
+.archive-filter-grid{display:flex;flex-wrap:wrap;gap:8px}
+.archive-filter-grid>div{display:flex;align-items:center;background:#fff;border-radius:10px;box-shadow:inset 0 0 0 1px var(--line);padding-left:12px}
+.archive-filter-grid label{margin:0;font-size:12px;color:var(--faint);white-space:nowrap}
+.archive-filter-grid select{background-color:transparent;min-height:38px;width:auto;font-weight:600;padding:0 30px 0 6px}
+.archive-search input{width:100%}
+.archive-entry{background:#fff;border-radius:14px;box-shadow:0 0 0 1px var(--line-soft);padding:0;margin:0}
+.archive-entry>summary{display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 14px;cursor:pointer}
+.archive-entry>summary::after{display:none}
+.archive-entry.selected{box-shadow:inset 0 0 0 1.5px var(--accent);background:var(--accent-soft)}
+.archive-icon{flex:none;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:12px;font-weight:700}
+.type-text{background:var(--accent-soft);color:var(--accent-ink)}.type-pdf{background:#FDECEC;color:#B42318}.type-image{background:#E7F6EE;color:#1F7A45}.type-word{background:#E8F1FD;color:#1D4E89}
+.archive-head{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.35}
+.archive-head strong{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.archive-head small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.archive-status{flex:none;height:24px;padding:0 10px;border-radius:999px;font-size:12px;display:flex;align-items:center;font-weight:500}
+.st-ok{background:var(--ok-bg);color:var(--ok)}.st-part{background:var(--warn-bg);color:var(--warn)}.st-none{background:var(--fill);color:var(--muted)}
+.archive-entry-date{flex:none;width:84px;text-align:right;font-size:12px;color:var(--faint)}
+.archive-entry-body{display:flex;flex-wrap:wrap;gap:8px;padding:4px 14px 14px}
+.archive-entry-body .grow{flex-basis:100%}
+.archive-entry-body p{margin:2px 0}
+.archive-split{display:grid;gap:16px;align-items:start}
+.archive-detail{display:none}
+@media screen and (min-width:1100px){
+ .archive-split{grid-template-columns:minmax(0,1fr) 360px}
+ .archive-detail{display:flex;flex-direction:column;gap:12px;position:sticky;top:24px;background:#fff;border-radius:18px;box-shadow:0 0 0 1px var(--line-soft);padding:20px}
+ .archive-detail-empty{margin:0;color:var(--muted);font-size:14px}
+ .archive-detail-head{display:flex;align-items:center;gap:12px}
+ .archive-detail-head .archive-head strong{white-space:normal;font-size:17px}
+ .archive-detail .archive-entry-body{padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .archive-detail .archive-entry-body .grow{grid-column:1/-1}
+ .archive-detail .archive-entry-body button:first-of-type{grid-column:1/-1;background:var(--accent);color:var(--on-accent,#fff);min-height:46px}
+ .archive-detail .archive-entry-body button:last-of-type{grid-column:1/-1;background:transparent;color:var(--danger)}
+}
+@media(max-width:599px){.archive-entry-date{display:none}.archive-entry>summary{gap:10px;padding:8px 12px}}
+.archive-split .pdf-archive-list,.archive-split .archive-month-grid{grid-template-columns:minmax(0,1fr)}
+.archive-status[hidden]{display:none}
+/* Modified by AI on 2026-10-11 01:58:20 */

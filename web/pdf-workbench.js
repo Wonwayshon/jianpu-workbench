@@ -355,10 +355,10 @@
         const row=document.createElement('details');row.className='pdf-archive-row archive-entry';row.open=archiveOpen.has(record.id);
         row.addEventListener('toggle',()=>{if(!row.isConnected)return;if(row.open)archiveOpen.add(record.id);else archiveOpen.delete(record.id)});
         const text=document.createElement('div');text.className='grow';const title=document.createElement('strong');title.textContent=record.title;
-        const badge=document.createElement('span');badge.className='pill';badge.textContent=record.fileId?(/pdf/i.test(record.fileType)||/\.pdf$/i.test(record.fileName)?'PDF':/\.docx?$/i.test(record.fileName)||/word/i.test(record.fileType)?'Word':'图片'):'文字';title.append(' ',badge);
+        const kind=record.fileId?(/pdf/i.test(record.fileType)||/\.pdf$/i.test(record.fileName)?'pdf':/\.docx?$/i.test(record.fileName)||/word/i.test(record.fileType)?'word':'image'):'text';const badge=document.createElement('span');badge.className='archive-icon type-'+kind;badge.textContent={pdf:'PDF',word:'W',image:'图',text:'文'}[kind];badge.ariaHidden='true';
         const meta=document.createElement('p');meta.className='subtle';
         meta.textContent=[record.fileId?`${record.fileName} · ${sizeText(record.fileSize)}`:record.sourceName||'无原文件',record.results.length?`已识别 ${record.results.length} 页 · ${record.results.filter(r=>r.reviewed).length} 页已校对`:'未识别',`保存于 ${new Date(record.updatedAt).toLocaleString()}`].join(' · ');
-        const summary=document.createElement('summary'),date=document.createElement('span');date.className='archive-entry-date';date.textContent='更新 '+new Date(record.updatedAt).toLocaleDateString();summary.append(title,date);row.append(summary);
+        const summary=document.createElement('summary'),date=document.createElement('span');date.className='archive-entry-date';date.textContent=new Date(record.updatedAt).toLocaleDateString();const head=document.createElement('span');head.className='archive-head';const sub=document.createElement('small');const done=record.results.filter(r=>r.reviewed).length,hasText=record.results.some(r=>r.text.trim());sub.textContent=record.results.length?`${record.results.length} 页 · ${done} 页已校对`:(record.fileId?record.fileName:'文字谱');head.append(title,sub);const status=document.createElement('span');const st=!hasText?'none':record.results.every(r=>r.text.trim()&&r.reviewed)?'ok':'part';status.className='archive-status st-'+st;if(!record.fileId)status.hidden=true;status.textContent={none:'未识别',ok:'已校对',part:'待校对'}[st];summary.append(badge,head,status,date);row.append(summary);row.archiveId=record.id;
         const body=document.createElement('div');body.className='archive-entry-body';text.append(meta);
         const created=document.createElement('p');created.className='subtle';created.textContent='创建于 '+new Date(record.createdAt).toLocaleString();text.append(created);if(record.note){const n=document.createElement('p');n.className='archive-note';n.textContent=record.note;text.append(n)}body.append(text);
         const hasScore=record.results.some(r=>r.text.trim());
@@ -482,4 +482,4 @@
   window.PdfWorkbenchCore={parsePages,joinText,usableText,checkedRecord};
   syncControls();refreshArchives();
 })();
-// Modified by AI on 2026-10-11 00:12:55
+// Modified by AI on 2026-10-11 01:58:52
