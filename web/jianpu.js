@@ -413,7 +413,7 @@ function justify(host,endsPiece=host._endsPiece!==false){
  for(const r of rows){r.classList.remove('jp-justify');r.style.minWidth=''}
  const cs=getComputedStyle(host),avail=host.clientWidth-parseFloat(cs.paddingLeft||0)-parseFloat(cs.paddingRight||0);
  if(avail<=0)return;
- const naturals=rows.map(r=>{const kids=[...r.children].filter(c=>!c.classList.contains('jp-measure-numbers'));return kids.length<3?0:kids[kids.length-1].getBoundingClientRect().right-kids[0].getBoundingClientRect().left});
+ const naturals=rows.map(r=>{const kids=[...r.children].filter(c=>!c.classList.contains('jp-measure-numbers')&&!c.classList.contains('jp-slurs'));return kids.length<3?0:kids[kids.length-1].getBoundingClientRect().right-kids[0].getBoundingClientRect().left});
  // A line still too wide at the minimum font scrolls; the others stretch to the same width so bar lines stay aligned.
  const width=Math.max(avail,...naturals);
  rows.forEach((r,i)=>{const natural=naturals[i];if(!natural)return;
@@ -433,7 +433,7 @@ function spaceAnnotations(host){
  }
 }
 // Natural width of a full-score line (label + measures at their content width).
-function naturalWidth(row){let w=0;for(const c of row.children){if(c.classList.contains('jp-measure-numbers'))continue;const prev=c.style.flex;c.style.flex='0 0 auto';w+=c.getBoundingClientRect().width;c.style.flex=prev}return w+8}
+function naturalWidth(row){let w=0;for(const c of row.children){if(c.classList.contains('jp-measure-numbers')||c.classList.contains('jp-slurs'))continue;const prev=c.style.flex;c.style.flex='0 0 auto';w+=c.getBoundingClientRect().width;c.style.flex=prev}return w+8}
 // Full score: bar k gets the same width in every part of a system (the widest content decides), so bar lines align.
 function alignSystems(host){
  for(const sys of host.querySelectorAll('.jp-system')){
@@ -454,36 +454,43 @@ function fitWidth(host){
 
 function drawOverlay(host){
  drawMeasureLabels(host);
- host.querySelector(':scope>svg.jp-slurs')?.remove();
+ for(const old of host.querySelectorAll('svg.jp-slurs'))old.remove();
  const arcs=host._arcs||[],tuplets=host._tuplets||[];if(!arcs.length&&!tuplets.length)return;
- const ns='http://www.w3.org/2000/svg',box=host.getBoundingClientRect();
- const svg=document.createElementNS(ns,'svg');svg.setAttribute('class','jp-slurs');svg.setAttribute('aria-hidden','true');
- svg.setAttribute('width',host.scrollWidth);svg.setAttribute('height',host.scrollHeight);
- const em=parseFloat(getComputedStyle(host).fontSize)||20;
- const X=r=>r.left+r.width/2-box.left+host.scrollLeft,Y=v=>v-box.top+host.scrollTop;
- const top=cell=>{const heads=[...cell.querySelectorAll('.jp-orn'),...cell.querySelectorAll('.jp-up i'),...cell.querySelectorAll('.jp-digit')];return Y(Math.min(...(heads.length?heads:[cell]).map(e=>e.getBoundingClientRect().top)))-0.12*em};
- // Account for the highest note in the entire span, not only its endpoints. Erhu rows reserve
- // a separate lane below their annotations for these curves, so finger labels stay above them.
- const spanTop=(a,b)=>{
-  if(!sameRow(a,b))return Math.min(top(a),top(b));
-  const lane=a.closest?.('.jp-voice-lane')||a.closest?.('.jp-line')||host,left=Math.min(X(a.getBoundingClientRect()),X(b.getBoundingClientRect())),right=Math.max(X(a.getBoundingClientRect()),X(b.getBoundingClientRect()));
-  const cells=[...lane.querySelectorAll('.jp-n')].filter(c=>sameRow(a,c)&&X(c.getBoundingClientRect())>=left&&X(c.getBoundingClientRect())<=right);
-  return Math.min(top(a),top(b),...cells.map(top));
+ const ns='http://www.w3.org/2000/svg',layers=new Map();
+ const rowOf=cell=>cell.closest?.('.jp-line')||host;
+ // Each curve belongs to its music row, so it travels with the notes through
+ // native print pagination. A score-wide SVG cannot follow page/row breaks.
+ const layer=row=>{
+  if(layers.has(row))return layers.get(row);
+  const box=row.getBoundingClientRect(),svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('class','jp-slurs jp-overlay');svg.setAttribute('aria-hidden','true');
+  svg.setAttribute('width',row.clientWidth);svg.setAttribute('height',row.clientHeight);
+  const em=parseFloat(getComputedStyle(row).fontSize)||20;
+  const X=r=>r.left+r.width/2-box.left+row.scrollLeft,Y=v=>v-box.top+row.scrollTop;
+  const top=cell=>{const heads=[...cell.querySelectorAll('.jp-orn'),...cell.querySelectorAll('.jp-up i'),...cell.querySelectorAll('.jp-digit')];return Y(Math.min(...(heads.length?heads:[cell]).map(e=>e.getBoundingClientRect().top)))-0.12*em};
+  const value={svg,em,X,top};layers.set(row,value);return value;
  };
- const sameRow=(a,b)=>Math.abs(a.getBoundingClientRect().top-b.getBoundingClientRect().top)<4;
- const arc=(x1,x2,y)=>{const p=document.createElementNS(ns,'path'),h=Math.min(0.45*em,0.12*Math.abs(x2-x1)+0.2*em);p.setAttribute('d',`M${x1} ${y} Q${(x1+x2)/2} ${y-h*2} ${x2} ${y}`);svg.append(p)};
+ const sameRow=(a,b)=>rowOf(a)===rowOf(b)&&Math.abs(a.getBoundingClientRect().top-b.getBoundingClientRect().top)<4;
+ const spanTop=(a,b,L)=>{
+  if(!sameRow(a,b))return Math.min(L.top(a),L.top(b));
+  const lane=a.closest?.('.jp-voice-lane')||rowOf(a),left=Math.min(L.X(a.getBoundingClientRect()),L.X(b.getBoundingClientRect())),right=Math.max(L.X(a.getBoundingClientRect()),L.X(b.getBoundingClientRect()));
+  const cells=[...lane.querySelectorAll('.jp-n')].filter(c=>sameRow(a,c)&&L.X(c.getBoundingClientRect())>=left&&L.X(c.getBoundingClientRect())<=right);
+  return Math.min(L.top(a),L.top(b),...cells.map(L.top));
+ };
+ const arc=(L,x1,x2,y)=>{const p=document.createElementNS(ns,'path'),h=Math.min(0.45*L.em,0.12*Math.abs(x2-x1)+0.2*L.em);p.setAttribute('d',`M${x1} ${y} Q${(x1+x2)/2} ${y-h*2} ${x2} ${y}`);L.svg.append(p)};
  for(const [a,b] of arcs){
-  const xa=X(a.querySelector('.jp-main').getBoundingClientRect()),xb=X(b.querySelector('.jp-main').getBoundingClientRect());
-  let ta=top(a),tb=top(b);
-  if(sameRow(a,b)){const y=spanTop(a,b);arc(xa,xb,y)}else{arc(xa,host.clientWidth-4,ta);arc(4,xb,tb)}
+  const ra=rowOf(a),rb=rowOf(b),A=layer(ra),B=layer(rb);
+  const xa=A.X(a.querySelector('.jp-main').getBoundingClientRect()),xb=B.X(b.querySelector('.jp-main').getBoundingClientRect());
+  if(sameRow(a,b))arc(A,xa,xb,spanTop(a,b,A));
+  else{arc(A,xa,ra.clientWidth-4,A.top(a));arc(B,4,xb,B.top(b))}
  }
  for(const [a,b,n] of tuplets){
-  const xa=X(a.getBoundingClientRect()),xb=X(b.getBoundingClientRect()),y=spanTop(a,b)-(arcs.some(p=>p[0]===a||p[1]===b)?0.55*em:0.05*em);
-  const t=document.createElementNS(ns,'text');t.setAttribute('x',sameRow(a,b)?(xa+xb)/2:xa);t.setAttribute('y',y);t.setAttribute('text-anchor','middle');t.setAttribute('class','jp-tuplet');t.textContent=n;svg.append(t);
+  const L=layer(rowOf(a)),xa=L.X(a.getBoundingClientRect()),xb=L.X(b.getBoundingClientRect()),y=spanTop(a,b,L)-(arcs.some(p=>p[0]===a||p[1]===b)?0.55*L.em:0.05*L.em);
+  const t=document.createElementNS(ns,'text');t.setAttribute('x',sameRow(a,b)?(xa+xb)/2:xa);t.setAttribute('y',y);t.setAttribute('text-anchor','middle');t.setAttribute('class','jp-tuplet');t.textContent=n;L.svg.append(t);
  }
- host.prepend(svg);
+ for(const [row,L] of layers)row.append(L.svg);
 }
 
 window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline,numberMeasures};
 })();
-// Modified by AI on 2026-10-11 12:52:40
+// Modified by AI on 2026-10-11 13:31:57

@@ -108,7 +108,7 @@ nav[aria-label="工具"]{grid-template-columns:repeat(7,1fr)}
 @media(max-width:360px){.flute-row{grid-template-columns:64px minmax(0,1fr)}.jp-group{font-size:19px}}
 /* Rendered numbered notation: octave dots, underlines (beamed when written together), augmentation dots, slurs */
 .jp-score{position:relative;white-space:normal;letter-spacing:0;line-height:1;font-family:"Times New Roman",serif}
-.jp-score .jp-line{display:flex;flex-wrap:nowrap;align-items:flex-start;padding:.25em 0 .12em;width:max-content;min-width:100%}
+.jp-score .jp-line{position:relative;display:flex;flex-wrap:nowrap;align-items:flex-start;padding:.25em 0 .12em;width:max-content;min-width:100%}
 .jp-score{overflow-x:auto}
 .score.jp-score{font-size:24px}
 .score-preview.jp-score{font-size:20px}
@@ -134,7 +134,7 @@ nav[aria-label="工具"]{grid-template-columns:repeat(7,1fr)}
 .jp-bar-cell{margin:0 .3em}
 .jp-bar{display:block;width:0;height:1.1em;border-left:.07em solid currentColor;min-width:1.5px}
 .jp-bar-double{width:.12em;border-right:.07em solid currentColor}
-.jp-slurs{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.jp-slurs{width:100%;height:100%;position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
 .jp-slurs path{fill:none;stroke:currentColor;stroke-width:1.4}
 .score.jp-score{line-height:1;letter-spacing:0}
 .score-preview-wrap{margin-top:12px}
@@ -646,4 +646,4 @@ body.viewer-open:has(.viewer.editing) .float-player{display:none!important}
 .viewer.editing .viewer-options{display:none}.viewer.editing .viewer-bar{grid-template-columns:minmax(0,1fr) auto}
 @media(max-width:1200px){.viewer-bar{grid-template-columns:minmax(0,1fr) auto}.viewer-middle{grid-column:1 / -1;grid-row:2}.viewer-tools{grid-column:2;grid-row:1}.viewer-tabs{justify-self:start}.viewer.editing .viewer-middle{grid-column:1;grid-row:1}}
 @media(max-width:680px){.viewer-bar{gap:8px;padding:8px!important}.viewer-bar .viewer-tabs{grid-column:1 / -1;justify-self:stretch}.viewer-bar .viewer-tools{grid-column:1 / -1;grid-row:3;justify-content:flex-end}.viewer-middle{grid-row:2}.viewer-bar .app-segments button{padding:0 6px;font-size:13px}.viewer-bar select{max-width:190px}.viewer.editing .viewer-tools{grid-row:1;grid-column:2}.viewer.editing .viewer-middle{grid-column:1}}
-/* Modified by AI on 2026-10-10 19:44:57 */
+/* Modified by AI on 2026-10-11 13:31:57 */
