@@ -113,7 +113,7 @@ function transition(p,c,info){
 
 // lines: parsed score lines whose note tokens carry `midi`. keyOf(token) -> key pitch class.
 // Returns Map(token -> {finger, string, shift, anchorMidi, bow}) and a summary.
-function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
+function annotate(lines,{tuning=[62,69],keyOf=()=>0,respectManual=true}={}){
  const seq=[];let slur=0,pauseBeats=0,restActive=false,attackGroup=0,bar=0,beam=0,glued=false;const tuplets=[];
  for(const l of lines){if(l.kind!=='music')continue;
   for(const t of l.tokens){
@@ -196,7 +196,7 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
   if(frames.length){x.trillExitAnchors=frames.map(c=>c.a);for(const z of next.slice(1))z.settledPositions=frames.map(c=>c.a-c.nat)}
  }
  const result=new Map();let unplayable=0,trillUnavailable=0;
- const cache=new Map();
+ const cache=new Map(),manualIssues=new Map();
  const fingerings=x=>{
   const t=x.t,key=keyOf(t),trill=hasTrill(t),id=`${t.midi}|${key}|${trill?trillUpper(t,key):'plain'}|${isolatedPeaks.has(t)}|${x.unisonRole||''}|${!!x.preparedEntry}|${!!x.outerApproach}|${x.trillExitAnchors?.join(",")||""}|${x.settledPositions?.join(",")||""}`;
   if(!cache.has(id))cache.set(id,(trill?trillCandidates(t,tuning,key):candidates(t.midi,tuning,key)).map(c=>{
@@ -209,7 +209,15 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
    if(x.settledPositions&&!x.settledPositions.includes(c.a-c.nat))cost+=4;
    return {...c,cost};
   }));
-  return cache.get(id);
+  const all=cache.get(id),o=respectManual&&t.erhu?parseOverride(t.erhu):{};
+  if(!o.hide&&('finger' in o||'string' in o)){
+   const matches=c=>!('finger' in o&&c.f!==o.finger)&&!('string' in o&&c.s!==o.string),locked=all.filter(matches);
+   if(locked.length)return locked;
+   const reason=trill&&candidates(t.midi,tuning,key).some(matches)?'手动指法没有可用的同弦同把位颤音辅助指':'手动指法与此音高无法组成可用手型';
+   manualIssues.set(t,reason);
+  }
+  // An impossible manual choice remains visible for correction; it cannot lock the entire phrase out.
+  return all;
  };
  // Viterbi over runs of playable notes (a note outside the range splits the run).
  let run=[];
@@ -241,6 +249,7 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
   flush();result.set(x.t,{finger:null,reason:trill?'trill':'range'});continue;
  }run.push(x)}
  flush();
+ for(const [t,message] of manualIssues){const r=result.get(t);if(r){r.review=[message];r.manualConflict=true}}
  // Shift and string-change marks relative to the previous note.
  let last=null,shifts=0;
  for(const x of seq){const r=result.get(x.t);if(!r||r.finger==null){last=null;continue}
@@ -280,7 +289,7 @@ const NAMES=['C','C♯','D','E♭','E','F','F♯','G','G♯','A','B♭','B'];
 function label(r){
  if(!r)return null;
  const box=document.createElement('span'),row=document.createElement('span'),low=document.createElement('span');
- box.className='jp-anno'+(r.manual?' anno-manual':'');row.className='anno-top';low.className='anno-low';
+ box.className='jp-anno'+(r.manual?' anno-manual':'')+(r.review?.length||r.finger==null?' anno-review':'');if(r.review?.length)box.title='指法需核对：'+r.review.join('；');row.className='anno-top';low.className='anno-low';
  const add=(parent,cls,text,title)=>{const e=document.createElement('span');e.className=cls;e.textContent=text;if(title)e.title=title;parent.append(e)};
  if(r.bow)add(row,'anno-bow',r.bow==='down'?'⊓':'V',r.bow==='down'?'拉弓':'推弓');
  if(r.finger==null){add(low,'anno-bad','?',r.reason==='trill'?'没有可用的同弦同把位颤音手型，请人工核对辅助音或演奏方式':'超出二胡音域');box.append(row,low);return box}
@@ -328,10 +337,30 @@ function parseOverride(text){
 function applyOverride(r,text){
  const o=parseOverride(text);if(o.hide)return null;const x={...(r||{}),manual:true};
  if('bow' in o)x.bow=o.bow;if('shift' in o)x.shift=o.shift;if('string' in o){x.string=o.string;x.stringChange=true}
- if('finger' in o){x.finger=o.finger;x.reason=undefined;x.guideFinger=o.guide?o.finger||x.finger:0;x.extended=!!o.extended;x.trill=null}
+ if('finger' in o){x.finger=o.finger;x.reason=undefined;x.guideFinger=o.guide?o.finger||x.finger:0;x.extended=!!o.extended||(o.finger===r?.finger&&!!r?.extended);x.trill=o.finger===r?.finger&&(!('string' in o)||o.string===r?.string)?r?.trill:null}
  else{if(o.guide)x.guideFinger=x.finger||1;if(o.extended)x.extended=true}
  return x;
 }
-window.ErhuFingering={annotate,label,parseOverride,applyOverride,autoTuning,tuningLabel,stringsName,TUNINGS:[['D–A（标准定弦）',[62,69]],['C–G',[60,67]],['E♭–B♭',[63,70]],['E–B',[64,71]],['F–C',[65,72]],['G–D（二泉调 / 中胡）',[55,62]]]};
+// Reconcile displayed string changes after manual overrides. Context belongs to each part,
+// and the cached inferred map stays immutable across filtered/printed/editor views.
+function applyOverrides(lines,map){
+ const out=new Map(map),last=new Map();
+ for(const line of lines){if(line.kind!=='music')continue;const id=line.part||'';
+  for(const t of line.tokens){if(t.t!=='note'||!map.has(t))continue;
+   const auto=map.get(t),o=t.erhu?parseOverride(t.erhu):{},r=t.erhu?applyOverride(auto,t.erhu):auto?{...auto}:null;
+   const effective=r||auto,previous=last.get(id),review=[...(r?.review||[])];
+   if(r&&r.finger!=null){
+    r.stringChange=!previous||previous.string!==r.string;
+    if(previous&&'shift' in o&&o.shift!==(auto?.shift||null))review.push(o.shift?'手动换把方向与推算的把位变化不一致':'已隐藏换把标记，但这里的手型仍需要换把');
+    if(previous?.manualConflict)review.push('前一音的手动指法无法匹配手型，请核对这两个音的连接');
+    if(review.length)r.review=[...new Set(review)];
+   }
+   out.set(t,r);
+   if(effective?.finger!=null&&[0,1].includes(effective.string))last.set(id,effective);else last.delete(id);
+  }
+ }
+ return out;
+}
+window.ErhuFingering={annotate,label,parseOverride,applyOverride,applyOverrides,autoTuning,tuningLabel,stringsName,TUNINGS:[['D–A（标准定弦）',[62,69]],['C–G',[60,67]],['E♭–B♭',[63,70]],['E–B',[64,71]],['F–C',[65,72]],['G–D（二泉调 / 中胡）',[55,62]]]};
 })();
-// Modified by AI on 2026-10-11 12:54:59
+// Modified by AI on 2026-10-11 14:29:02

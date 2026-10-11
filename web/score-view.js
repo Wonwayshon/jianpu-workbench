@@ -102,10 +102,13 @@ function spellIn(t,X,fromKey,digits){
  }
  const rel=t.midi-(60+X);return {label:digits[((rel%12)+12)%12],octave:Math.floor(rel/12)};
 }
-function renderTrans(){
+function refreshTransLines(){
  if(!(lastConverted?.notes.length||lastConverted?.percussionCount)){$('transOutput').replaceChildren();transLines=transAllLines=null;return}
  transAllLines=buildTransposed();transLines=F(transAllLines);
  if(!transLines.some(l=>l.kind==='meta'&&l.name==='note'))transLines.unshift({kind:'meta',name:'note',value:`原谱 1=${lastConverted.keyLabel} → 1=${KEY_NAMES[Number($('transKey').value)]}${$('transMode').value==='move'?'（整曲移调）':''}`});
+}
+function renderTrans(){
+ refreshTransLines();if(!transLines)return;
  $('transOutput').hidden=transStaff();$('transStaff').hidden=!transStaff();
  if(transStaff())Staff.render($('transStaff'),transLines,{keyLabel:staffKey('trans'),partNames:scoreParts(),...scoreDisplayOptions(transLines,'trans')}).catch(e=>{$('transStaff').textContent='五线谱无法显示：'+e.message});
  else Jianpu.render($('transOutput'),transLines,erhuOpts(transLines,'trans'));
@@ -150,13 +153,13 @@ function erhuFor(lines,v){
   const only=whole.filter(l=>l.kind!=='music'||(l.part||'')===id);
   let cache=erhuCache.get(whole);if(!cache){cache=new Map();erhuCache.set(whole,cache)}
   const key=JSON.stringify([id,v,X,song,tuning]);let r=cache.get(key);
-  if(!r){r=ErhuFingering.annotate(only,{tuning,keyOf:t=>v==='trans'?X:(t.keyPc??song)});cache.set(key,r)}
+  if(!r){r=ErhuFingering.annotate(only,{tuning,keyOf:t=>v==='trans'?X:(t.keyPc??song),respectManual:v==='source'});cache.set(key,r)}
   for(const [t,value] of r.map)res.map.set(t,value);
   for(const k of ['shifts','unplayable','trillUnavailable'])res[k]+=r[k]||0;
  }
  // Hand-edited markings ([…] after a note in the text) replace the automatic result on the original score only.
- if(v==='source')for(const l of whole)if(l.kind==='music'&&ids.includes(l.part||''))for(const t of l.tokens)if(t.t==='note'&&t.erhu){erhuAuto.set(t,res.map.get(t));res.map.set(t,ErhuFingering.applyOverride(res.map.get(t),t.erhu))}
- if(v==='source')lastErhuMap=res.map;
+ if(v==='source')for(const l of whole)if(l.kind==='music'&&ids.includes(l.part||''))for(const t of l.tokens)if(t.t==='note'&&t.erhu){erhuAuto.set(t,res.map.get(t))}
+ if(v==='source'){res.map=ErhuFingering.applyOverrides(whole,res.map);lastErhuMap=res.map}
  return res.map.size?res:null;
 }
 function erhuOpts(lines,v,base={}){base={...base,partNames:scoreParts(),...scoreDisplayOptions(lines,v)};const res=erhuFor(lines,v);if(!res)return base;return {...base,annotations:res.map,label:ErhuFingering.label,summary:res}}
@@ -199,6 +202,8 @@ function renderMain(){
  if(!lastConverted&&$('scoreOutput').closest('.output-card')?.classList.contains('stale'))return; // keep the last good score visible while the text has a parse error
  if(!lastConverted||!(lastConverted.notes.length||lastConverted.percussionCount)){$('scoreOutput').replaceChildren('输入音符后在这里显示');$('scorePreview').replaceChildren();$('staffOutput').replaceChildren();return}
  syncPartBar();fillErhuParts();
+ // The editor is the visible score. Defer the three background card engravings until it closes.
+ if(viewerOpen&&vEdit){staffDirty=true;return}
  const flute=F(lastConverted.lines);Jianpu.render($('scoreOutput'),flute,scoreDisplayOptions(flute,'flute'));const so=erhuOpts(F(lastConverted.source.lines),'source');Jianpu.render($('scorePreview'),F(lastConverted.source.lines),so);renderTrans();
  const summary=(view==='trans'?erhuFor(transLines,'trans'):so.summary);$('erhuSummary').textContent=summary?`推算：换把 ${summary.shifts} 次${summary.unplayable?`，${summary.unplayable} 个音无法推算（音域或颤音手型，标 ?）`:''}；仅供参考`:'';
  staffDirty=true;if(view==='staff')showStaff();
@@ -410,7 +415,7 @@ function erhuEditor(){
  d.innerHTML='<div class="sheet-body"><div class="sheet-head"><h2>修改指法 <small class="erhu-edit-note"></small></h2><button type="button" class="small-btn" data-close>关闭</button></div>'
   +ERHU_GROUPS.map(([k,label,opts])=>`<div class="erhu-edit-row"><span>${label}</span><div class="erhu-edit-opts" role="radiogroup" aria-label="${label}" data-k="${k}">${opts.map(([v,t])=>`<button type="button" role="radio" data-v="${v}">${t}</button>`).join('')}</div></div>`).join('')
   +'<div class="erhu-edit-row"><span>其他</span><div class="erhu-edit-opts"><button type="button" data-x="滑" aria-pressed="false">滑（带指换把）</button><button type="button" data-x="伸" aria-pressed="false">伸（四指延伸）</button><button type="button" data-x="-" aria-pressed="false">隐藏这个音的标记</button></div></div>'
-  +'<p class="subtle erhu-edit-auto"></p><div class="dialog-actions"><button type="button" data-reset>恢复自动</button><button type="button" data-reset-all>整首恢复自动</button><span class="grow"></span><button type="button" class="primary" data-save>保存</button></div></div>';
+  +'<p class="subtle erhu-edit-auto"></p><p class="erhu-edit-warning" role="status" hidden></p><div class="dialog-actions"><button type="button" data-reset>恢复自动</button><button type="button" data-reset-all>整首恢复自动</button><span class="grow"></span><button type="button" class="primary" data-save>保存</button></div></div>';
  document.body.append(d);
  d.querySelector('[data-close]').onclick=()=>d.close();d.addEventListener('click',e=>{if(e.target===d)d.close()});
  for(const g of d.querySelectorAll('[data-k]'))g.addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;for(const x of g.children)x.setAttribute('aria-checked',String(x===b))});
@@ -428,12 +433,14 @@ function erhuText(){
  return pick('string')+pick('finger')+(on('滑')?'滑':'')+(on('伸')?'伸':'')+pick('bow')+pick('shift');
 }
 function openErhuEditor(t){
+ if(vEdit)editSelect(t);
  const d=erhuEditor();erhuTok=t;const o=t.erhu?ErhuFingering.parseOverride(t.erhu):{},auto=erhuAuto.get(t)??(lastErhuMap?.get(t))??null;
  const cur={bow:'bow' in o?(o.bow==='down'?'⊓':o.bow==='up'?'V':'无弓'):'',string:'string' in o?(o.string===0?'内':'外'):'',finger:'finger' in o?'〇一二三四'[o.finger]:'',shift:'shift' in o?(o.shift==='up'?'↓':o.shift==='down'?'↑':'无换'):''};
  for(const g of d.querySelectorAll('[data-k]'))for(const b of g.children)b.setAttribute('aria-checked',String(b.dataset.v===cur[g.dataset.k]));
  d.querySelector('[data-x="滑"]').setAttribute('aria-pressed',String(!!o.guide));d.querySelector('[data-x="伸"]').setAttribute('aria-pressed',String(!!o.extended));d.querySelector('[data-x="-"]').setAttribute('aria-pressed',String(!!o.hide));
  d.querySelector('.erhu-edit-note').textContent=`第 ${t.line} 行`;
- const a=auto||{};d.querySelector('.erhu-edit-auto').textContent=auto?`自动推算：${a.string===0?'内':'外'}弦 ${a.finger==null?'?':'〇一二三四'[a.finger]}指${a.bow?' · '+(a.bow==='down'?'出弓 ⊓':'进弓 V'):''}${a.shift?' · 上下滑 '+(a.shift==='up'?'↓':'↑'):''}。没改的项保持自动。`:'没改的项保持自动。';
+ const shown=lastErhuMap?.get(t),warning=d.querySelector('.erhu-edit-warning');warning.hidden=!shown?.review?.length;warning.textContent=shown?.review?.join('；')||'';
+ const a=auto||{};d.querySelector('.erhu-edit-auto').textContent=auto?`当前手型推算：${a.string===0?'内':'外'}弦 ${a.finger==null?'?':'〇一二三四'[a.finger]}指${a.bow?' · '+(a.bow==='down'?'出弓 ⊓':'进弓 V'):''}${a.shift?' · 上下滑 '+(a.shift==='up'?'↓':'↑'):''}。没改的项保持自动。`:'没改的项保持自动。';
  d.showModal();
 }
 // Rewrites the note's […] in the score text (the source text keeps columns 1:1 for these lines).
@@ -442,7 +449,8 @@ function writeErhu(t,text){
  if(line==null||t.col==null||!t.len)return;
  if(Jianpu.normalize(line).length!==line.length||Jianpu.normalize(line).slice(t.col,t.col+t.len)!==noteSlice(line,t)){$('copyStatus').textContent='这一行有需要规范化的字符，请直接在乐谱文本里修改。';return}
  const end=t.col+t.len;lines[i]=line.slice(0,end)+(text?`[${text}]`:'')+line.slice(end+(t.erhuLen||0));
- ta.value=lines.join('\n');ta.dispatchEvent(new Event('input',{bubbles:true}));updateScore();
+ if(vEdit){const inp=$('viewerBody').querySelector(`.edit-line[data-i="${i}"]`);editFocus={i,start:t.col,end:end+(text?text.length+2:0),scrollLeft:inp?.scrollLeft||0}}
+ ta.value=lines.join('\n');ta.dispatchEvent(new Event('input',{bubbles:true}));
  $('copyStatus').textContent=text?'已修改这个音的二胡标记，会随乐谱一起保存和导出。':'已恢复自动推算的标记。';
  if(viewerOpen)rebuild(vIndex);
 }
@@ -450,7 +458,7 @@ function writeErhu(t,text){
 function clearAllErhu(){
  const ta=$('scoreInput'),before=ta.value,after=before.replace(/(^|[^\s\[])\[([^\]\d\s][^\]\s]{0,15})\]/gm,(m,a,b,o,str)=>{const lineStart=str.lastIndexOf('\n',o)+1;return /^\s*$/.test(str.slice(lineStart,o+a.length))?m:a});
  if(after===before){$('copyStatus').textContent='这首谱子没有手改的二胡标记。';return}
- ta.value=after;ta.dispatchEvent(new Event('input',{bubbles:true}));updateScore();$('copyStatus').textContent='已把整首的二胡标记恢复为自动推算。';if(viewerOpen)rebuild(vIndex);
+ ta.value=after;ta.dispatchEvent(new Event('input',{bubbles:true}));$('copyStatus').textContent='已把整首的二胡标记恢复为自动推算。';if(viewerOpen)rebuild(vIndex);
 }
 const noteSlice=(line,t)=>Jianpu.normalize(line).slice(t.col,t.col+t.len);
 document.addEventListener('click',e=>{
@@ -554,33 +562,59 @@ $('printScore').onclick=openPdfDialog;
 // ---------- edit mode (full-screen, side by side) ----------
 // Text on the left, each line beside the row it draws (@page separators line up too); the preview on the right
 // follows the viewer's notation × key (a staff preview is not row-aligned). Tapping a note selects its text and
-// flashes it; moving the caret flashes the note. Edits re-render the preview live; playback works as in the viewer.
-let vEdit=false,editTimer=0,editFocus=null;
+// highlights it; moving the caret highlights the note. Edits re-render the preview live; playback works as in the viewer.
+let vEdit=false,editTimer=0,editFocus=null,editorBuildId=0;
 async function openEditor(){
  if(!lastConverted)return;vEdit=true;$('scoreViewer').classList.add('editing');syncFloatPlayer();
  await openViewer();
 }
 const editLines=()=>$('scoreInput').value.replace(/\r\n?/g,'\n').split('\n');
+// Preserve a visible text row as an anchor, as well as caret/selection and both scroll axes.
+function editorPosition(){
+ const scroll=$('viewerBody').querySelector('.edit-scroll');if(!scroll)return null;
+ const box=scroll.getBoundingClientRect(),active=document.activeElement;
+ const capture=inp=>inp?{i:Number(inp.dataset.i),start:inp.selectionStart,end:inp.selectionEnd,direction:inp.selectionDirection,scrollLeft:inp.scrollLeft}:null;
+ const focus=active?.classList?.contains('edit-line')&&scroll.contains(active)?capture(active):null,selected=focus||capture(scroll.querySelector('.edit-line.edit-selected'));
+ const visible=inp=>{const r=inp.getBoundingClientRect();return r.bottom>box.top&&r.top<box.bottom};
+ const anchor=focus&&visible(active)?active:[...scroll.querySelectorAll('.edit-line')].find(visible);
+ return {top:scroll.scrollTop,left:scroll.scrollLeft,focus,selected,anchor:anchor?{i:Number(anchor.dataset.i),offset:anchor.getBoundingClientRect().top-box.top}:null};
+}
+function restoreEditorPosition(position,restoreFocus=true){
+ const scroll=$('viewerBody').querySelector('.edit-scroll');if(!scroll)return;
+ const focus=restoreFocus&&(editFocus||position?.focus);
+ if(focus){const inp=scroll.querySelector(`.edit-line[data-i="${focus.i}"]`);if(inp){
+  const start=Math.min(focus.start??focus.pos??0,inp.value.length),end=Math.min(focus.end??start,inp.value.length);
+  inp.focus({preventScroll:true});inp.setSelectionRange(start,end,focus.direction||'none');inp.scrollLeft=focus.scrollLeft||0;markEditSelection(inp);
+ }}else if(restoreFocus&&position?.selected){const p=position.selected,inp=scroll.querySelector(`.edit-line[data-i="${p.i}"]`);if(inp){inp.setSelectionRange(Math.min(p.start,inp.value.length),Math.min(p.end,inp.value.length));inp.scrollLeft=p.scrollLeft||0;markEditSelection(inp)}}
+ if(restoreFocus)editFocus=null;
+ if(!position)return;
+ scroll.scrollTop=position.top;scroll.scrollLeft=position.left;
+ const anchor=position.anchor&&scroll.querySelector(`.edit-line[data-i="${position.anchor.i}"]`);
+ if(anchor)scroll.scrollTop+=anchor.getBoundingClientRect().top-scroll.getBoundingClientRect().top-position.anchor.offset;
+}
 function buildEditor(){
  if(!lastConverted)return; // text currently has an error: keep the last good preview and lines
- const body=$('viewerBody');body.className='viewer-body edit-body';body.replaceChildren();
- const scroll=document.createElement('div');scroll.className='edit-scroll';const grid=document.createElement('div');grid.className='edit-grid';
+ const position=editorPosition(),buildId=++editorBuildId,body=$('viewerBody');body.className='viewer-body edit-body';
+ let scroll=body.querySelector('.edit-scroll');if(scroll)scroll.replaceChildren();else{scroll=document.createElement('div');scroll.className='edit-scroll';body.replaceChildren(scroll)}
+ const grid=document.createElement('div');grid.className='edit-grid';
  const left=document.createElement('div');left.className='jp-score viewer-sheet edit-left';const right=document.createElement('div');right.className='edit-right';
- grid.append(left,right);scroll.append(grid);body.append(scroll);
+ grid.append(left,right);scroll.append(grid);
  // The preview follows the viewer's notation × key. Converted lines drop @octave rows, so map them back to text lines.
+ if(vView==='trans')refreshTransLines();
  const src=lastConverted.source.lines,v=vView,trans=v==='trans'&&transAllLines,lines=trans?transAllLines:v==='source'?src:lastConverted.lines;
  const srcIndex=src.map((l,i)=>i).filter(i=>!(src[i].kind==='meta'&&src[i].name==='octave')),indexOf=l=>{const k=lines.indexOf(l);return k<0?-1:lines===src?k:srcIndex[k]??-1};
  const text=editLines();
  if(isStaff(v)){
   left.classList.remove('jp-score');left.classList.add('edit-staff');
-  Staff.render(left,lines,{keyLabel:staffKey(v),partNames:scoreParts(),...scoreDisplayOptions(lines,v==='trans'?'trans':'staff')}).catch(error=>{left.textContent='五线谱无法显示：'+error.message});
-  buildEditorFromText(text,true);$('viewerEditStatus').textContent='五线谱预览不与文字逐行对齐；改完自动重排';$('viewerEditStatus').classList.remove('error');return;
+  const drawing=Staff.render(left,lines,{keyLabel:staffKey(v),partNames:scoreParts(),...scoreDisplayOptions(lines,v==='trans'?'trans':'staff')});
+  buildEditorFromText(text,true,position);const restoredTop=scroll.scrollTop;
+  drawing.then(()=>{if(buildId===editorBuildId&&scroll.isConnected&&scroll.scrollTop===restoredTop)restoreEditorPosition(position,false)}).catch(error=>{left.textContent='五线谱无法显示：'+error.message});$('viewerEditStatus').textContent='五线谱预览不与文字逐行对齐；改完自动重排';$('viewerEditStatus').classList.remove('error');return;
  }
  Jianpu.render(left,lines,erhuOpts(lines,v,{minFont:12}));
  if(lines!==src)for(const l of lines)if(l.kind==='music')for(const t of l.tokens){for(const n of t.t==='chord'?t.notes:[t])if(n.src)n.src._editCell=n._cell}
  // Blocks: each rendered row with the text lines it came from; lines that draw nothing join the block before them.
  const blocks=[...left.children].filter(el=>el._src&&!el.classList.contains('jp-overlay')).map(el=>({el,idx:el._src.map(indexOf).filter(i=>i>=0)})).filter(b=>b.idx.length).sort((a,b)=>Math.min(...a.idx)-Math.min(...b.idx));
- if(!blocks.length)return;
+ if(!blocks.length){restoreEditorPosition(position);return}
  const owner=new Array(text.length);
  for(let i=0;i<text.length;i++){let k=0;for(let j=0;j<blocks.length;j++)if(Math.min(...blocks[j].idx)<=i)k=j;owner[i]=k}
  blocks.forEach(b=>b.lines=[]);owner.forEach((k,i)=>blocks[k].lines.push(i));
@@ -598,26 +632,29 @@ function buildEditor(){
  blocks.forEach(b=>{b.box.style.top=b.el.offsetTop+'px';b.box.style.height=Math.max(b.lines.length*lineH,b.el.offsetHeight)+'px'});
  right.style.minHeight=left.scrollHeight+'px';
  for(const inp of inputs.filter(Boolean)){
-  inp.oninput=()=>{clearTimeout(editTimer);editTimer=setTimeout(flushEdit,450)};
+  bindEditInput(inp);
   inp.onkeydown=e=>editKey(e,inp);
   inp.onkeyup=inp.onclick=()=>caretFlash(inp);
  }
- if(editFocus){const inp=inputs[editFocus.i];if(inp){inp.focus({preventScroll:true});inp.setSelectionRange(editFocus.pos,editFocus.pos)}editFocus=null}
+ restoreEditorPosition(position);
  $('viewerEditStatus').textContent='点右边谱面上的音，左边对应的文字会选中；改完自动重排';$('viewerEditStatus').classList.remove('error','jump');
  // A rebuild (resize, view switch) while the text has an error keeps the error visible.
  if(!$('scoreError').hidden&&$('scoreError').textContent){$('viewerEditStatus').textContent=$('scoreError').textContent;$('viewerEditStatus').classList.add('error');markEditError()}
+}
+function bindEditInput(inp){
+ inp.oninput=e=>{clearTimeout(editTimer);if(e?.isComposing)return;editTimer=setTimeout(flushEdit,450)};
+ inp.addEventListener('compositionstart',()=>clearTimeout(editTimer));inp.addEventListener('compositionend',()=>inp.oninput());
 }
 // Each text line sits in a row that shows its line number (as in the workbench text pane).
 function numbered(inp,i){const row=document.createElement('div');row.className='edit-row';row.dataset.n=i+1;row.append(inp);return row}
 function editText(){return [...$('viewerBody').querySelectorAll('.edit-line')].sort((a,b)=>a.dataset.i-b.dataset.i).map(i=>i.value).join('\n')}
 // Writes the edited text back to the score input; on a format error the left side keeps the last good version.
-function flushEdit(){
+function flushEdit(renderPreview=true){
  if(!vEdit)return;const inputs=$('viewerBody').querySelectorAll('.edit-line');if(!inputs.length)return;
  const text=editText();if(text===$('scoreInput').value)return;
- const a=document.activeElement;if(a?.classList?.contains('edit-line'))editFocus={i:Number(a.dataset.i),pos:a.selectionStart};
  $('scoreInput').value=text;updateScore();
  if(!$('scoreError').hidden&&$('scoreError').textContent){$('viewerEditStatus').textContent=$('scoreError').textContent;$('viewerEditStatus').classList.add('error');editFocus=null;markEditError();return}
- if(ScorePlayer.isPlaying())ScorePlayer.stop();buildEditor();
+ if(ScorePlayer.isPlaying())ScorePlayer.stop();if(renderPreview)buildEditor();
 }
 // Enter splits a line, Backspace at the start joins it to the previous one, ↑ / ↓ move between lines.
 function editKey(e,inp){
@@ -640,36 +677,39 @@ function markEditError(){
 }
 $('viewerEditStatus').addEventListener('click',()=>{const inp=$('viewerBody').querySelector('.edit-line.has-error');if(inp){inp.focus();inp.scrollIntoView({block:'center'})}});
 // When the text does not parse, still rebuild the right side so lines match what was typed.
-function buildEditorFromText(lines,force=false){
+function buildEditorFromText(lines,force=false,position=editorPosition()){
  if(!force&&($('scoreError').hidden||!$('scoreError').textContent)){buildEditor();return}
  const right=$('viewerBody').querySelector('.edit-right');if(!right)return;
  const box=document.createElement('div');box.className='edit-block plain';
- lines.forEach((t,i)=>{const inp=document.createElement('input');inp.className='edit-line';inp.value=t;inp.dataset.i=i;inp.spellcheck=false;inp.oninput=()=>{clearTimeout(editTimer);editTimer=setTimeout(flushEdit,450)};inp.onkeydown=e=>editKey(e,inp);box.append(numbered(inp,i))});
+ lines.forEach((t,i)=>{const inp=document.createElement('input');inp.className='edit-line';inp.value=t;inp.dataset.i=i;inp.spellcheck=false;bindEditInput(inp);inp.onkeydown=e=>editKey(e,inp);box.append(numbered(inp,i))});
  box.querySelectorAll('.edit-line').forEach(inp=>{inp.onkeyup=inp.onclick=()=>caretFlash(inp)});
  right.replaceChildren(box);right.style.height='auto';
- if(editFocus){const inp=box.querySelector(`.edit-line[data-i="${editFocus.i}"]`);inp?.focus();inp?.setSelectionRange(editFocus.pos,editFocus.pos);editFocus=null}
+ restoreEditorPosition(position);
 }
 // Source tokens of a text line, in column order (spaces dropped).
 function lineTokens(i){
  const l=lastConverted?.source.lines[i];if(!l||l.kind!=='music')return [];
  return l.tokens.filter(t=>t.t!=='space'&&t.col!=null).sort((a,b)=>a.col-b.col);
 }
-function flash(el,cls='edit-flash',ms=2500){if(!el)return;el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls);clearTimeout(el._flashT);el._flashT=setTimeout(()=>el.classList.remove(cls),ms)}
-// Tap on a note (left): select its text on the right for a few seconds.
+// Tap on a note (left): keep its text and preview selected until selection changes.
 function editSelect(token){
  const src=token.src||token,i=(src.line??0)-1,inp=$('viewerBody').querySelector(`.edit-line[data-i="${i}"]`);if(!inp)return;
  const toks=lineTokens(i),k=toks.indexOf(src),end=k>=0&&k+1<toks.length?toks[k+1].col:inp.value.length;
  let stop=end;while(stop>src.col&&/\s/.test(inp.value[stop-1]))stop--;
  inp.focus({preventScroll:true});inp.setSelectionRange(src.col,stop);inp.scrollIntoView({block:'nearest'});
- flash(inp);flash(token._cell||src._cell,'edit-flash-note');
+ markEditSelection(inp);
 }
-// Caret moved on the right: flash the note under it on the left.
-function caretFlash(inp){
- const i=Number(inp.dataset.i),toks=lineTokens(i),pos=inp.selectionStart;let hit=null;
- for(const t of toks)if(t.col<=pos)hit=t;else break;
- const cell=[hit?._editCell,hit?._cell].find(c=>c?.isConnected&&$('viewerBody').contains(c));
- if(cell){flash(cell,'edit-flash-note',1500);cell.scrollIntoView({block:'nearest'})}
+// Selection stays highlighted until another row/note is selected, including after a rebuild.
+function markEditSelection(inp,scroll=false){
+ const body=$('viewerBody');for(const old of body.querySelectorAll('.edit-selected'))old.classList.remove('edit-selected');for(const old of body.querySelectorAll('.edit-selected-note'))old.classList.remove('edit-selected-note');
+ inp.classList.add('edit-selected');
+ const toks=lineTokens(Number(inp.dataset.i)).filter(t=>['note','rest','chord','percussion'].includes(t.t)),start=inp.selectionStart,end=inp.selectionEnd;
+ let selected=toks.filter(t=>start<end&&t.col<end&&t.col+(t.len||1)+(t.erhuLen||0)>start);
+ if(start===end){let hit=null;for(const t of toks)if(t.col<=start)hit=t;else break;selected=hit?[hit]:[]}
+ const cells=selected.map(t=>[t._editCell,t._cell].find(c=>c?.isConnected&&body.contains(c))).filter(Boolean);
+ for(const cell of cells)cell.classList.add('edit-selected-note');if(scroll)cells[0]?.scrollIntoView({block:'nearest'});
 }
+function caretFlash(inp){markEditSelection(inp,true)}
 $('viewerBody').addEventListener('click',e=>{if(!vEdit)return;const t=tokenAt(e.target);if(t&&t.t!=='bar')editSelect(t)});
 
 // ---------- full-screen viewer ----------
@@ -779,7 +819,7 @@ async function openViewer(){
 function closeViewer(){
  viewerRenderId++;
  if(perform)setPerform(false);
- if(vEdit){vEdit=false;$('scoreViewer').classList.remove('editing');clearTimeout(editTimer);flushEdit()}
+ if(vEdit){clearTimeout(editTimer);flushEdit(false);vEdit=false;editorBuildId++;$('scoreViewer').classList.remove('editing')}
  viewerOpen=false;$('scoreViewer').hidden=true;document.body.classList.remove('viewer-open');$('viewerBody').replaceChildren();clearViewerHighlight();
  syncFloatPlayer();
  // The viewer re-rendered tokens into its own cells; draw the card again so highlights land there.
@@ -831,4 +871,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 14:05:33
+// Modified by AI on 2026-10-11 14:37:40

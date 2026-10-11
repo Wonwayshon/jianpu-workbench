@@ -110,7 +110,7 @@ const select=ids=>store.set('flute.erhuParts',JSON.stringify({signature:JSON.str
 select(['胡']);const selected=c.erhuFor(p.lines,'source');assert.ok(selected.map.size>0);
 for(const line of p.lines.filter(l=>l.kind==='music'))for(const t of line.tokens.filter(t=>t.t==='note'))assert.equal(selected.map.has(t),line.part==='胡');
 const before=calls;const later=c.erhuFor(systems[1].lines,'source');assert.equal(calls,before,'cached full-part inference reused on later pages');
-for(const [t,value] of later.map)assert.equal(value,selected.map.get(t));
+for(const [t,value] of later.map)assert.deepEqual(value,selected.map.get(t));
 assert.equal(c.erhuFor(J.filterParts(p.lines,['笛']),'source'),null,'display filtering does not switch erhu to another voice');
 J.render(host,p.lines,{fit:false,annotations:selected.map});assert.equal(host.querySelectorAll('.jp-erhu-line').length,3);assert.equal(host.querySelectorAll('.jp-line').length,9);
 select(p.parts.map(x=>x.id));const all=c.erhuFor(p.lines,'source');
@@ -130,4 +130,4 @@ vm.runInContext(view.slice(view.indexOf('async function showPage('),view.indexOf
  assert.deepEqual($('viewerBody').children.map(e=>e.attrs['aria-label']),['第 3 页','第 4 页']);assert.match($('viewerPage').textContent,/3–4/);
  console.log('PASS: measured two-page available area, full-score pagination retains all 36 rows in intact systems; rapid page turns do not append stale pages.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-08 23:50:50
+// Modified by AI on 2026-10-11 14:34:41

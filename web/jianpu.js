@@ -372,6 +372,7 @@ function render(host,lines,opts={}){
    if(t.t==='tupOpen'){tupOpen.push(t.n);continue}
    if(t.t==='tupClose'){const s=tupStarts.pop();if(s&&lastNote)tuplets.push([s.cell,lastNote,s.n]);continue}
    const cell=noteCell(t),isNote=t.t==='note'||t.t==='rest'||t.t==='chord'||t.t==='percussion',under=isNote&&!t.grace&&t.under>0;
+   const review=t.t==='note'&&opts.annotations?.get(t);if(review&&(review.review?.length||review.finger==null)){cell.classList.add('jp-review');cell.title='指法需核对：'+(review.review?.join('；')||'没有可用的指法手型')}
    if(opts.annotations&&t.t==='note'){const lab=opts.label?.(opts.annotations.get(t));if(lab){const orns=[...cell.querySelectorAll(':scope>.jp-orn')];if(orns.length){const row=document.createElement('span');row.className='anno-orn';for(const o of orns){o.remove();row.append(o.textContent)}lab.prepend(row)}cell.append(lab)}}
    if(t.grace){graces.push(cell);continue}
    // Keep the small notes beside their following main note, including inside a shared beam.
@@ -493,4 +494,4 @@ function drawOverlay(host){
 
 window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline,numberMeasures};
 })();
-// Modified by AI on 2026-10-11 13:31:57
+// Modified by AI on 2026-10-11 14:29:02
