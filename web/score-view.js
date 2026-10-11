@@ -501,6 +501,8 @@ function pdfDialog(){
   +'<div class="pdf-field"><span>记谱法</span><div class="app-segments" role="group" aria-label="记谱法"><button type="button" data-n="jp">简谱</button><button type="button" data-n="staff">五线谱</button></div></div>'
   +'<div class="pdf-field"><label for="pdfKey">调</label><select id="pdfKey"><option value="orig">原调</option><option value="fixed">音名谱（固定 1=C）</option><option value="trans">转调</option></select></div>'
   +'<p class="subtle pdf-trans-note"></p>'
+  +'<label class="pdf-switch"><input type="checkbox" role="switch" id="pdfReflow">重新排版</label>'
+  +'<p class="subtle compact">忽略原谱分页，按纸张连续排版；总谱谱组保持完整。</p>'
   +'<label class="pdf-switch"><input type="checkbox" role="switch" id="pdfMeasures">小节号</label>'
   +'<label class="pdf-switch"><input type="checkbox" role="switch" id="pdfErhu">二胡指法与弓法</label>'
   +'<p class="subtle pdf-erhu-note">二胡标记只用于简谱的原调或转调。</p>'
@@ -528,6 +530,7 @@ function openPdfDialog(){
 }
 function exportPdf(){
  const d=pdfDlg,staff=d.dataset.n==='staff',key=d.querySelector('#pdfKey').value,name=sheetTitle(lastConverted.source,'');
+ const printable=lines=>d.querySelector('#pdfReflow').checked?reflowLines(lines):lines;
  const keepMeasure=measureOn,keepErhu=$('erhuFinger').checked;measureOn=d.querySelector('#pdfMeasures').checked;$('erhuFinger').checked=d.querySelector('#pdfErhu').checked;
  try{
   if(key==='trans'){
@@ -535,14 +538,14 @@ function exportPdf(){
    if(!lines.some(l=>l.kind==='meta'&&l.name==='note'))lines.unshift({kind:'meta',name:'note',value:`原谱 1=${lastConverted.keyLabel} → 1=${k}${$('transMode').value==='move'?'（整曲移调）':''}`});
    const keepAll=transAllLines;transAllLines=all;
    const extra=staff?{partNames:scoreParts(),...scoreDisplayOptions(lines,'trans')}:erhuOpts(lines,'trans');transAllLines=keepAll;
-   printScoreSheet(lines,`${name||'转调谱'} 1=${k}${staff?' 五线谱':''}`,$('transMode').value==='move'?`整曲移到 1=${k}`:`保持原音高，按 1=${k} 记谱`,staff?'staff':'jianpu',k,extra);
+   printScoreSheet(printable(lines),`${name||'转调谱'} 1=${k}${staff?' 五线谱':''}`,$('transMode').value==='move'?`整曲移到 1=${k}`:`保持原音高，按 1=${k} 记谱`,staff?'staff':'jianpu',k,extra);
   }else if(staff){
    const lines=F(lastConverted.lines);
-   printScoreSheet(lines,`${name||'乐谱'} 五线谱`,$('conversionCaption').textContent,'staff',key==='fixed'?'C':lastConverted.keyLabel,{partNames:scoreParts(),...scoreDisplayOptions(lines,'staff')});
+   printScoreSheet(printable(lines),`${name||'乐谱'} 五线谱`,$('conversionCaption').textContent,'staff',key==='fixed'?'C':lastConverted.keyLabel,{partNames:scoreParts(),...scoreDisplayOptions(lines,'staff')});
   }else if(key==='fixed'){
-   const lines=F(lastConverted.lines);printScoreSheet(lines,`${name||'乐谱'} 音名谱`,$('conversionCaption').textContent,'jianpu',undefined,{partNames:scoreParts(),...scoreDisplayOptions(lines,'flute')});
+   const lines=F(lastConverted.lines);printScoreSheet(printable(lines),`${name||'乐谱'} 音名谱`,$('conversionCaption').textContent,'jianpu',undefined,{partNames:scoreParts(),...scoreDisplayOptions(lines,'flute')});
   }else{
-   const lines=F(lastConverted.source.lines);printScoreSheet(lines,`${name||'简谱'}`,'','jianpu',undefined,erhuOpts(lines,'source'));
+   const lines=F(lastConverted.source.lines);printScoreSheet(printable(lines),`${name||'简谱'}`,'','jianpu',undefined,erhuOpts(lines,'source'));
   }
  }finally{measureOn=keepMeasure;$('erhuFinger').checked=keepErhu}
 }
@@ -828,4 +831,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 12:56:19
+// Modified by AI on 2026-10-11 14:05:33
