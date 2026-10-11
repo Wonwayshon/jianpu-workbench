@@ -292,8 +292,9 @@ function label(r){
  if(r.guideFinger)hints.push(`${FINGERS[r.guideFinger]}指带指换把，${r.shift==='up'?'手向下移、音高上升':'手向上移、音高下降'}，指法建议不改变原谱音高或播放`);
  if(r.trill)hints.push(`颤音：${FINGERS[r.finger]}指与${FINGERS[r.trill.finger]}指交替；上邻音 ${NAMES[r.trill.midi%12]}${Math.floor(r.trill.midi/12)-1}，同弦同把位（按当前调内上邻音推算）`);
  if(r.extended)hints.push('四指延伸：仅在避免额外换把更合适时采用，需按个人手型核对');
+ // Trills show only the stopped finger (the alternating one is in the tooltip).
  // With a shift arrow already drawn, 「滑」 would only repeat it (and crowd neighbours); the tooltip keeps the hint.
- add(low,'anno-finger',FINGERS[r.finger]+(r.guideFinger&&!r.shift?'滑':'')+(r.extended?'伸':'')+(r.trill?'↔'+FINGERS[r.trill.finger]:''),hints.join('；')||undefined);
+ add(low,'anno-finger',FINGERS[r.finger]+(r.guideFinger&&!r.shift?'滑':'')+(r.extended?'伸':''),hints.join('；')||undefined);
  box.append(row,low);return box;
 }
 // Tuning for a key: the six common keys keep the standard D–A strings (named by scale degree); other keys use the
@@ -333,4 +334,4 @@ function applyOverride(r,text){
 }
 window.ErhuFingering={annotate,label,parseOverride,applyOverride,autoTuning,tuningLabel,stringsName,TUNINGS:[['D–A（标准定弦）',[62,69]],['C–G',[60,67]],['E♭–B♭',[63,70]],['E–B',[64,71]],['F–C',[65,72]],['G–D（二泉调 / 中胡）',[55,62]]]};
 })();
-// Modified by AI on 2026-10-11 12:53:29
+// Modified by AI on 2026-10-11 12:54:59

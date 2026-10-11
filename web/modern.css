@@ -1028,4 +1028,11 @@ body:has(#floatPlayer:not([hidden])) main{padding-bottom:110px}
 .erhu-edit-opts button[aria-checked=true],.erhu-edit-opts button[aria-pressed=true]{background:var(--accent);color:var(--on-accent,#fff)}
 .erhu-edit-sheet .dialog-actions{display:flex;justify-content:space-between;gap:8px}
 .viewer.perform .jp-anno{pointer-events:none}
-/* Modified by AI on 2026-10-11 12:52:40 */
+/* Double-tap menu on a note */
+.note-menu{position:fixed;z-index:70;display:flex;gap:2px;padding:4px;border-radius:14px;background:var(--dark);box-shadow:0 10px 28px #0F111547;white-space:nowrap}
+.note-menu[hidden]{display:none}
+.note-menu button{min-height:38px;padding:0 12px;border-radius:10px;background:transparent;color:#fff;font-size:14px;font-weight:500}
+.note-menu button:hover{background:#2A2E37}
+.note-menu #startHerePlay{background:var(--accent);color:var(--on-accent,#fff)}
+.note-menu button[hidden]{display:none}
+/* Modified by AI on 2026-10-11 12:54:59 */

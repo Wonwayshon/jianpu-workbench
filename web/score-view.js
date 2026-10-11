@@ -452,10 +452,23 @@ document.addEventListener('click',e=>{
 },true);
 function tokenAt(target){for(let el=target;el&&el!==document.body;el=el.parentNode)if(el._token)return el._token;return null}
 let lastTap={t:0,x:0,y:0},startToken=null,hideTimer=0;
+// Double-tap a note: 从这里开始播放 / 编辑 (its text) / 编辑指法 (when erhu markings are on for that note).
 function showStartHere(x,y,token){
- startToken=token;const b=$('startHere');b.hidden=false;
- const w=b.offsetWidth||170;b.style.left=Math.min(innerWidth-w-8,Math.max(8,x-w/2))+'px';b.style.top=Math.max(8,y-64)+'px';
- clearTimeout(hideTimer);hideTimer=setTimeout(()=>{b.hidden=true},4000);
+ startToken=token;const b=$('startHere'),src=token.src||token;
+ $('startHereErhu').hidden=!(token.t==='note'&&!token.src&&token.line&&$('erhuFinger').checked&&lastErhuMap?.has(token));
+ $('startHereEdit').hidden=!(src.line&&src.col!=null);
+ b.hidden=false;
+ const w=b.offsetWidth||260;b.style.left=Math.min(innerWidth-w-8,Math.max(8,x-w/2))+'px';b.style.top=Math.max(8,y-64)+'px';
+ clearTimeout(hideTimer);hideTimer=setTimeout(()=>{b.hidden=true},6000);
+}
+// 编辑: in full screen go to edit mode at this note; on the page select its text in 乐谱文本.
+async function editAtNote(token){
+ const src=token.src||token;if(!src.line)return;
+ if(viewerOpen){if(!vEdit){vEdit=true;$('scoreViewer').classList.add('editing');syncFloatPlayer();await rebuild(vIndex)}editSelect(src);return}
+ const ta=$('scoreInput'),lines=ta.value.replace(/\r\n?/g,'\n').split('\n');let start=0;for(let i=0;i<src.line-1&&i<lines.length;i++)start+=lines[i].length+1;
+ start+=src.col||0;const end=start+(src.len||1)+(src.erhuLen||0);
+ window.setScorePane?.('text');ta.focus();ta.setSelectionRange(start,end);
+ const lh=parseFloat(getComputedStyle(ta).lineHeight)||28;ta.scrollTop=Math.max(0,(src.line-3)*lh);
 }
 function onTap(e){
  if(perform)return; // taps turn pages in performance mode
@@ -465,8 +478,10 @@ function onTap(e){
  lastTap={t:now,x:e.clientX,y:e.clientY};
 }
 for(const id of ['scoreOutput','scorePreview','staffOutput','transOutput','viewerBody'])$(id).addEventListener('pointerup',onTap);
-$('startHere').onclick=()=>{$('startHere').hidden=true;ScorePlayer.stop();startPlayback(startToken)};
-document.addEventListener('pointerdown',e=>{if(e.target!==$('startHere')&&!tokenAt(e.target))$('startHere').hidden=true});
+$('startHerePlay').onclick=()=>{$('startHere').hidden=true;ScorePlayer.stop();startPlayback(startToken)};
+$('startHereEdit').onclick=()=>{$('startHere').hidden=true;editAtNote(startToken)};
+$('startHereErhu').onclick=()=>{$('startHere').hidden=true;openErhuEditor(startToken)};
+document.addEventListener('pointerdown',e=>{if(!$('startHere').contains(e.target)&&!tokenAt(e.target))$('startHere').hidden=true});
 
 // ---------- PDF export: choose notation, key, bar numbers and erhu markings ----------
 let pdfDlg=null;
@@ -804,4 +819,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 12:52:40
+// Modified by AI on 2026-10-11 12:54:59
