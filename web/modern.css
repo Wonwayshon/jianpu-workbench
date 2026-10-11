@@ -1035,4 +1035,6 @@ body:has(#floatPlayer:not([hidden])) main{padding-bottom:110px}
 .note-menu button:hover{background:#2A2E37}
 .note-menu #startHerePlay{background:var(--accent);color:var(--on-accent,#fff)}
 .note-menu button[hidden]{display:none}
-/* Modified by AI on 2026-10-11 12:55:25 */
+.erhu-edit-sheet .dialog-actions .grow{flex:1}
+.erhu-edit-sheet .dialog-actions button.armed{background:var(--danger-bg);color:var(--danger)}
+/* Modified by AI on 2026-10-11 12:56:19 */

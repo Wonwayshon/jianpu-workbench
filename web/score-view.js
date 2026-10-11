@@ -410,12 +410,15 @@ function erhuEditor(){
  d.innerHTML='<div class="sheet-body"><div class="sheet-head"><h2>修改指法 <small class="erhu-edit-note"></small></h2><button type="button" class="small-btn" data-close>关闭</button></div>'
   +ERHU_GROUPS.map(([k,label,opts])=>`<div class="erhu-edit-row"><span>${label}</span><div class="erhu-edit-opts" role="radiogroup" aria-label="${label}" data-k="${k}">${opts.map(([v,t])=>`<button type="button" role="radio" data-v="${v}">${t}</button>`).join('')}</div></div>`).join('')
   +'<div class="erhu-edit-row"><span>其他</span><div class="erhu-edit-opts"><button type="button" data-x="滑" aria-pressed="false">滑（带指换把）</button><button type="button" data-x="伸" aria-pressed="false">伸（四指延伸）</button><button type="button" data-x="-" aria-pressed="false">隐藏这个音的标记</button></div></div>'
-  +'<p class="subtle erhu-edit-auto"></p><div class="dialog-actions"><button type="button" data-reset>恢复自动</button><button type="button" class="primary" data-save>保存</button></div></div>';
+  +'<p class="subtle erhu-edit-auto"></p><div class="dialog-actions"><button type="button" data-reset>恢复自动</button><button type="button" data-reset-all>整首恢复自动</button><span class="grow"></span><button type="button" class="primary" data-save>保存</button></div></div>';
  document.body.append(d);
  d.querySelector('[data-close]').onclick=()=>d.close();d.addEventListener('click',e=>{if(e.target===d)d.close()});
  for(const g of d.querySelectorAll('[data-k]'))g.addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;for(const x of g.children)x.setAttribute('aria-checked',String(x===b))});
  for(const b of d.querySelectorAll('[data-x]'))b.onclick=()=>b.setAttribute('aria-pressed',String(b.getAttribute('aria-pressed')!=='true'));
- d.querySelector('[data-reset]').onclick=()=>{d.close();writeErhu(erhuTok,'')};
+ // Resets ask twice: the first tap arms the button for 3 seconds.
+ const twice=(b,label,run)=>{let t=0;b.onclick=()=>{if(b.classList.contains('armed')){clearTimeout(t);b.classList.remove('armed');b.textContent=label;run();return}b.classList.add('armed');b.textContent='确认'+label+'？';t=setTimeout(()=>{b.classList.remove('armed');b.textContent=label},3000)}};
+ twice(d.querySelector('[data-reset]'),'恢复自动',()=>{d.close();writeErhu(erhuTok,'')});
+ twice(d.querySelector('[data-reset-all]'),'整首恢复自动',()=>{d.close();clearAllErhu()});
  d.querySelector('[data-save]').onclick=()=>{d.close();writeErhu(erhuTok,erhuText())};
  return erhuDlg=d;
 }
@@ -442,6 +445,12 @@ function writeErhu(t,text){
  ta.value=lines.join('\n');ta.dispatchEvent(new Event('input',{bubbles:true}));updateScore();
  $('copyStatus').textContent=text?'已修改这个音的二胡标记，会随乐谱一起保存和导出。':'已恢复自动推算的标记。';
  if(viewerOpen)rebuild(vIndex);
+}
+// Removes every hand-edited […] marking from the score text.
+function clearAllErhu(){
+ const ta=$('scoreInput'),before=ta.value,after=before.replace(/(^|[^\s\[])\[([^\]\d\s][^\]\s]{0,15})\]/gm,(m,a,b,o,str)=>{const lineStart=str.lastIndexOf('\n',o)+1;return /^\s*$/.test(str.slice(lineStart,o+a.length))?m:a});
+ if(after===before){$('copyStatus').textContent='这首谱子没有手改的二胡标记。';return}
+ ta.value=after;ta.dispatchEvent(new Event('input',{bubbles:true}));updateScore();$('copyStatus').textContent='已把整首的二胡标记恢复为自动推算。';if(viewerOpen)rebuild(vIndex);
 }
 const noteSlice=(line,t)=>Jianpu.normalize(line).slice(t.col,t.col+t.len);
 document.addEventListener('click',e=>{
@@ -819,4 +828,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 12:55:25
+// Modified by AI on 2026-10-11 12:56:19
