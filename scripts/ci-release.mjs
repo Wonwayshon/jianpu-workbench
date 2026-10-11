@@ -5,7 +5,7 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export const project=JSON.parse(fs.readFileSync(path.join(root,'project.json'),'utf8'));
-export function expectedFiles(version=project.version){return [`flute-key-lab-${version}.apk`,`flute-key-lab-macos-arm64-${version}.dmg`,`flute-key-lab-macos-arm64-${version}.zip`,`flute-key-lab-windows-x64-${version}.exe`,`flute-key-lab-project-${version}.zip`,'instrument-audition.html','LICENSE',`SHA256SUMS-${version}.txt`]}
+export function expectedFiles(version=project.version){return [`flute-key-lab-${version}.apk`,`flute-key-lab-macos-arm64-${version}.dmg`,`flute-key-lab-macos-arm64-${version}.zip`,`flute-key-lab-windows-x64-${version}.exe`,`flute-key-lab-project-${version}.zip`,'LICENSE',`SHA256SUMS-${version}.txt`]}
 export function verifyTag(tag){if(tag!==`v${project.version}`)throw Error('Tag must match project.json exactly');return tag}
 export function verifyAssets(assets,files){
  if(assets.length!==files.length)throw Error('Unexpected Release asset count');
@@ -63,4 +63,4 @@ async function main(){
  console.log(`Published and verified ${release.html_url} (${files.length} assets)`);
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))await main();
-// Modified by AI on 2026-10-10 16:22:16
+// Modified by AI on 2026-10-11 13:05:22

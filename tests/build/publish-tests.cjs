@@ -20,7 +20,7 @@ if(args[0]==='api'){
  else if(url.includes('/releases/tags/')){console.error('Draft tag lookup is intentionally unavailable');process.exit(1)}
  else if(url.endsWith('/releases')&&method==='POST'){const body=JSON.parse(fs.readFileSync(0,'utf8'));s.events.push('create-draft');s.release={...body,id:2,assets:[],html_url:'https://example.invalid/release'};out(s.release)}
  else if(url.endsWith('/releases/2')&&method==='GET')out(s.release);
- else if(url.endsWith('/releases/2')&&method==='PATCH'){if(s.release.assets.length!==8)throw Error('Published before all uploads');Object.assign(s.release,JSON.parse(fs.readFileSync(0,'utf8')));s.events.push('publish');out(s.release)}
+ else if(url.endsWith('/releases/2')&&method==='PATCH'){if(s.release.assets.length!==7)throw Error('Published before all uploads');Object.assign(s.release,JSON.parse(fs.readFileSync(0,'utf8')));s.events.push('publish');out(s.release)}
  else if(url.endsWith('/releases/latest')){s.latestCalls++;out(s.latestCalls===1?old:s.release)}
  else throw Error('Unexpected API '+method+' '+url);
 }else if(args[0]==='release'&&args[1]==='upload'){
@@ -35,8 +35,9 @@ if(args[0]==='api'){
   const r=spawnSync(process.execPath,[path.join(tmp,'scripts/ci-release.mjs'),'publish'],{env:{...process.env,PATH:path.join(tmp,'bin')+path.delimiter+process.env.PATH,GITHUB_REF_NAME:tag,GITHUB_REPOSITORY:'Wonwayshon/jianpu-workbench',PUBLISH_TEST_STATE:state},encoding:'utf8'});
   const result=JSON.parse(fs.readFileSync(state));
   if(corrupt){assert.notEqual(r.status,0);assert.equal(result.release.draft,true);assert.equal(result.removed,undefined);assert.deepEqual(result.events,['create-draft','upload'])}
-  else{assert.equal(r.status,0,r.stderr);assert.deepEqual(result.events,['create-draft','upload','publish','delete-old']);assert.equal(result.latestCalls,2);assert.equal(result.release.assets.length,8)}
+  else{assert.equal(r.status,0,r.stderr);assert.deepEqual(result.events,['create-draft','upload','publish','delete-old']);assert.equal(result.latestCalls,2);assert.equal(result.release.assets.length,7);assert.ok(!result.release.assets.some(a=>a.name==='instrument-audition.html'));assert.ok(!fs.readFileSync(path.join(tmp,'outputs',`SHA256SUMS-${project.version}.txt`),'utf8').includes('instrument-audition.html'))}
  }
+ // An old local audition output must never become a Release asset or checksum entry.
  console.log('PASS: full publisher handles draft-ID lookup and delayed latest endpoint; corrupt upload stays a draft and preserves old release');
 }finally{fs.rmSync(tmp,{recursive:true,force:true})}
-// Modified by AI on 2026-10-10 16:23:50
+// Modified by AI on 2026-10-11 13:05:22

@@ -21,13 +21,11 @@ jobs:
       - run: npm run security:check
       - run: npm test
       - run: npm run release:source
-      - run: npm run build:audition
       - uses: actions/upload-artifact@v4
         with:
           name: release-source
           path: |
             outputs/flute-key-lab-project-*.zip
-            outputs/instrument-audition.html
           if-no-files-found: error
   android:
     needs: verify
