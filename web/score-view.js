@@ -401,15 +401,15 @@ dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
 
 // ---------- double tap: play from here ----------
 // ---------- hand-editing erhu markings: tap a marking, change it, the text gets 「[外二⊓]」 after that note ----------
-const ERHU_GROUPS=[['bow','弓法',[['','自动'],['⊓','⊓ 拉'],['V','V 推'],['无弓','不标']]],['string','弦',[['','自动'],['内','内'],['外','外']]],
- ['finger','手指',[['','自动'],['〇','〇'],['一','一'],['二','二'],['三','三'],['四','四']]],['shift','换把',[['','自动'],['↓','↓'],['↑','↑'],['无换','不标']]]];
+const ERHU_GROUPS=[['bow','弓法',[['','自动'],['⊓','出弓 ⊓'],['V','进弓 V'],['无弓','不标']]],['string','弦',[['','自动'],['内','内弦'],['外','外弦']]],
+ ['finger','指法',[['','自动'],['〇','〇'],['一','一'],['二','二'],['三','三'],['四','四']]],['shift','上下滑',[['','自动'],['↓','↓ 往下（音变高）'],['↑','↑ 往上（音变低）'],['无换','不标']]]];
 let erhuDlg=null,erhuTok=null;
 function erhuEditor(){
  if(erhuDlg)return erhuDlg;
  const d=document.createElement('dialog');d.className='sheet erhu-edit-sheet';d.setAttribute('aria-label','修改二胡指法');
  d.innerHTML='<div class="sheet-body"><div class="sheet-head"><h2>修改指法 <small class="erhu-edit-note"></small></h2><button type="button" class="small-btn" data-close>关闭</button></div>'
   +ERHU_GROUPS.map(([k,label,opts])=>`<div class="erhu-edit-row"><span>${label}</span><div class="erhu-edit-opts" role="radiogroup" aria-label="${label}" data-k="${k}">${opts.map(([v,t])=>`<button type="button" role="radio" data-v="${v}">${t}</button>`).join('')}</div></div>`).join('')
-  +'<div class="erhu-edit-row"><span>附加</span><div class="erhu-edit-opts"><button type="button" data-x="滑" aria-pressed="false">滑（带指换把）</button><button type="button" data-x="伸" aria-pressed="false">伸（四指延伸）</button><button type="button" data-x="-" aria-pressed="false">隐藏这个音的标记</button></div></div>'
+  +'<div class="erhu-edit-row"><span>其他</span><div class="erhu-edit-opts"><button type="button" data-x="滑" aria-pressed="false">滑（带指换把）</button><button type="button" data-x="伸" aria-pressed="false">伸（四指延伸）</button><button type="button" data-x="-" aria-pressed="false">隐藏这个音的标记</button></div></div>'
   +'<p class="subtle erhu-edit-auto"></p><div class="dialog-actions"><button type="button" data-reset>恢复自动</button><button type="button" class="primary" data-save>保存</button></div></div>';
  document.body.append(d);
  d.querySelector('[data-close]').onclick=()=>d.close();d.addEventListener('click',e=>{if(e.target===d)d.close()});
@@ -430,7 +430,7 @@ function openErhuEditor(t){
  for(const g of d.querySelectorAll('[data-k]'))for(const b of g.children)b.setAttribute('aria-checked',String(b.dataset.v===cur[g.dataset.k]));
  d.querySelector('[data-x="滑"]').setAttribute('aria-pressed',String(!!o.guide));d.querySelector('[data-x="伸"]').setAttribute('aria-pressed',String(!!o.extended));d.querySelector('[data-x="-"]').setAttribute('aria-pressed',String(!!o.hide));
  d.querySelector('.erhu-edit-note').textContent=`第 ${t.line} 行`;
- const a=auto||{};d.querySelector('.erhu-edit-auto').textContent=auto?`自动推算：${a.string===0?'内':'外'}弦 ${a.finger==null?'?':'〇一二三四'[a.finger]}指${a.bow?' · '+(a.bow==='down'?'⊓ 拉':'V 推'):''}${a.shift?' · 换把 '+(a.shift==='up'?'↓':'↑'):''}。没改的项保持自动。`:'没改的项保持自动。';
+ const a=auto||{};d.querySelector('.erhu-edit-auto').textContent=auto?`自动推算：${a.string===0?'内':'外'}弦 ${a.finger==null?'?':'〇一二三四'[a.finger]}指${a.bow?' · '+(a.bow==='down'?'出弓 ⊓':'进弓 V'):''}${a.shift?' · 上下滑 '+(a.shift==='up'?'↓':'↑'):''}。没改的项保持自动。`:'没改的项保持自动。';
  d.showModal();
 }
 // Rewrites the note's […] in the score text (the source text keeps columns 1:1 for these lines).
@@ -819,4 +819,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 12:54:59
+// Modified by AI on 2026-10-11 12:55:25

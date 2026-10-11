@@ -1021,7 +1021,7 @@ body:has(#floatPlayer:not([hidden])) main{padding-bottom:110px}
 @media print{.jp-anno.anno-manual .anno-low,.jp-anno.anno-manual .anno-top{text-decoration:none}.jp-annotated .jp-anno:hover{background:none}}
 .erhu-edit-sheet{width:min(520px,calc(100vw - 32px))}
 .erhu-edit-sheet h2 small{font-size:13px;font-weight:400;color:var(--muted);margin-left:6px}
-.erhu-edit-row{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;align-items:center}
+.erhu-edit-row{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;align-items:center}
 .erhu-edit-row>span{font-size:13px;color:var(--muted);font-weight:600}
 .erhu-edit-opts{display:flex;flex-wrap:wrap;gap:6px}
 .erhu-edit-opts button{min-height:36px;padding:0 12px;border-radius:9px;background:var(--fill);font-weight:500}
@@ -1035,4 +1035,4 @@ body:has(#floatPlayer:not([hidden])) main{padding-bottom:110px}
 .note-menu button:hover{background:#2A2E37}
 .note-menu #startHerePlay{background:var(--accent);color:var(--on-accent,#fff)}
 .note-menu button[hidden]{display:none}
-/* Modified by AI on 2026-10-11 12:54:59 */
+/* Modified by AI on 2026-10-11 12:55:25 */
