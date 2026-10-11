@@ -213,7 +213,7 @@ window.onScoreConverted=()=>{
 function setView(v){
  view=v;try{localStorage.setItem('flute.scoreView',v)}catch{}
  for(const [k,id] of Object.entries(VIEWS)){$(id).hidden=k!==v;$(TAB_BUTTONS[k]).setAttribute('aria-pressed',String(k===v))}
- $('viewHint').textContent=HINTS[v];$('printScore').textContent={flute:'音名谱存 PDF',source:'简谱存 PDF',staff:'五线谱存 PDF',trans:'转调谱存 PDF'}[v];if(ScorePlayer.isPlaying())ScorePlayer.stop();
+ $('viewHint').textContent=HINTS[v];$('printScore').textContent='存为 PDF…';if(ScorePlayer.isPlaying())ScorePlayer.stop();
  if(v==='staff')showStaff();
  syncErhuBar();if(v==='trans'||v==='source')renderMain();
 }
@@ -243,6 +243,21 @@ async function startPlayback(startToken){
 }
 const toggle=()=>ScorePlayer.isPlaying()?ScorePlayer.stop():startPlayback();
 $('playScore').onclick=()=>{floatDismissed=false;toggle()};$('floatStop').onclick=toggle;$('viewerPlay').onclick=toggle;
+// Play bar clock: elapsed / total while playing; 0:00 / total (whole piece at the current tempo) when idle.
+const mmss=t=>{t=Math.max(0,Math.round(t||0));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
+let idleTotal={key:null,value:0};
+function pieceLength(){
+ if(!lastConverted)return 0;const all=view==='trans'&&transAllLines?transAllLines:lastConverted.lines;
+ if(idleTotal.key!==all||idleTotal.tempo!==settings.tempo){let v=0;try{v=ScorePlayer.duration?ScorePlayer.duration(all,settings):0}catch{}idleTotal={key:all,tempo:settings.tempo,value:v}}
+ return idleTotal.value;
+}
+function showClock(){
+ const pos=ScorePlayer.position?.(),total=pos?pos.total:pieceLength(),now=pos?pos.elapsed:0,text=mmss(now)+' / '+mmss(total);
+ if($('playTime')&&$('playTime').textContent!==text)$('playTime').textContent=text;
+ if($('playProg'))$('playProg').style.width=(total?Math.min(100,now/total*100):0)+'%';
+ if(pos&&$('floatInfo'))$('floatInfo').innerHTML=`<b>${mmss(now)} / ${mmss(total)}</b> <small>♩=${settings.tempo}</small>`;
+}
+setInterval(()=>{if(!document.hidden)showClock()},300);
 // Floating bar: appears when playback starts and stays (▶ / ■) until closed with ✕; drag it anywhere, it snaps to
 // the nearest side and remembers where it was.
 let floatDismissed=false,floatAvailable=false;
@@ -391,14 +406,61 @@ for(const id of ['scoreOutput','scorePreview','staffOutput','transOutput','viewe
 $('startHere').onclick=()=>{$('startHere').hidden=true;ScorePlayer.stop();startPlayback(startToken)};
 document.addEventListener('pointerdown',e=>{if(e.target!==$('startHere')&&!tokenAt(e.target))$('startHere').hidden=true});
 
-// ---------- PDF of the visible tab ----------
-$('printScore').onclick=()=>{
- if(!lastConverted)return;const name=sheetTitle(lastConverted.source,'');
- if(view==='source')printScoreSheet(F(lastConverted.source.lines),`${name||'简谱'} · 简谱`,'按乐谱文本排版的简谱');
- else if(view==='trans'){const k=KEY_NAMES[Number($('transKey').value)];printScoreSheet(transLines,`${name||'转调谱'} · 1=${k}`,$('transMode').value==='move'?`整曲移到 1=${k}`:`保持原音高，按 1=${k} 记谱`,transStaff()?'staff':'jianpu',k)}
- else if(view==='staff')printScoreSheet(F(lastConverted.lines),`${name||'乐谱'} · 五线谱`,$('conversionCaption').textContent,'staff',lastConverted.keyLabel);
- else printScoreSheet(F(lastConverted.lines),`${name||'音名谱'} · 音名谱（固定 1=C）`,$('conversionCaption').textContent);
-};
+// ---------- PDF export: choose notation, key, bar numbers and erhu markings ----------
+let pdfDlg=null;
+function pdfDialog(){
+ if(pdfDlg)return pdfDlg;
+ const d=document.createElement('dialog');d.className='sheet pdf-sheet';d.setAttribute('aria-label','存为 PDF');
+ d.innerHTML='<div class="sheet-body"><div class="sheet-head"><h2>存为 PDF</h2><button type="button" class="small-btn" data-close>关闭</button></div>'
+  +'<div class="pdf-field"><span>记谱法</span><div class="app-segments" role="group" aria-label="记谱法"><button type="button" data-n="jp">简谱</button><button type="button" data-n="staff">五线谱</button></div></div>'
+  +'<div class="pdf-field"><label for="pdfKey">调</label><select id="pdfKey"><option value="orig">原调</option><option value="fixed">音名谱（固定 1=C）</option><option value="trans">转调</option></select></div>'
+  +'<p class="subtle pdf-trans-note"></p>'
+  +'<label class="pdf-switch"><input type="checkbox" role="switch" id="pdfMeasures">小节号</label>'
+  +'<label class="pdf-switch"><input type="checkbox" role="switch" id="pdfErhu">二胡指法与弓法</label>'
+  +'<p class="subtle pdf-erhu-note">二胡标记只用于简谱的原调或转调。</p>'
+  +'<div class="dialog-actions"><button type="button" class="primary" data-go>存 PDF</button></div></div>';
+ document.body.append(d);
+ d.querySelector('[data-close]').onclick=()=>d.close();d.addEventListener('click',e=>{if(e.target===d)d.close()});
+ for(const b of d.querySelectorAll('[data-n]'))b.onclick=()=>{d.dataset.n=b.dataset.n;syncPdf()};
+ d.querySelector('#pdfKey').onchange=syncPdf;
+ d.querySelector('[data-go]').onclick=()=>{d.close();exportPdf()};
+ return pdfDlg=d;
+}
+function syncPdf(){
+ const d=pdfDlg,staff=d.dataset.n==='staff',key=d.querySelector('#pdfKey').value;
+ for(const b of d.querySelectorAll('[data-n]'))b.setAttribute('aria-pressed',String(b.dataset.n===d.dataset.n));
+ d.querySelector('.pdf-trans-note').textContent=key==='trans'?`转到 1=${KEY_NAMES[Number($('transKey').value)]}（${$('transMode').value==='move'?'整曲移调':'保持原音高'}），在「调」菜单里可改。`:'';
+ const erhuOk=!staff&&key!=='fixed',e=d.querySelector('#pdfErhu');e.disabled=!erhuOk;if(!erhuOk)e.checked=false;
+ d.querySelector('.pdf-erhu-note').hidden=erhuOk;
+}
+function openPdfDialog(){
+ if(!lastConverted)return;const d=pdfDialog();
+ d.dataset.n=view==='staff'||(view==='trans'&&transStaff())?'staff':'jp';
+ d.querySelector('#pdfKey').value=view==='trans'?'trans':view==='flute'?'fixed':'orig';
+ d.querySelector('#pdfMeasures').checked=measureOn;d.querySelector('#pdfErhu').checked=$('erhuFinger').checked;
+ syncPdf();d.showModal();
+}
+function exportPdf(){
+ const d=pdfDlg,staff=d.dataset.n==='staff',key=d.querySelector('#pdfKey').value,name=sheetTitle(lastConverted.source,'');
+ const keepMeasure=measureOn,keepErhu=$('erhuFinger').checked;measureOn=d.querySelector('#pdfMeasures').checked;$('erhuFinger').checked=d.querySelector('#pdfErhu').checked;
+ try{
+  if(key==='trans'){
+   const all=buildTransposed(),lines=F(all),k=KEY_NAMES[Number($('transKey').value)];
+   if(!lines.some(l=>l.kind==='meta'&&l.name==='note'))lines.unshift({kind:'meta',name:'note',value:`原谱 1=${lastConverted.keyLabel} → 1=${k}${$('transMode').value==='move'?'（整曲移调）':''}`});
+   const keepAll=transAllLines;transAllLines=all;
+   const extra=staff?{partNames:scoreParts(),...scoreDisplayOptions(lines,'trans')}:erhuOpts(lines,'trans');transAllLines=keepAll;
+   printScoreSheet(lines,`${name||'转调谱'} · 1=${k}${staff?' · 五线谱':''}`,$('transMode').value==='move'?`整曲移到 1=${k}`:`保持原音高，按 1=${k} 记谱`,staff?'staff':'jianpu',k,extra);
+  }else if(staff){
+   const lines=F(lastConverted.lines);
+   printScoreSheet(lines,`${name||'乐谱'} · 五线谱`,$('conversionCaption').textContent,'staff',key==='fixed'?'C':lastConverted.keyLabel,{partNames:scoreParts(),...scoreDisplayOptions(lines,'staff')});
+  }else if(key==='fixed'){
+   const lines=F(lastConverted.lines);printScoreSheet(lines,`${name||'音名谱'} · 音名谱（固定 1=C）`,$('conversionCaption').textContent,'jianpu',undefined,{partNames:scoreParts(),...scoreDisplayOptions(lines,'flute')});
+  }else{
+   const lines=F(lastConverted.source.lines);printScoreSheet(lines,`${name||'简谱'} · 简谱`,'按乐谱文本排版的简谱','jianpu',undefined,erhuOpts(lines,'source'));
+  }
+ }finally{measureOn=keepMeasure;$('erhuFinger').checked=keepErhu}
+}
+$('printScore').onclick=openPdfDialog;
 
 // ---------- edit mode (full-screen, side by side) ----------
 // Text on the left, each line beside the row it draws (@page separators line up too); the preview on the right
@@ -680,4 +742,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 06:31:32
+// Modified by AI on 2026-10-11 10:46:46

@@ -396,6 +396,7 @@ function render(host,lines,opts={}){
  }
  compactStaves(host,partNames);
  prepareMeasureLabels(host,lines,opts);
+ spaceAnnotations(host);
  host._arcs=arcs;host._tuplets=tuplets;fitWidth(host);justify(host);drawOverlay(host);
  if(!host._observer&&'ResizeObserver' in window){let lastWidth=0;host._observer=new ResizeObserver(()=>{if(host.clientWidth!==lastWidth){lastWidth=host.clientWidth;fitWidth(host);justify(host)}drawOverlay(host)});host._observer.observe(host)}
 }
@@ -416,6 +417,17 @@ function justify(host,endsPiece=host._endsPiece!==false){
   if(width>avail+1)r.style.minWidth=Math.ceil(width)+'px';
   if(endsPiece&&i===rows.length-1&&natural<avail*0.25)return; // only a very short ending (about one bar) stays left
   r.classList.add('jp-justify')});
+}
+// Erhu labels do not widen their notes; only where two neighbouring labels would touch does the later note get
+// just enough extra left padding (in em, so it scales with the fitted font). Moving one note shifts all after it
+// equally, so every gap can be measured once from the original layout.
+function spaceAnnotations(host){
+ for(const row of host.querySelectorAll('.jp-erhu-line')){
+  const cells=[...row.querySelectorAll('.jp-n')].filter(c=>c.querySelector(':scope>.jp-anno'));if(cells.length<2)continue;
+  const em=parseFloat(getComputedStyle(row).fontSize)||20,gap=0.12*em;
+  const info=cells.map(c=>{let l=Infinity,r=-Infinity;for(const k of c.querySelector(':scope>.jp-anno').children){const b=k.getBoundingClientRect();if(b.width){l=Math.min(l,b.left);r=Math.max(r,b.right)}}const cb=c.getBoundingClientRect();return {c,l:l===Infinity?cb.left:l,r:r===-Infinity?cb.right:r,pad:parseFloat(getComputedStyle(c).paddingLeft)||0,top:cb.top}});
+  for(let i=1;i<info.length;i++){const a=info[i-1],b=info[i];if(Math.abs(a.top-b.top)>4)continue;const need=a.r+gap-b.l;if(need>0.5)b.c.style.paddingLeft=((b.pad+need)/em).toFixed(3)+'em'}
+ }
 }
 // Natural width of a full-score line (label + measures at their content width).
 function naturalWidth(row){let w=0;for(const c of row.children){if(c.classList.contains('jp-measure-numbers'))continue;const prev=c.style.flex;c.style.flex='0 0 auto';w+=c.getBoundingClientRect().width;c.style.flex=prev}return w+8}
@@ -471,4 +483,4 @@ function drawOverlay(host){
 
 window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline,numberMeasures};
 })();
-// Modified by AI on 2026-10-11 05:55:14
+// Modified by AI on 2026-10-11 10:46:46

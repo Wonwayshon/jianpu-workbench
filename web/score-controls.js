@@ -303,9 +303,20 @@ tbox.append(b);
 }
 tsel.addEventListener('change', paint); $('settingsTab').addEventListener('click', paint); paint();
 }
+// The save / copy message is a toast: it clears itself a few seconds after the last change.
+const toast = $('copyStatus');
+if (toast) { let t; new MutationObserver(() => { clearTimeout(t); if (toast.textContent && !/…$/.test(toast.textContent)) t = setTimeout(() => { toast.textContent = ''; }, 3500); }).observe(toast, { childList: true, characterData: true, subtree: true }); }
+// Sidebar collapse (desktop): a toggle next to 设置; the choice is remembered and applies on every page.
+const navBtn = $('navCollapse');
+if (navBtn) {
+const setNav = (on) => { document.body.classList.toggle('nav-collapsed', on); navBtn.setAttribute('aria-label', on ? '展开侧栏' : '收起侧栏'); navBtn.title = navBtn.getAttribute('aria-label'); };
+let on = false; try { on = localStorage.getItem('flute.navCollapsed') === '1'; } catch {}
+setNav(on);
+navBtn.onclick = () => { on = !document.body.classList.contains('nav-collapsed'); setNav(on); try { localStorage.setItem('flute.navCollapsed', on ? '1' : '0'); } catch {} };
+}
 // Sidebar version tag (release builds only).
 const ver = (document.querySelector('meta[name="app-version"]') || {}).content || '';
 if ($('navVersion') && /^\d+\.\d+/.test(ver)) $('navVersion').textContent = ver.match(/^\d+\.\d+/)[0];
 })();
 })();
-// Modified by AI on 2026-10-11 06:25:46
+// Modified by AI on 2026-10-11 10:46:46

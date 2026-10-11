@@ -277,7 +277,7 @@ function play(lines,opts,onEnd){
  // Clicks are created just ahead of time too (about 1.2 s), never all at once.
  const aheadClicks=()=>{while(ci<clicks.length&&clicks[ci].when<ctx.currentTime+1.2){const item=clicks[ci++];if(item.when>=ctx.currentTime-0.04)click(item.when,item.kind,1)}};aheadClicks();
  const end=Math.max(start+total*spb,s.metronome?start+all.warpBeat(Math.max(all.writtenTotal,writtenOffset+barBeats))*spb:0);
- playing={raf:0,timer:0,cells,onEnd};const session=playing;
+ playing={raf:0,timer:0,cells,onEnd,start,dur:total*spb};const session=playing;
  // The audio clock runs independently of visual animation, which WebViews pause when hidden/occluded.
  const audioPulse=()=>{if(playing!==session||ctx!==audioContext)return;if(ctx.currentTime>=end+0.05){stop();return}ahead();aheadClicks()};
  session.timer=setInterval(audioPulse,50);
@@ -376,6 +376,9 @@ function setPartMute(id,muted){
  const bus=partBuses.get(id);if(!playing||!ctx||!bus)return;
  bus.gain.setTargetAtTime(muted?0:1,ctx.currentTime,0.008);
 }
-window.ScorePlayer={normalizeSettings,metronomeGrid,timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,PREVIEW_PHRASES,TIMBRE_LIST,play,playReady,stop,schedule,isPlaying:()=>!!playing||preparing!=null,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
+// Playback position in seconds (piece time, count-in excluded) and the length of the whole piece at a tempo.
+function position(){return playing&&ctx&&playing.dur!=null?{elapsed:Math.min(Math.max(0,ctx.currentTime-playing.start),playing.dur),total:playing.dur}:null}
+function duration(lines,opts){const s=normalizeSettings(opts);return schedule(lines,{tempo:s.tempo}).total*60/s.tempo}
+window.ScorePlayer={position,duration,normalizeSettings,metronomeGrid,timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,PREVIEW_PHRASES,TIMBRE_LIST,play,playReady,stop,schedule,isPlaying:()=>!!playing||preparing!=null,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
 })();
-// Modified by AI on 2026-10-10 15:14:48
+// Modified by AI on 2026-10-11 10:46:46

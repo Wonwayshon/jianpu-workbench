@@ -923,17 +923,17 @@ input[type=checkbox][role=switch]:focus-visible{outline:2px solid var(--accent);
 }
 #playSettings::after{content:"";width:12px;height:12px;margin-left:6px;background:currentColor;opacity:.6;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='m6 15 6-6 6 6'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='m6 15 6-6 6 6'/%3E%3C/svg%3E") center/contain no-repeat}
 #playSettings{display:inline-flex;align-items:center}
-/* 转谱 on desktop (design): a 72px icon rail — 转谱 / 谱库 / 练习 / 工具 / 设置 — leaves room for the workbench. */
+/* Collapsed sidebar (toggle next to 设置): the 72px icon rail of the design — 转谱 / 谱库 / 练习 / 工具 / 设置. */
 @media screen and (min-width:900px){
- body[data-tab=score]{--rail-width:72px}
- body[data-tab=score] nav[aria-label="工具"]{padding:16px 6px;align-items:center;gap:4px}
- body[data-tab=score] nav[aria-label="工具"] .nav-brand,body[data-tab=score] nav[aria-label="工具"] .nav-group{display:none}
- body[data-tab=score] #instrumentTab,body[data-tab=score] #fingeringTab,body[data-tab=score] #tunerTab,body[data-tab=score] #erhuTab{display:none}
- body[data-tab=score] #toolsTab{display:flex}
- body[data-tab=score] nav[aria-label="工具"] button{flex-direction:column;justify-content:center;width:58px;height:56px;min-height:56px;padding:0;gap:2px;font-size:11px;border-radius:12px}
- body[data-tab=score] nav[aria-label="工具"] .nav-l{display:none}
- body[data-tab=score] nav[aria-label="工具"] .nav-s{display:inline}
- body[data-tab=score] nav[aria-label="工具"] button svg{width:21px;height:21px}
+ body.nav-collapsed{--rail-width:72px}
+ body.nav-collapsed nav[aria-label="工具"]{padding:16px 6px;align-items:center;gap:4px}
+ body.nav-collapsed nav[aria-label="工具"] .nav-brand,body.nav-collapsed nav[aria-label="工具"] .nav-group{display:none}
+ body.nav-collapsed #instrumentTab,body.nav-collapsed #fingeringTab,body.nav-collapsed #tunerTab,body.nav-collapsed #erhuTab{display:none}
+ body.nav-collapsed #toolsTab{display:flex}
+ body.nav-collapsed nav[aria-label="工具"] button{flex-direction:column;justify-content:center;width:58px;height:56px;min-height:56px;padding:0;gap:2px;font-size:11px;border-radius:12px}
+ body.nav-collapsed nav[aria-label="工具"] .nav-l{display:none}
+ body.nav-collapsed nav[aria-label="工具"] .nav-s{display:inline}
+ body.nav-collapsed nav[aria-label="工具"] button svg{width:21px;height:21px}
 }
 .archive-progress{display:flex;flex-direction:column;gap:6px}
 .archive-progress>div:first-child{display:flex;justify-content:space-between;font-size:13px}.archive-progress span{color:var(--muted)}
@@ -945,4 +945,56 @@ input[type=checkbox][role=switch]:focus-visible{outline:2px solid var(--accent);
  #scorePanel .play-bar #fullView::before{display:block!important}
  .practice-actions .chips-seg{order:-1}
 }
-/* Modified by AI on 2026-10-11 06:31:32 */
+
+/* Page headers use <header>; the legacy sticky white app header style must not apply to them. */
+main header.page-head{position:static;background:transparent;border:0;z-index:auto}
+/* Sidebar foot: 设置 with the collapse toggle at its right; collapsed, the toggle sits above 设置. */
+.nav-foot{display:none}
+.nav-collapse{display:none}
+@media screen and (min-width:900px){
+ .nav-foot{display:flex;align-items:center;gap:4px}
+ .nav-foot>#settingsTab{flex:1;min-width:0}
+ body nav[aria-label="工具"] .nav-collapse{display:grid;place-items:center;flex:none;width:36px;height:36px;min-height:36px;padding:0;border-radius:10px;background:transparent;color:var(--muted)}
+ body nav[aria-label="工具"] .nav-collapse:hover{background:var(--fill)}
+ .nav-collapse svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ body.nav-collapsed .nav-foot{flex-direction:column-reverse;gap:6px}
+ body.nav-collapsed .nav-foot>#settingsTab{flex:none}
+ body.nav-collapsed .nav-collapse svg{transform:scaleX(-1)}
+ body.nav-collapsed nav[aria-label="工具"] .nav-collapse{width:58px;height:40px;min-height:40px}
+}
+@media screen and (max-width:899px){.nav-foot{display:contents}}
+/* Save / copy messages appear as a short toast instead of wrapping under the header. */
+#copyStatus:not(:empty){position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:80;max-width:min(560px,calc(100vw - 32px));padding:10px 16px;border-radius:12px;background:var(--ink);color:#fff;font-size:13px;box-shadow:0 8px 24px #0F111533;flex-basis:auto;white-space:normal;text-align:center}
+/* Instrument range warnings are off for now (ranges are not tuned per instrument yet). */
+#rangeNote{display:none!important}
+/* Play icon centred: flex with the (zero-size) label text beside the icon. */
+.play-bar #playScore,.float-player #floatStop{display:flex!important;align-items:center;justify-content:center;line-height:0}
+.play-bar #playScore::before,.float-player #floatStop::before{flex:none;margin-left:2px}
+.play-bar #playScore.playing::before,.float-player #floatStop.playing::before{margin-left:0}
+/* Play bar position (design): time and beat dots over a thin progress line. */
+.play-bar .play-pos{flex:1 1 auto;min-width:120px;display:flex;flex-direction:column;gap:7px}
+.play-pos-top{display:flex;align-items:center;gap:10px}
+#playTime{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
+.play-prog{display:block;height:4px;border-radius:2px;background:var(--fill-2);overflow:hidden}
+.play-prog i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;transition:width .3s linear}
+.play-bar #beatDots{flex:none;min-width:0}
+@media(max-width:599px){
+ #scorePanel .play-bar .play-pos{flex:none;min-width:0;gap:4px}
+ #scorePanel .play-bar #playTime{color:#fff;font-size:12px}
+ #scorePanel .play-bar .play-prog{background:#2A2E37;width:74px}
+}
+/* Erhu labels sit centred over their note without widening it (overlaps are spaced out in jianpu.js). */
+.jp-erhu-line .jp-n{min-width:.62em}
+.jp-erhu-line .jp-n>.jp-anno{width:0;overflow:visible}
+/* 存为 PDF dialog */
+.pdf-sheet{width:min(460px,calc(100vw - 32px))}
+.pdf-field{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pdf-field>span,.pdf-field>label{font-weight:600;margin:0}
+.pdf-field .app-segments{margin:0;display:inline-grid;grid-auto-flow:column;grid-template-columns:none}
+.pdf-field .app-segments button{min-height:34px;padding:0 16px}
+.pdf-field select{width:auto;min-width:200px}
+.pdf-switch{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;font-weight:500;flex-direction:row-reverse}
+.pdf-switch input:disabled{opacity:.4}
+.pdf-sheet .subtle:empty{display:none}
+.pdf-sheet .dialog-actions{display:flex;justify-content:flex-end}
+/* Modified by AI on 2026-10-11 10:46:46 */
