@@ -112,8 +112,9 @@ r=E.annotate(p.lines,{keyOf:t=>t===p.notes[0]?0:2});assert.equal(r.map.get(p.not
 // Inspect rendered annotation text and the actionable unavailable-trill tooltip without a browser.
 ctx.document={createElement:()=>({children:[],textContent:'',append(...xs){this.children.push(...xs)}})};
 const label=E.label(six);const all=n=>(n.textContent||'')+n.children.map(all).join('');assert.match(all(label),/二↔三/);
-const slide=E.label({finger:1,string:1,anchorMidi:77,shift:'up',guideFinger:1});assert.match(all(slide),/一滑/);
+const slide=E.label({finger:1,string:1,anchorMidi:77,shift:'up',guideFinger:1});assert.match(all(slide),/↓一/);assert.doesNotMatch(all(slide),/滑/);assert.match(slide.querySelector?.('.anno-finger')?.title??[...slide.children].flatMap(c=>[...(c.children||[])]).map(c=>c.title||'').join(' '),/带指换把/);
+assert.match(all(E.label({finger:1,string:1,guideFinger:1})),/一滑/);
 const cross=E.label({finger:4,string:0,technique:'unisonCrossing'});assert.match(cross.children[1].children.at(-1).title,/同音换弦/);
 const bad=E.label({finger:null,reason:'trill'});assert.match(bad.children[1].children[0].title,/颤音手型/);
 console.log(`PASS: opening 1123, one prepared shift, stable following frame; repeated 5 stays on 3 / shift at 6 with 2↔3; ${count} trills across 12 keys and 3 tunings; upper-degree accidentals; impossible trills; ordinary fourth fingers; phrase restart; grace fingering, isolated peak, exact-pair timbral crossing and index-guide shift; label and tooltip.`);
-// Modified by AI on 2026-10-11 12:52:40
+// Modified by AI on 2026-10-11 12:53:29
