@@ -27,11 +27,23 @@ function b45decode(str){
 }
 async function pipe(bytes,stream){return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer())}
 
+// Hand-edited erhu markings (3[外二⊓]) travel beside the text as [page, offset, marking] in an optional "e" field.
+// The page text itself stays plain Jianpu, so versions without the syntax read a clean score and ignore "e".
+const MARK=/(^|[^\s\[])\[([^\]\d\s][^\]\s]{0,15})\]/gm,MARK_TEXT=/^[^\]\d\s\[][^\]\s\[]{0,15}$/;
+function splitMarks(text){
+ const marks=[];let removed=0;
+ const clean=text.replace(MARK,(m,a,b,o,str)=>{const lineStart=str.lastIndexOf('\n',o)+1;if(/^\s*$/.test(str.slice(lineStart,o+a.length)))return m;marks.push([o+a.length-removed,b]);removed+=b.length+2;return a});
+ return {clean,marks};
+}
+function joinMarks(text,marks){
+ let out=text;for(const [at,mark] of [...marks].sort((x,y)=>y[0]-x[0]))out=out.slice(0,at)+'['+mark+']'+out.slice(at);return out;
+}
 // Only the text travels: title, note and each page's transcription (original files are too large for a QR code).
 async function encode(record){
- const pages=(record.results||[]).filter(r=>r.text.trim()).map(r=>[r.page,r.text]);
+ const pages=[],marks=[];
+ for(const r of record.results||[]){if(!r.text.trim())continue;const {clean,marks:m}=splitMarks(r.text);pages.push([r.page,clean]);for(const [at,mark] of m)marks.push([r.page,at,mark])}
  if(!pages.length)throw new Error('这份存档还没有识别出的文字，二维码只能分享文字内容；原文件请用「导出备份」发送。');
- const json=JSON.stringify({t:record.title,n:record.note||undefined,p:pages});
+ const json=JSON.stringify({t:record.title,n:record.note||undefined,p:pages,e:marks.length?marks:undefined});
  const packed=await pipe(new TextEncoder().encode(json),new CompressionStream('deflate-raw'));
  return PREFIX+b45encode(packed);
 }
@@ -43,7 +55,13 @@ async function decode(code){
  let data;try{data=JSON.parse(new TextDecoder().decode(bytes))}catch{throw new Error('分享码内容无法读取。')}
  if(typeof data.t!=='string'||!Array.isArray(data.p)||!data.p.length||data.p.length>300||data.t.length>120)throw new Error('分享码内容无法读取。');
  const pages=new Set();for(const p of data.p){if(!Array.isArray(p)||!Number.isSafeInteger(p[0])||p[0]<1||pages.has(p[0])||typeof p[1]!=='string'||p[1].length>100000)throw new Error('分享码页码或文字无效。');pages.add(p[0])}
- return {title:data.t,note:typeof data.n==='string'?data.n:'',pages:data.p.filter(p=>Array.isArray(p)&&Number.isSafeInteger(p[0])&&typeof p[1]==='string').map(([page,text])=>({page,text}))};
+ // Markings that do not fit their page are dropped; the score itself still imports.
+ const marks=new Map(),seen=new Set();
+ if(Array.isArray(data.e)&&data.e.length<=20000)for(const e of data.e){
+  if(!Array.isArray(e)||!pages.has(e[0])||!Number.isSafeInteger(e[1])||e[1]<0||typeof e[2]!=='string'||!MARK_TEXT.test(e[2])||seen.has(e[0]+':'+e[1]))continue;
+  seen.add(e[0]+':'+e[1]);if(!marks.has(e[0]))marks.set(e[0],[]);marks.get(e[0]).push([e[1],e[2]]);
+ }
+ return {title:data.t,note:typeof data.n==='string'?data.n:'',pages:data.p.map(([page,text])=>({page,text:joinMarks(text,(marks.get(page)||[]).filter(([at])=>at<=text.length))}))};
 }
 
 function qrSvg(code){
@@ -62,8 +80,9 @@ async function show(record){
  let code;try{code=await encode(record)}catch(e){$('shareInfo').textContent=e.message;$('shareCopy').hidden=true;$('shareSave').hidden=true;dlg.showModal();return}
  const q=qrSvg(code);$('shareCopy').hidden=false;$('shareSave').hidden=!q;
  const raw=new TextEncoder().encode(JSON.stringify(record.results.map(r=>r.text))).length;
- if(q){$('shareQr').innerHTML=q.svg;$('shareInfo').textContent=`${record.results.length} 页文字 · 压缩后 ${code.length} 字符（原文约 ${(raw/1024).toFixed(1)} KB）· ${q.modules}×${q.modules} 码点。用本 App「谱库 → 扫码导入」扫描。`+(q.modules>121?' 码点较密，扫描时让屏幕亮一些、镜头离近一点。':'')}
- else $('shareInfo').textContent=`内容太长（压缩后 ${code.length} 字符，二维码最多约 ${MAX_L}），放不进一个二维码。可以复制分享码用聊天软件发送，或用「导出备份」。`;
+ const marked=record.results.reduce((n,r)=>n+splitMarks(r.text).marks.length,0),erhu=marked?` 含 ${marked} 处手改的二胡标记（旧版本扫码会忽略，只用自动推算）。`:'';
+ if(q){$('shareQr').innerHTML=q.svg;$('shareInfo').textContent=`${record.results.length} 页文字 · 压缩后 ${code.length} 字符（原文约 ${(raw/1024).toFixed(1)} KB）· ${q.modules}×${q.modules} 码点。用本 App「谱库 → 扫码导入」扫描。`+erhu+(q.modules>121?' 码点较密，扫描时让屏幕亮一些、镜头离近一点。':'')}
+ else $('shareInfo').textContent=`内容太长（压缩后 ${code.length} 字符，二维码最多约 ${MAX_L}），放不进一个二维码。可以复制分享码用聊天软件发送，或用「导出备份」。`+erhu;
  $('shareCopy').onclick=()=>{copy(code);$('shareStatus').textContent='分享码已复制。对方在「谱库 → 扫码导入 → 粘贴分享码」导入。'};
  $('shareSave').onclick=()=>saveQrPng(q.svg,record.title);
  dlg.showModal?dlg.showModal():dlg.setAttribute('open','');
@@ -114,6 +133,6 @@ function bind(){
  $('scanPaste').onclick=async()=>{let t='';try{t=await Platform.readClipboard()}catch{}if(!t.includes(PREFIX))t=prompt('粘贴分享码（以 DTZJ1: 开头）：',t)||'';if(t)await handle(t)};
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
-window.ScoreShare={encode,decode,show,scan,qrSvg,b45encode,b45decode};
+window.ScoreShare={encode,decode,show,scan,qrSvg,b45encode,b45decode,splitMarks,joinMarks};
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-11 15:33:49
