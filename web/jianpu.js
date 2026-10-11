@@ -100,7 +100,10 @@ function parseMusic(src,lineNo,notes,fail,key={letter:0,pc0:0,octave:4},offset=0
     const r=letterNote(lm[1],(ACC[acc]||0)+(ACC[lm[2]]||0),lm[3],octave,key);degree=r.degree;accN=r.acc;octave=r.octave;natural=false;
     if(Math.abs(accN)>2)fail(`「${raw}」换算成 ${r.degree} 级时升降超过两个半音，请检查调号。`)}
    const token=n==='0'?{t:'rest',under,dot,orns}:percussion?{t:'percussion',under,dot,orns}:{t:'note',degree,acc:accN,natural,octave,under,dot,orns,grace:!!grace,line:lineNo};
-   tokens.push(token);if(token.t==='note')notes.push(token);i+=raw.length;continue;
+   // A hand-edited erhu marking right after a note, e.g. 3'/[外二⊓]; kept in the text so it is saved, shared and printed.
+   let used=raw.length;token.len=raw.length;
+   if(token.t==='note'){const em=rest.slice(raw.length).match(/^\[([^\]\d\s][^\]\s]{0,15})\]/);if(em){token.erhu=em[1];token.erhuLen=em[0].length;used+=em[0].length}}
+   tokens.push(token);if(token.t==='note')notes.push(token);i+=used;continue;
   }
   if((m=rest.match(/^[.\]:_\/]+/))){tokens.push({t:'text',text:m[0]});i+=m[0].length;continue}
   if(rest[0]==='?')fail('有看不清的音「?」，请对照原图补上。');
@@ -136,7 +139,7 @@ function noteText(t){
  if(t.t==='rest')return '0'+tail;
  if(t.t==='percussion')return 'X'+tail;
  const label=t.label??((t.natural?'♮':t.acc>0?'#':t.acc<0?'b':'')+t.degree);
- return (t.grace?'^':'')+label.replace('♯','#').replace('♭','b')+(t.octave>0?"'".repeat(t.octave):','.repeat(-t.octave))+tail;
+ return (t.grace?'^':'')+label.replace('♯','#').replace('♭','b')+(t.octave>0?"'".repeat(t.octave):','.repeat(-t.octave))+tail+(t.erhu?`[${t.erhu}]`:'');
 }
 function serialize(lines){
  return lines.map(line=>{
@@ -483,4 +486,4 @@ function drawOverlay(host){
 
 window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline,numberMeasures};
 })();
-// Modified by AI on 2026-10-11 10:46:46
+// Modified by AI on 2026-10-11 12:52:40

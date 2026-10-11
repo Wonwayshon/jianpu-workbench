@@ -137,6 +137,7 @@ function erhuPartIds(){
  return [];
 }
 const erhuCache=new WeakMap();
+const erhuAuto=new WeakMap();let lastErhuMap=null;
 function erhuFor(lines,v){
  if(!$('erhuFinger').checked||!(v==='source'||v==='trans')||!lines)return null;
  const X=Number($('transKey').value),song=Number($('songKey').value);
@@ -153,6 +154,9 @@ function erhuFor(lines,v){
   for(const [t,value] of r.map)res.map.set(t,value);
   for(const k of ['shifts','unplayable','trillUnavailable'])res[k]+=r[k]||0;
  }
+ // Hand-edited markings ([…] after a note in the text) replace the automatic result on the original score only.
+ if(v==='source')for(const l of whole)if(l.kind==='music'&&ids.includes(l.part||''))for(const t of l.tokens)if(t.t==='note'&&t.erhu){erhuAuto.set(t,res.map.get(t));res.map.set(t,ErhuFingering.applyOverride(res.map.get(t),t.erhu))}
+ if(v==='source')lastErhuMap=res.map;
  return res.map.size?res:null;
 }
 function erhuOpts(lines,v,base={}){base={...base,partNames:scoreParts(),...scoreDisplayOptions(lines,v)};const res=erhuFor(lines,v);if(!res)return base;return {...base,annotations:res.map,label:ErhuFingering.label,summary:res}}
@@ -396,6 +400,56 @@ $('mixBalance').oninput=()=>{settings.balance=Number($('mixBalance').value);fill
 dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
 
 // ---------- double tap: play from here ----------
+// ---------- hand-editing erhu markings: tap a marking, change it, the text gets 「[外二⊓]」 after that note ----------
+const ERHU_GROUPS=[['bow','弓法',[['','自动'],['⊓','⊓ 拉'],['V','V 推'],['无弓','不标']]],['string','弦',[['','自动'],['内','内'],['外','外']]],
+ ['finger','手指',[['','自动'],['〇','〇'],['一','一'],['二','二'],['三','三'],['四','四']]],['shift','换把',[['','自动'],['↓','↓'],['↑','↑'],['无换','不标']]]];
+let erhuDlg=null,erhuTok=null;
+function erhuEditor(){
+ if(erhuDlg)return erhuDlg;
+ const d=document.createElement('dialog');d.className='sheet erhu-edit-sheet';d.setAttribute('aria-label','修改二胡指法');
+ d.innerHTML='<div class="sheet-body"><div class="sheet-head"><h2>修改指法 <small class="erhu-edit-note"></small></h2><button type="button" class="small-btn" data-close>关闭</button></div>'
+  +ERHU_GROUPS.map(([k,label,opts])=>`<div class="erhu-edit-row"><span>${label}</span><div class="erhu-edit-opts" role="radiogroup" aria-label="${label}" data-k="${k}">${opts.map(([v,t])=>`<button type="button" role="radio" data-v="${v}">${t}</button>`).join('')}</div></div>`).join('')
+  +'<div class="erhu-edit-row"><span>附加</span><div class="erhu-edit-opts"><button type="button" data-x="滑" aria-pressed="false">滑（带指换把）</button><button type="button" data-x="伸" aria-pressed="false">伸（四指延伸）</button><button type="button" data-x="-" aria-pressed="false">隐藏这个音的标记</button></div></div>'
+  +'<p class="subtle erhu-edit-auto"></p><div class="dialog-actions"><button type="button" data-reset>恢复自动</button><button type="button" class="primary" data-save>保存</button></div></div>';
+ document.body.append(d);
+ d.querySelector('[data-close]').onclick=()=>d.close();d.addEventListener('click',e=>{if(e.target===d)d.close()});
+ for(const g of d.querySelectorAll('[data-k]'))g.addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;for(const x of g.children)x.setAttribute('aria-checked',String(x===b))});
+ for(const b of d.querySelectorAll('[data-x]'))b.onclick=()=>b.setAttribute('aria-pressed',String(b.getAttribute('aria-pressed')!=='true'));
+ d.querySelector('[data-reset]').onclick=()=>{d.close();writeErhu(erhuTok,'')};
+ d.querySelector('[data-save]').onclick=()=>{d.close();writeErhu(erhuTok,erhuText())};
+ return erhuDlg=d;
+}
+function erhuText(){
+ const d=erhuDlg,pick=k=>d.querySelector(`[data-k="${k}"] [aria-checked=true]`)?.dataset.v||'',on=x=>d.querySelector(`[data-x="${x}"]`).getAttribute('aria-pressed')==='true';
+ if(on('-'))return '-';
+ return pick('string')+pick('finger')+(on('滑')?'滑':'')+(on('伸')?'伸':'')+pick('bow')+pick('shift');
+}
+function openErhuEditor(t){
+ const d=erhuEditor();erhuTok=t;const o=t.erhu?ErhuFingering.parseOverride(t.erhu):{},auto=erhuAuto.get(t)??(lastErhuMap?.get(t))??null;
+ const cur={bow:'bow' in o?(o.bow==='down'?'⊓':o.bow==='up'?'V':'无弓'):'',string:'string' in o?(o.string===0?'内':'外'):'',finger:'finger' in o?'〇一二三四'[o.finger]:'',shift:'shift' in o?(o.shift==='up'?'↓':o.shift==='down'?'↑':'无换'):''};
+ for(const g of d.querySelectorAll('[data-k]'))for(const b of g.children)b.setAttribute('aria-checked',String(b.dataset.v===cur[g.dataset.k]));
+ d.querySelector('[data-x="滑"]').setAttribute('aria-pressed',String(!!o.guide));d.querySelector('[data-x="伸"]').setAttribute('aria-pressed',String(!!o.extended));d.querySelector('[data-x="-"]').setAttribute('aria-pressed',String(!!o.hide));
+ d.querySelector('.erhu-edit-note').textContent=`第 ${t.line} 行`;
+ const a=auto||{};d.querySelector('.erhu-edit-auto').textContent=auto?`自动推算：${a.string===0?'内':'外'}弦 ${a.finger==null?'?':'〇一二三四'[a.finger]}指${a.bow?' · '+(a.bow==='down'?'⊓ 拉':'V 推'):''}${a.shift?' · 换把 '+(a.shift==='up'?'↓':'↑'):''}。没改的项保持自动。`:'没改的项保持自动。';
+ d.showModal();
+}
+// Rewrites the note's […] in the score text (the source text keeps columns 1:1 for these lines).
+function writeErhu(t,text){
+ const ta=$('scoreInput'),lines=ta.value.replace(/\r\n?/g,'\n').split('\n'),i=(t.line||0)-1,line=lines[i];
+ if(line==null||t.col==null||!t.len)return;
+ if(Jianpu.normalize(line).length!==line.length||Jianpu.normalize(line).slice(t.col,t.col+t.len)!==noteSlice(line,t)){$('copyStatus').textContent='这一行有需要规范化的字符，请直接在乐谱文本里修改。';return}
+ const end=t.col+t.len;lines[i]=line.slice(0,end)+(text?`[${text}]`:'')+line.slice(end+(t.erhuLen||0));
+ ta.value=lines.join('\n');ta.dispatchEvent(new Event('input',{bubbles:true}));updateScore();
+ $('copyStatus').textContent=text?'已修改这个音的二胡标记，会随乐谱一起保存和导出。':'已恢复自动推算的标记。';
+ if(viewerOpen)rebuild(vIndex);
+}
+const noteSlice=(line,t)=>Jianpu.normalize(line).slice(t.col,t.col+t.len);
+document.addEventListener('click',e=>{
+ const a=e.target.closest?.('.jp-anno');if(!a||!a.closest('#scorePreview,.viewer-body')||a.closest('.viewer.perform'))return;
+ const t=tokenAt(a);if(!t||t.t!=='note')return;e.stopPropagation();
+ if(t.src||!t.line){$('copyStatus').textContent='请在「原调」简谱里修改二胡标记。';return}
+ openErhuEditor(t);
+},true);
 function tokenAt(target){for(let el=target;el&&el!==document.body;el=el.parentNode)if(el._token)return el._token;return null}
 let lastTap={t:0,x:0,y:0},startToken=null,hideTimer=0;
 function showStartHere(x,y,token){
@@ -750,4 +804,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 12:29:53
+// Modified by AI on 2026-10-11 12:52:40

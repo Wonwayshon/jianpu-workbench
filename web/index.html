@@ -86,6 +86,7 @@ nav{flex-wrap:wrap}.erhu-tuning{display:flex;flex-wrap:wrap;gap:12px;margin:20px
 <div class="score-work">
 <div class="card score-controls no-print" aria-label="乐谱文本">
 <div class="pane-head"><span class="pane-title">乐谱文本</span><div class="app-segments src-tabs" role="group" aria-label="左栏内容"><button type="button" data-src="text" aria-pressed="true">文本</button><button type="button" data-src="img" aria-pressed="false">原图对照</button></div><span class="grow"></span><div class="menu-wrap"><button type="button" id="helpBtn" class="out-pill" aria-haspopup="true" aria-expanded="false">写法速查</button><div id="helpMenu" class="pop-menu help-menu" hidden><p class="subtle" id="syntaxHelp">1' = 高音 1，1, = 低音 1，可重复；也支持 1̇ / 1̣。#4 或 ♯4 为升音，b7 或 ♭7 为降音；0 为休止，X 为无固定音高的敲击（X/ 八分、X// 十六分）。升降号只影响紧随的一个音。调号可另起一行写 1=F；请去掉歌词、拍号和其他文字。</p>
+<p class="subtle">二胡指法可以手改：点谱面上的二胡小字修改，或在音后直接写 [外二⊓]（内 / 外弦、〇–四指、⊓ / V 弓法、↓ / ↑ 换把，写 [-] 隐藏）；改过的标记随乐谱保存和导出。</p>
 <details class="syntax-more"><summary>完整写法 · 乐谱文本格式 v1（节奏、连线、换行、换页）</summary><pre class="notation-rules"></pre><div class="toolbar"><button id="copyRules">复制规则</button></div></details>
 <div class="toolbar"><button id="fExample">载入 F 调示例</button><span class="subtle">点号“.”仅作为节奏符号保留；请用撇号或组合上下点标八度。</span></div>
 <details class="work-block"><summary>长笛上怎么读？</summary><p>普通 C 调长笛是非移调乐器，这里只改变读谱方式。固定数字 1、2、3、4、5、6、7 分别表示 C、D、E、F、G、A、B；♭7 就是 B♭，♯4 就是 F♯。不要再次按 F 调去读转换后的数字。</p><p>例如原谱 1=F，中音 1 定为 F4：1 2 3 4 5 6 7 转成 4 5 6 ♭7 1̇ 2̇ 3̇，音名为 F4 G4 A4 B♭4 C5 D5 E5。原谱的 5 已跨到 C5，所以需要上点。</p><p>简谱调号本身不确定绝对八度，请根据原曲选择“中音 1 的八度”。超出普通 C 尾管长笛常用范围 C4–C7 会提示；B 尾管可再低半音。整体升降八度会改变实际音区。以 6 为主音的小调仍按谱面 1= 的调号输入。</p><p>临时升降号按相对音级加减半音。♮ 仅表示取消该音级的临时变化，回到原调该级本音，不会取消原谱调号。复杂调号拼写在输出中归并为等音，便于按音高吹奏。</p></details>
@@ -467,4 +468,4 @@ showTab(TAB_NAMES.includes(location.hash.slice(1))?location.hash.slice(1):'instr
 </script>
 </body>
 </html>
-<!-- Modified by AI on 2026-10-11 12:29:53 -->
+<!-- Modified by AI on 2026-10-11 12:52:40 -->

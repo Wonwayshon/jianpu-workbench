@@ -1014,4 +1014,18 @@ main header.page-head{position:static;background:transparent;border:0;z-index:au
 body:has(#floatPlayer:not([hidden])) main{padding-bottom:110px}
 @media screen and (min-width:900px){body:has(#floatPlayer:not([hidden])) main{padding-bottom:48px}}
 @media(max-width:599px){.float-player{left:10px!important;right:10px!important;bottom:calc(80px + env(safe-area-inset-bottom))!important;max-width:none!important}.float-player #floatInfo{flex:1 1 auto}}
-/* Modified by AI on 2026-10-11 12:29:53 */
+/* Erhu markings are tappable for hand edits; edited ones get a faint underline on screen only. */
+.jp-annotated .jp-anno{pointer-events:auto;cursor:pointer;border-radius:4px}
+.jp-annotated .jp-anno:hover{background:var(--accent-soft)}
+.jp-anno.anno-manual .anno-low,.jp-anno.anno-manual .anno-top{text-decoration:underline dotted color-mix(in srgb,var(--accent) 60%,transparent);text-underline-offset:2px}
+@media print{.jp-anno.anno-manual .anno-low,.jp-anno.anno-manual .anno-top{text-decoration:none}.jp-annotated .jp-anno:hover{background:none}}
+.erhu-edit-sheet{width:min(520px,calc(100vw - 32px))}
+.erhu-edit-sheet h2 small{font-size:13px;font-weight:400;color:var(--muted);margin-left:6px}
+.erhu-edit-row{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;align-items:center}
+.erhu-edit-row>span{font-size:13px;color:var(--muted);font-weight:600}
+.erhu-edit-opts{display:flex;flex-wrap:wrap;gap:6px}
+.erhu-edit-opts button{min-height:36px;padding:0 12px;border-radius:9px;background:var(--fill);font-weight:500}
+.erhu-edit-opts button[aria-checked=true],.erhu-edit-opts button[aria-pressed=true]{background:var(--accent);color:var(--on-accent,#fff)}
+.erhu-edit-sheet .dialog-actions{display:flex;justify-content:space-between;gap:8px}
+.viewer.perform .jp-anno{pointer-events:none}
+/* Modified by AI on 2026-10-11 12:52:40 */

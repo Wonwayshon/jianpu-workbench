@@ -70,8 +70,16 @@ for(const [key,tuning,octave] of [[2,[62,69],0],[0,[60,67],0],[7,[55,62],-1]]){
  const pair=p.notes.slice(1,3).map(t=>r.map.get(t));assert.deepEqual(Array.from(pair,x=>x.finger),[0,4]);assert.deepEqual(Array.from(pair,x=>x.string),[1,0]);
  assert.equal(pair[1].technique,'unisonCrossing');assert.equal(pair[1].shift,undefined);assert.equal(p.notes[1].midi,p.notes[2].midi);
 }
-for(const text of ["5/5/5/","5/0/5/","(5/5/)","5/!tr5/","5/5'/","5/^5//5/","5 - 5","5/ <1 3>/ 5/"]){
+// Only a beamed pair of its own inside one bar: not across a bar line, not inside a faster group such as 3355.
+({p,r}=run("1 2 | 5/5/ 6",2));assert.equal(r.map.get(p.notes[3]).technique,"unisonCrossing");
+for(const text of ["5/5/5/","5/0/5/","(5/5/)","5/!tr5/","5/5'/","5/^5//5/","5 - 5","5/ <1 3>/ 5/","3/3/5/5/","3//3//5//5//","5/ | 5/","1 5 | 5 1"]){
  ({p,r}=run(text,2));assert.ok(p.notes.every(t=>r.map.get(t)?.technique!=='unisonCrossing'),`do not impose timbral crossing: ${text}`);
+}
+// Hand-edited markings: parsed after a note, kept by serialize, and only the written fields replace the automatic ones.
+{const q=J.parse("3'/[外二⊓] 5 6[-] 1[内〇无弓]");const [a,b,c,d]=q.notes;assert.equal(a.erhu,'外二⊓');assert.equal(b.erhu,undefined);assert.equal(c.erhu,'-');assert.equal(d.erhu,'内〇无弓');
+ assert.equal(a.col,0);assert.equal(a.len,3);assert.equal(a.erhuLen,5);assert.match(J.serialize(q.lines),/3'\/\[外二⊓\] 5 6\[-\] 1\[内〇无弓\]/);
+ const auto={finger:3,string:0,bow:'up',shift:'up',stringChange:false};const x=E.applyOverride(auto,'外二⊓');assert.deepEqual([x.finger,x.string,x.bow,x.shift,x.manual,x.stringChange],[2,1,'down','up',true,true]);
+ assert.equal(E.applyOverride(auto,'-'),null);const y=E.applyOverride(auto,'无弓无换');assert.equal(y.bow,null);assert.equal(y.shift,null);assert.equal(y.finger,3);
 }
 ({p,r}=run("1'/b3'/4'/",2));
 assert.deepEqual(Array.from(p.notes.slice(0,2),t=>r.map.get(t).finger),[1,3]);
@@ -108,4 +116,4 @@ const slide=E.label({finger:1,string:1,anchorMidi:77,shift:'up',guideFinger:1});
 const cross=E.label({finger:4,string:0,technique:'unisonCrossing'});assert.match(cross.children[1].children.at(-1).title,/同音换弦/);
 const bad=E.label({finger:null,reason:'trill'});assert.match(bad.children[1].children[0].title,/颤音手型/);
 console.log(`PASS: opening 1123, one prepared shift, stable following frame; repeated 5 stays on 3 / shift at 6 with 2↔3; ${count} trills across 12 keys and 3 tunings; upper-degree accidentals; impossible trills; ordinary fourth fingers; phrase restart; grace fingering, isolated peak, exact-pair timbral crossing and index-guide shift; label and tooltip.`);
-// Modified by AI on 2026-10-08 23:49:10
+// Modified by AI on 2026-10-11 12:52:40

@@ -114,9 +114,11 @@ function transition(p,c,info){
 // lines: parsed score lines whose note tokens carry `midi`. keyOf(token) -> key pitch class.
 // Returns Map(token -> {finger, string, shift, anchorMidi, bow}) and a summary.
 function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
- const seq=[];let slur=0,pauseBeats=0,restActive=false,attackGroup=0;const tuplets=[];
+ const seq=[];let slur=0,pauseBeats=0,restActive=false,attackGroup=0,bar=0,beam=0,glued=false;const tuplets=[];
  for(const l of lines){if(l.kind!=='music')continue;
   for(const t of l.tokens){
+   // Bars and beam groups (notes joined by one 减时线 run) for idioms that only apply inside one beamed pair.
+   if(t.t==='bar'){bar++;glued=false}else if(t.t==='space'||!(t.t==='note'||t.t==='open'||t.t==='close'))glued=false;
    if(t.t==='open')slur++;else if(t.t==='close')slur=Math.max(0,slur-1);
    else if(t.t==='tupOpen'){let q=1;while(q*2<t.n)q*=2;tuplets.push(q/t.n)}
    else if(t.t==='tupClose')tuplets.pop();
@@ -125,7 +127,8 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
    else if(t.t==='dash'){attackGroup++;if(restActive)pauseBeats+=1;}
    else if(t.t==='note'&&t.midi!=null){
     // Eighth rests separate attacks, not phrases: keep the hand frame through 3/0/ 5/0/ ... .
-    seq.push({t,attackGroup,inSlur:slur>0,afterRest:pauseBeats>=1-1e-9,short:(t.under||0)>=2});pauseBeats=0;restActive=false;
+    if(!t.grace){if((t.under||0)>0){if(!glued)beam++;glued=true}else{beam++;glued=false}}
+    seq.push({t,attackGroup,bar,beam,inSlur:slur>0,afterRest:pauseBeats>=1-1e-9,short:(t.under||0)>=2});pauseBeats=0;restActive=false;
    }
   }
  }
@@ -156,12 +159,14 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0}={}){
    if(!equalReturn&&briefUpperReach){p.keepFrame=true;n.keepFrame=true}
   }
  }
- // Exactly two rearticulated outer-open sol notes in 1–5 tuning can contrast open/stopped timbres.
- // Rests, ties/slurs, ornaments, other octaves and longer chains do not trigger this idiom.
+ // Exactly two rearticulated outer-open sol notes in 1–5 tuning can contrast open/stopped timbres — only when the
+ // two notes form their own beamed pair inside one bar (e.g. 5/5/). Across a bar line or inside a faster group such
+ // as 3/3/5/5/ both notes keep the same fingering. Rests, slurs, ornaments, other octaves and longer chains do not either.
+ const beamSize=new Map();for(const z of seq)if(!z.t.grace)beamSize.set(z.beam,(beamSize.get(z.beam)||0)+1);
  for(let i=0;i<seq.length-1;i++){
   const x=seq[i],n=seq[i+1],p=seq[i-1],after=seq[i+2],key=keyOf(x.t);
   const plain=z=>z&&!z.inSlur&&!z.t.grace&&!(z.t.orns||[]).length;
-  if(plain(x)&&plain(n)&&x.attackGroup===n.attackGroup&&keyOf(n.t)===key&&x.t.degree===5&&n.t.degree===5&&x.t.midi===tuning[1]&&n.t.midi===x.t.midi&&tuning[1]-tuning[0]===7&&((tuning[0]-key)%12+12)%12===0&&
+  if(plain(x)&&plain(n)&&x.attackGroup===n.attackGroup&&x.bar===n.bar&&x.beam===n.beam&&(x.t.under||0)>0&&beamSize.get(x.beam)===2&&keyOf(n.t)===key&&x.t.degree===5&&n.t.degree===5&&x.t.midi===tuning[1]&&n.t.midi===x.t.midi&&tuning[1]-tuning[0]===7&&((tuning[0]-key)%12+12)%12===0&&
    !(p&&p.attackGroup===x.attackGroup&&p.t.midi===x.t.midi)&&!(after&&after.attackGroup===n.attackGroup&&after.t.midi===n.t.midi)){
    x.unisonRole='open';n.unisonRole='stopped';
   }
@@ -275,7 +280,7 @@ const NAMES=['C','C♯','D','E♭','E','F','F♯','G','G♯','A','B♭','B'];
 function label(r){
  if(!r)return null;
  const box=document.createElement('span'),row=document.createElement('span'),low=document.createElement('span');
- box.className='jp-anno';row.className='anno-top';low.className='anno-low';
+ box.className='jp-anno'+(r.manual?' anno-manual':'');row.className='anno-top';low.className='anno-low';
  const add=(parent,cls,text,title)=>{const e=document.createElement('span');e.className=cls;e.textContent=text;if(title)e.title=title;parent.append(e)};
  if(r.bow)add(row,'anno-bow',r.bow==='down'?'⊓':'V',r.bow==='down'?'拉弓':'推弓');
  if(r.finger==null){add(low,'anno-bad','?',r.reason==='trill'?'没有可用的同弦同把位颤音手型，请人工核对辅助音或演奏方式':'超出二胡音域');box.append(row,low);return box}
@@ -304,6 +309,27 @@ function autoTuning(key){
 // "15 弦（D4–A4）": the open strings named by scale degree in the key (inner first), as erhu players say.
 function stringsName(t,key){return `${degreeName(t[0]%12,key)}${degreeName(t[1]%12,key)} 弦`}
 function tuningLabel(t,key){const n=m=>NAMES[m%12]+(Math.floor(m/12)-1);return `${stringsName(t,key)}（${n(t[0])}–${n(t[1])}）`}
-window.ErhuFingering={annotate,label,autoTuning,tuningLabel,stringsName,TUNINGS:[['D–A（标准定弦）',[62,69]],['C–G',[60,67]],['E♭–B♭',[63,70]],['E–B',[64,71]],['F–C',[65,72]],['G–D（二泉调 / 中胡）',[55,62]]]};
+// Hand-edited markings: ⊓ / V bow, 内 / 外 string, 〇 一 二 三 四 finger, ↓ / ↑ shift (as drawn), 滑, 伸,
+// 无弓 / 无换 to drop a mark, and "-" to hide the note's markings. Only what is written replaces the automatic result.
+const OV_FINGER={'〇':0,'○':0,'O':0,'o':0,'一':1,'二':2,'三':3,'四':4};
+function parseOverride(text){
+ let s=String(text||'').trim();const o={};if(s==='-')return {hide:true};
+ if(s.includes('无弓')){o.bow=null;s=s.replace('无弓','')}if(s.includes('无换')){o.shift=null;s=s.replace('无换','')}
+ for(const ch of s){
+  if('⊓∏П'.includes(ch))o.bow='down';else if('Vv∨'.includes(ch))o.bow='up';
+  else if(ch==='↓')o.shift='up';else if(ch==='↑')o.shift='down';
+  else if(ch==='内')o.string=0;else if(ch==='外')o.string=1;
+  else if(ch in OV_FINGER)o.finger=OV_FINGER[ch];else if(ch==='滑')o.guide=true;else if(ch==='伸')o.extended=true;
+ }
+ return o;
+}
+function applyOverride(r,text){
+ const o=parseOverride(text);if(o.hide)return null;const x={...(r||{}),manual:true};
+ if('bow' in o)x.bow=o.bow;if('shift' in o)x.shift=o.shift;if('string' in o){x.string=o.string;x.stringChange=true}
+ if('finger' in o){x.finger=o.finger;x.reason=undefined;x.guideFinger=o.guide?o.finger||x.finger:0;x.extended=!!o.extended;x.trill=null}
+ else{if(o.guide)x.guideFinger=x.finger||1;if(o.extended)x.extended=true}
+ return x;
+}
+window.ErhuFingering={annotate,label,parseOverride,applyOverride,autoTuning,tuningLabel,stringsName,TUNINGS:[['D–A（标准定弦）',[62,69]],['C–G',[60,67]],['E♭–B♭',[63,70]],['E–B',[64,71]],['F–C',[65,72]],['G–D（二泉调 / 中胡）',[55,62]]]};
 })();
-// Modified by AI on 2026-10-08 23:54:40
+// Modified by AI on 2026-10-11 12:52:40
