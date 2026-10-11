@@ -18,7 +18,7 @@ if(args[0]==='api'){
  else if(url.includes('/contents/'))out({content:Buffer.from(JSON.stringify({androidVersionCode:1})).toString('base64')});
  else if(url.endsWith('/releases?per_page=100'))out([...(s.removed?[]:[old]),...(s.release?[s.release]:[])]);
  else if(url.includes('/releases/tags/')){console.error('Draft tag lookup is intentionally unavailable');process.exit(1)}
- else if(url.endsWith('/releases')&&method==='POST'){const body=JSON.parse(fs.readFileSync(0,'utf8'));s.events.push('create-draft');s.release={...body,id:2,assets:[],html_url:'https://example.invalid/release'};out(s.release)}
+ else if(url.endsWith('/releases')&&method==='POST'){const body=JSON.parse(fs.readFileSync(0,'utf8'));if(body.target_commitish!==undefined)throw Error('Explicit target SHA triggers workflow permission checks');if(body.tag_name!=='${tag}')throw Error('Release must use verified existing tag');s.events.push('create-draft');s.release={...body,id:2,assets:[],html_url:'https://example.invalid/release'};out(s.release)}
  else if(url.endsWith('/releases/2')&&method==='GET')out(s.release);
  else if(url.endsWith('/releases/2')&&method==='PATCH'){if(s.release.assets.length!==7)throw Error('Published before all uploads');Object.assign(s.release,JSON.parse(fs.readFileSync(0,'utf8')));s.events.push('publish');out(s.release)}
  else if(url.endsWith('/releases/latest')){s.latestCalls++;out(s.latestCalls===1?old:s.release)}
@@ -40,4 +40,4 @@ if(args[0]==='api'){
  // An old local audition output must never become a Release asset or checksum entry.
  console.log('PASS: full publisher handles draft-ID lookup and delayed latest endpoint; corrupt upload stays a draft and preserves old release');
 }finally{fs.rmSync(tmp,{recursive:true,force:true})}
-// Modified by AI on 2026-10-11 13:05:22
+// Modified by AI on 2026-10-11 13:09:53

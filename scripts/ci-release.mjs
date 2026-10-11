@@ -50,7 +50,9 @@ async function main(){
   const metadata=api(`${endpoint}/contents/project.json?ref=${previous.tag_name}`),old=JSON.parse(Buffer.from(metadata.content,'base64').toString('utf8'));
   if(project.androidVersionCode<=old.androidVersionCode)throw Error('Android versionCode must increase to allow updates');
  }
- let release=existing||api(`${endpoint}/releases`,'POST',{tag_name:tag,target_commitish:head,draft:true,name:`笛调之间 ${version}`,body:fs.readFileSync(path.join(root,'docs/releases',`${tag}.md`),'utf8')});
+ // The existing tag is verified above. Omit target_commitish: an explicit old SHA
+ // can trigger workflow-write checks when main's workflow changes during a build.
+ let release=existing||api(`${endpoint}/releases`,'POST',{tag_name:tag,draft:true,name:`笛调之间 ${version}`,body:fs.readFileSync(path.join(root,'docs/releases',`${tag}.md`),'utf8')});
  gh('release','upload',tag,...files.map(f=>path.join(out,f.name)),'--repo',repo,'--clobber');
  release=api(`${endpoint}/releases/${release.id}`);verifyAssets(release.assets,files);
  release=api(`${endpoint}/releases/${release.id}`,'PATCH',{draft:false,make_latest:'true'});
@@ -63,4 +65,4 @@ async function main(){
  console.log(`Published and verified ${release.html_url} (${files.length} assets)`);
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))await main();
-// Modified by AI on 2026-10-11 13:05:22
+// Modified by AI on 2026-10-11 13:09:53
