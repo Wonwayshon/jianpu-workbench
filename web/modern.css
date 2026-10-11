@@ -997,4 +997,21 @@ main header.page-head{position:static;background:transparent;border:0;z-index:au
 .pdf-switch input:disabled{opacity:.4}
 .pdf-sheet .subtle:empty{display:none}
 .pdf-sheet .dialog-actions{display:flex;justify-content:flex-end}
-/* Modified by AI on 2026-10-11 10:46:46 */
+/* PDF: each @page of the score starts a new printed page; rows and systems never split. */
+@media print{.print-sheet .jp-page~.jp-page{break-before:page}.print-sheet .jp-line,.print-sheet .jp-system{break-inside:avoid}}
+/* 写法速查 stays inside the 420px text pane (the pane clips overflow), with even inner margins. */
+@media screen and (min-width:900px){#scorePanel .help-menu{width:376px;right:-4px;padding:16px;gap:12px}}
+.help-menu>*{min-width:0}
+.help-menu details>summary{padding-right:28px}
+/* Away from 转谱 the player floats (dark card, design phone bar); on 转谱 it stays embedded in the page. */
+.float-player{left:auto!important;right:24px!important;bottom:24px!important;top:auto!important;width:auto!important;max-width:min(520px,calc(100vw - 32px))!important;min-height:0!important;padding:8px 10px 8px 8px!important;gap:12px!important;border-radius:18px!important;background:var(--dark)!important;color:#fff!important;box-shadow:0 12px 32px #0F111547!important}
+.float-player #floatInfo{color:#fff;font-size:13px!important;flex:0 1 auto}
+.float-player #floatInfo small{color:#A7ADBA}
+.float-player #floatStop{width:44px;height:44px;min-width:44px;min-height:44px}
+.float-player .beat-dots{display:none!important}
+.float-player #floatSettings{background:#1C1F26!important;color:#fff!important;font-size:16px}
+.float-player .float-close{color:#A7ADBA!important}
+body:has(#floatPlayer:not([hidden])) main{padding-bottom:110px}
+@media screen and (min-width:900px){body:has(#floatPlayer:not([hidden])) main{padding-bottom:48px}}
+@media(max-width:599px){.float-player{left:10px!important;right:10px!important;bottom:calc(80px + env(safe-area-inset-bottom))!important;max-width:none!important}.float-player #floatInfo{flex:1 1 auto}}
+/* Modified by AI on 2026-10-11 12:29:53 */

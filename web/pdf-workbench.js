@@ -434,7 +434,7 @@
   // ---------- WebDAV ----------
   function davForm(){return {...ScoreLibrary.davConfig(),url:byId('davUrl').value.trim(),user:byId('davUser').value.trim(),pass:byId('davPass').value||(byId('davPass').dataset.stored==='1'?SecureCredentials.TOKEN:''),folder:byId('davFolder').value.trim()||'笛调之间'};}
   function showDavConfig(){const c=ScoreLibrary.davConfig();byId('davUrl').value=c.url;byId('davUser').value=c.user;byId('davPass').dataset.stored=c.pass===SecureCredentials.TOKEN?'1':'0';byId('davPass').value=c.pass===SecureCredentials.TOKEN?'':c.pass;byId('davPass').placeholder=c.pass===SecureCredentials.TOKEN?'已安全保存；留空保持':'密码 / 应用密码';byId('davFolder').value=c.folder;byId('davLast').textContent=c.lastSync?`上次同步：${new Date(c.lastSync).toLocaleString()}`:'尚未同步';}
-  byId('davPreset').onchange=()=>{if(byId('davPreset').value)byId('davUrl').value=byId('davPreset').value;report('davStatus','已填入地址，请填写账号和密码后保存。');};
+  if(byId('davPreset'))byId('davPreset').onchange=()=>{if(byId('davPreset').value)byId('davUrl').value=byId('davPreset').value;report('davStatus','已填入地址，请填写账号和密码后保存。');};
   byId('davForget').onclick=async()=>{try{await SecureCredentials.removeAsync('webdav');if(!await ScoreLibrary.saveDavConfigAsync({...ScoreLibrary.davConfig(),pass:''}))throw new Error('清除设置失败');showDavConfig();report('davStatus','已清除保存的密码，需要重新填写后才能同步。')}catch(error){report('davStatus',error.message,true)}};
   byId('davSave').onclick=async()=>{const ok=await ScoreLibrary.saveDavConfigAsync(davForm());if(ok)showDavConfig();report('davStatus',ok?'已安全保存':'保存失败：修改服务地址或账号后请重新填写密码。',!ok)};
   byId('davTest').onclick=async()=>{byId('davTest').disabled=true;report('davStatus','正在连接…');try{await ScoreLibrary.testDav(davForm());report('davStatus','连接成功，远端文件夹已就绪。记得点「保存设置」。');}catch(error){report('davStatus',`连接失败：${error.message}`,true);}finally{byId('davTest').disabled=false;}};
@@ -499,4 +499,4 @@
   window.PdfWorkbenchCore={parsePages,joinText,usableText,checkedRecord};
   syncControls();setLibraryView(true);
 })();
-// Modified by AI on 2026-10-11 05:55:14
+// Modified by AI on 2026-10-11 12:29:53

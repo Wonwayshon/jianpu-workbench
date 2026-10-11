@@ -526,12 +526,18 @@ public final class MainActivity extends Activity {
                 }
             });
         }
-        @JavascriptInterface public void printScore() {
+        @JavascriptInterface public void printScore() { printScoreTitled("笛调之间"); }
+        // The job name becomes the default PDF file name; keep it short and free of path characters.
+        @JavascriptInterface public void printScoreTitled(String title) {
             if (!trustedDocument) return;
+            String clean = title == null ? "" : title.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", " ").trim();
+            if (clean.isEmpty()) clean = "笛调之间";
+            if (clean.length() > 80) clean = clean.substring(0, 80);
+            final String job = clean;
             runOnUiThread(() -> {
                 PrintManager manager = (PrintManager) getSystemService(PRINT_SERVICE);
                 if (manager == null) { toast("当前设备不支持打印。"); return; }
-                manager.print("长笛数字谱", webView.createPrintDocumentAdapter("长笛数字谱"),
+                manager.print(job, webView.createPrintDocumentAdapter(job),
                         new PrintAttributes.Builder().build());
             });
         }
@@ -629,4 +635,4 @@ public final class MainActivity extends Activity {
         super.onDestroy();
     }
 }
-// Modified by AI on 2026-10-08 14:35:52
+// Modified by AI on 2026-10-11 12:30:14

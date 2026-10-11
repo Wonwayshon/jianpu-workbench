@@ -427,7 +427,8 @@ function answer(base,acc,oct){
 }
 function buildPad(){
  const pad=$('practicePad');pad.replaceChildren();pad.className='practice-pad piano-pad';
- for(const oct of padOctaves()){
+ // Like a real piano: the lowest octave on the left.
+ for(const oct of padOctaves().slice().reverse()){
   const section=document.createElement('div');section.className='piano-octave';
   const title=document.createElement('div');title.className='piano-octave-name';title.textContent=`C${oct}–B${oct}`;
   const row=document.createElement('div');row.className='piano-keyboard';row.setAttribute('role','group');row.setAttribute('aria-label',`第 ${oct} 组钢琴键`);
@@ -522,4 +523,4 @@ function bind(){
 bind();
 window.Practice={keyboardAnswer,buildPad,padOctaves,pressedMidi,cfg,makeExercise,toAbc,expected,reason,newExercise,answer,midiOf,RANGES,TUNES,engrave,keyInfo,get current(){return ex}};
 })();
-// Modified by AI on 2026-10-11 06:31:32
+// Modified by AI on 2026-10-11 12:29:53

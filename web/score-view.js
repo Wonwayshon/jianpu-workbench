@@ -213,7 +213,7 @@ window.onScoreConverted=()=>{
 function setView(v){
  view=v;try{localStorage.setItem('flute.scoreView',v)}catch{}
  for(const [k,id] of Object.entries(VIEWS)){$(id).hidden=k!==v;$(TAB_BUTTONS[k]).setAttribute('aria-pressed',String(k===v))}
- $('viewHint').textContent=HINTS[v];$('printScore').textContent='存为 PDF…';if(ScorePlayer.isPlaying())ScorePlayer.stop();
+ $('viewHint').textContent=HINTS[v];$('printScore').textContent='另存为 PDF';if(ScorePlayer.isPlaying())ScorePlayer.stop();
  if(v==='staff')showStaff();
  syncErhuBar();if(v==='trans'||v==='source')renderMain();
 }
@@ -257,7 +257,15 @@ function showClock(){
  if($('playProg'))$('playProg').style.width=(total?Math.min(100,now/total*100):0)+'%';
  if(pos&&$('floatInfo'))$('floatInfo').innerHTML=`<b>${mmss(now)} / ${mmss(total)}</b> <small>♩=${settings.tempo}</small>`;
 }
-setInterval(()=>{if(!document.hidden)showClock()},300);
+setInterval(()=>{if(!document.hidden)showClock();syncMediaSession()},300);
+// System media controls where the platform exposes them (desktop browsers; WebViews mostly ignore Web Audio).
+const media='mediaSession' in navigator?navigator.mediaSession:null;let mediaOn=null;
+if(media){try{media.setActionHandler('play',()=>{if(!ScorePlayer.isPlaying())startPlayback()});media.setActionHandler('pause',()=>ScorePlayer.stop());media.setActionHandler('stop',()=>ScorePlayer.stop())}catch{}}
+function syncMediaSession(){
+ if(!media)return;const on=ScorePlayer.isPlaying();
+ if(on!==mediaOn){mediaOn=on;try{media.playbackState=on?'playing':'paused';if(on&&window.MediaMetadata)media.metadata=new MediaMetadata({title:sheetTitle(lastConverted?.source,'')||'乐谱',artist:'笛调之间',album:`♩=${settings.tempo}`})}catch{}}
+ const pos=on&&ScorePlayer.position?.();if(pos&&pos.total>0&&media.setPositionState){try{media.setPositionState({duration:pos.total,position:Math.min(pos.elapsed,pos.total),playbackRate:1})}catch{}}
+}
 // Floating bar: appears when playback starts and stays (▶ / ■) until closed with ✕; drag it anywhere, it snaps to
 // the nearest side and remembers where it was.
 let floatDismissed=false,floatAvailable=false;
@@ -410,15 +418,15 @@ document.addEventListener('pointerdown',e=>{if(e.target!==$('startHere')&&!token
 let pdfDlg=null;
 function pdfDialog(){
  if(pdfDlg)return pdfDlg;
- const d=document.createElement('dialog');d.className='sheet pdf-sheet';d.setAttribute('aria-label','存为 PDF');
- d.innerHTML='<div class="sheet-body"><div class="sheet-head"><h2>存为 PDF</h2><button type="button" class="small-btn" data-close>关闭</button></div>'
+ const d=document.createElement('dialog');d.className='sheet pdf-sheet';d.setAttribute('aria-label','另存为 PDF');
+ d.innerHTML='<div class="sheet-body"><div class="sheet-head"><h2>另存为 PDF</h2><button type="button" class="small-btn" data-close>关闭</button></div>'
   +'<div class="pdf-field"><span>记谱法</span><div class="app-segments" role="group" aria-label="记谱法"><button type="button" data-n="jp">简谱</button><button type="button" data-n="staff">五线谱</button></div></div>'
   +'<div class="pdf-field"><label for="pdfKey">调</label><select id="pdfKey"><option value="orig">原调</option><option value="fixed">音名谱（固定 1=C）</option><option value="trans">转调</option></select></div>'
   +'<p class="subtle pdf-trans-note"></p>'
   +'<label class="pdf-switch"><input type="checkbox" role="switch" id="pdfMeasures">小节号</label>'
   +'<label class="pdf-switch"><input type="checkbox" role="switch" id="pdfErhu">二胡指法与弓法</label>'
   +'<p class="subtle pdf-erhu-note">二胡标记只用于简谱的原调或转调。</p>'
-  +'<div class="dialog-actions"><button type="button" class="primary" data-go>存 PDF</button></div></div>';
+  +'<div class="dialog-actions"><button type="button" class="primary" data-go>保存 PDF</button></div></div>';
  document.body.append(d);
  d.querySelector('[data-close]').onclick=()=>d.close();d.addEventListener('click',e=>{if(e.target===d)d.close()});
  for(const b of d.querySelectorAll('[data-n]'))b.onclick=()=>{d.dataset.n=b.dataset.n;syncPdf()};
@@ -449,14 +457,14 @@ function exportPdf(){
    if(!lines.some(l=>l.kind==='meta'&&l.name==='note'))lines.unshift({kind:'meta',name:'note',value:`原谱 1=${lastConverted.keyLabel} → 1=${k}${$('transMode').value==='move'?'（整曲移调）':''}`});
    const keepAll=transAllLines;transAllLines=all;
    const extra=staff?{partNames:scoreParts(),...scoreDisplayOptions(lines,'trans')}:erhuOpts(lines,'trans');transAllLines=keepAll;
-   printScoreSheet(lines,`${name||'转调谱'} · 1=${k}${staff?' · 五线谱':''}`,$('transMode').value==='move'?`整曲移到 1=${k}`:`保持原音高，按 1=${k} 记谱`,staff?'staff':'jianpu',k,extra);
+   printScoreSheet(lines,`${name||'转调谱'} 1=${k}${staff?' 五线谱':''}`,$('transMode').value==='move'?`整曲移到 1=${k}`:`保持原音高，按 1=${k} 记谱`,staff?'staff':'jianpu',k,extra);
   }else if(staff){
    const lines=F(lastConverted.lines);
-   printScoreSheet(lines,`${name||'乐谱'} · 五线谱`,$('conversionCaption').textContent,'staff',key==='fixed'?'C':lastConverted.keyLabel,{partNames:scoreParts(),...scoreDisplayOptions(lines,'staff')});
+   printScoreSheet(lines,`${name||'乐谱'} 五线谱`,$('conversionCaption').textContent,'staff',key==='fixed'?'C':lastConverted.keyLabel,{partNames:scoreParts(),...scoreDisplayOptions(lines,'staff')});
   }else if(key==='fixed'){
-   const lines=F(lastConverted.lines);printScoreSheet(lines,`${name||'音名谱'} · 音名谱（固定 1=C）`,$('conversionCaption').textContent,'jianpu',undefined,{partNames:scoreParts(),...scoreDisplayOptions(lines,'flute')});
+   const lines=F(lastConverted.lines);printScoreSheet(lines,`${name||'乐谱'} 音名谱`,$('conversionCaption').textContent,'jianpu',undefined,{partNames:scoreParts(),...scoreDisplayOptions(lines,'flute')});
   }else{
-   const lines=F(lastConverted.source.lines);printScoreSheet(lines,`${name||'简谱'} · 简谱`,'按乐谱文本排版的简谱','jianpu',undefined,erhuOpts(lines,'source'));
+   const lines=F(lastConverted.source.lines);printScoreSheet(lines,`${name||'简谱'}`,'','jianpu',undefined,erhuOpts(lines,'source'));
   }
  }finally{measureOn=keepMeasure;$('erhuFinger').checked=keepErhu}
 }
@@ -742,4 +750,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 10:46:46
+// Modified by AI on 2026-10-11 12:29:53

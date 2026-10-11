@@ -16,7 +16,7 @@ async function request(method,url,headers={},body=null,options={}){
  }catch(e){native().releaseTransfer(key);throw e}
 }
 async function saveBlob(blob,name,mime){const key=id('save');try{await upload(key,blob);native().saveTransfer(key,name,mime||blob.type||'application/octet-stream');return true}catch(e){native().releaseTransfer(key);throw e}}
-registry.android={kind:'android',available:()=>!!native(),ready:Promise.resolve(),request,saveBlob,copyText:async text=>{native().copyText(text);return true},readClipboard:async()=>native().readClipboard()||'',printScore:async()=>native().printScore(),setImmersive:async on=>native().setImmersive(on),openExternal:async url=>{if(native().openExternal)native().openExternal(url);else location.href=url},
+registry.android={kind:'android',available:()=>!!native(),ready:Promise.resolve(),request,saveBlob,copyText:async text=>{native().copyText(text);return true},readClipboard:async()=>native().readClipboard()||'',printScore:async title=>title&&native().printScoreTitled?native().printScoreTitled(String(title)):native().printScore(),setImmersive:async on=>native().setImmersive(on),openExternal:async url=>{if(native().openExternal)native().openExternal(url);else location.href=url},
  credentials:{store:(...args)=>native().storeCredential(...args),has:key=>native().hasCredential(key),remove:key=>native().deleteCredential(key)}};
 })();
-// Modified by AI on 2026-10-08 14:35:52
+// Modified by AI on 2026-10-11 12:29:53
