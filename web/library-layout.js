@@ -54,7 +54,7 @@ function sheet(id, title) {
 const panel = $(id);
 if (!panel) return null;
 const dlg = document.createElement('dialog');
-dlg.className = 'sheet lib-sheet'; dlg.setAttribute('aria-label', title);
+dlg.className = 'sheet lib-sheet' + (id === 'backupPanel' ? ' backup-sheet' : ''); dlg.setAttribute('aria-label', title);
 const body = document.createElement('div'); body.className = 'sheet-body';
 const head = document.createElement('div'); head.className = 'sheet-head';
 const h = document.createElement('h2'); h.textContent = title;
@@ -84,4 +84,4 @@ $('davPanel').closest('dialog').addEventListener('close', davState);
 davState();
 }
 })();
-// Modified by AI on 2026-10-11 06:31:32
+// Modified by AI on 2026-10-11 21:10:31

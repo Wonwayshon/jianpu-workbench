@@ -106,7 +106,8 @@ function transition(p,c,info){
  // These are preferences, not locks: a required trill or an otherwise unreachable phrase can override them.
  const sameFrame=sameHand(p,c);
  const timbralPair=info.unisonRole==='stopped'&&p.s===1&&p.f===0&&c.s===0&&c.f===4&&sameFrame;
- if(info.repeatPitch&&!timbralPair&&(p.f!==c.f||p.s!==c.s||!sameFrame))cost+=4;
+ const preparedRepeat=info.repeatEntry&&c.f===1&&info.repeatEntry.some(v=>sameHand(v,c));
+ if(info.repeatPitch&&!timbralPair&&!preparedRepeat&&(p.f!==c.f||p.s!==c.s||!sameFrame))cost+=4;
  if(info.keepFrame&&!sameFrame)cost+=4;
  return cost;
 }
@@ -114,12 +115,12 @@ function transition(p,c,info){
 // lines: parsed score lines whose note tokens carry `midi`. keyOf(token) -> key pitch class.
 // Returns Map(token -> {finger, string, shift, anchorMidi, bow}) and a summary.
 function annotate(lines,{tuning=[62,69],keyOf=()=>0,respectManual=true}={}){
- const seq=[];let slur=0,pauseBeats=0,restActive=false,attackGroup=0,bar=0,beam=0,glued=false;const tuplets=[];
+ const seq=[];let slur=0,sustainId=0,activeSustain=0,pauseBeats=0,restActive=false,attackGroup=0,bar=0,beam=0,glued=false;const tuplets=[];
  for(const l of lines){if(l.kind!=='music')continue;
   for(const t of l.tokens){
    // Bars and beam groups (notes joined by one 减时线 run) for idioms that only apply inside one beamed pair.
    if(t.t==='bar'){bar++;glued=false}else if(t.t==='space'||!(t.t==='note'||t.t==='open'||t.t==='close'))glued=false;
-   if(t.t==='open')slur++;else if(t.t==='close')slur=Math.max(0,slur-1);
+   if(t.t==='open'){if(!slur)activeSustain=++sustainId;slur++}else if(t.t==='close'){slur=Math.max(0,slur-1);if(!slur)activeSustain=0}
    else if(t.t==='tupOpen'){let q=1;while(q*2<t.n)q*=2;tuplets.push(q/t.n)}
    else if(t.t==='tupClose')tuplets.pop();
    else if(t.t==='chord'||t.t==='percussion')attackGroup++;
@@ -128,7 +129,7 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0,respectManual=true}={}){
    else if(t.t==='note'&&t.midi!=null){
     // Eighth rests separate attacks, not phrases: keep the hand frame through 3/0/ 5/0/ ... .
     if(!t.grace){if((t.under||0)>0){if(!glued)beam++;glued=true}else{beam++;glued=false}}
-    seq.push({t,attackGroup,bar,beam,inSlur:slur>0,afterRest:pauseBeats>=1-1e-9,short:(t.under||0)>=2});pauseBeats=0;restActive=false;
+    seq.push({t,attackGroup,bar,beam,sustainId:activeSustain,inSlur:slur>0,afterRest:pauseBeats>=1-1e-9,short:(t.under||0)>=2});pauseBeats=0;restActive=false;
    }
   }
  }
@@ -137,7 +138,7 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0,respectManual=true}={}){
  for(let i=1;i<seq.length;i++){
   const prev=seq[i-1],now=seq[i];
   now.ornamentLink=prev.attackGroup===now.attackGroup&&prev.t.grace;
-  if(!now.afterRest&&prev.t.midi===now.t.midi)now.repeatPitch=true;
+  if(!now.afterRest&&prev.t.midi===now.t.midi){now.repeatPitch=true;now.heldRepeat=!!now.sustainId&&now.sustainId===prev.sustainId}
   const next=seq[i+1];
   // A short lower neighbour returning to the same stopped pitch also keeps the frame:
   // e.g. 2′–1′–2′ should not shift down on 1′ only to use finger 4 on the returning 2′.
@@ -195,10 +196,38 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0,respectManual=true}={}){
   const frames=trillCandidates(x.t,tuning,key).filter(c=>c.f===1&&c.s===1&&next.every(z=>candidates(z.t.midi,tuning,key).some(v=>sameHand(c,v)&&!v.ext))&&next.slice(1).every(z=>z.t.midi<x.t.midi));
   if(frames.length){x.trillExitAnchors=frames.map(c=>c.a);for(const z of next.slice(1))z.settledPositions=frames.map(c=>c.a-c.nat)}
  }
+ // A repeated tonic can shift on its last new attack to prepare 2–3 and a held pentatonic crest.
+ // Preserve the first three attacks in their home frame; keep tied copies of the crest together,
+ // then shift on the rearticulated crest before its next ascending run.
+ for(let i=3;i<seq.length-5;i++){
+  const x=seq[i],approach=seq.slice(i-3,i),key=keyOf(x.t),n=seq[i+1],third=seq[i+2];
+  if(x.t.degree!==1||x.t.acc!==0||x.t.grace||x.afterRest||x.heldRepeat||approach.some((z,j)=>z.t.midi!==x.t.midi||j>0&&z.afterRest||z.t.grace||z.heldRepeat||keyOf(z.t)!==key)||n.t.degree!==2||third.t.degree!==3||n.t.midi<=x.t.midi||third.t.midi<=n.t.midi)continue;
+  let peak=i+3;while(peak<seq.length&&seq[peak].t.midi===third.t.midi&&!seq[peak].afterRest)peak++;
+  if(peak>=seq.length||seq[peak].t.degree!==5||seq[peak].t.midi<=third.t.midi)continue;
+  let exit=peak+1;while(exit<seq.length&&seq[exit].t.midi===seq[peak].t.midi&&!seq[exit].afterRest)exit++;
+  const climb=seq.slice(exit,exit+3),span=seq.slice(i,exit);
+  if(exit-peak<3||seq[exit-1].heldRepeat||climb.length!==3||span.concat(climb).some(z=>z.t.grace||z.afterRest||hasTrill(z.t)||keyOf(z.t)!==key)||!climb.every((z,j)=>z.t.midi>(j?climb[j-1].t.midi:seq[peak].t.midi)))continue;
+  const frames=candidates(x.t.midi,tuning,key).filter(c=>c.f===1&&span.slice(1,-1).every(z=>candidates(z.t.midi,tuning,key).some(v=>v.s===c.s&&v.a===c.a&&(!v.ext||v.f===4&&z.t.midi===seq[peak].t.midi))));
+  const landing=candidates(seq[exit-1].t.midi,tuning,key).filter(c=>c.f===1&&candidates(climb[0].t.midi,tuning,key).some(v=>v.s===c.s&&v.a===c.a&&v.f===2&&!v.ext));
+  if(!frames.length||!landing.length)continue;
+  for(const z of approach)z.homeApproach=true;
+  x.repeatEntry=frames;x.preparedEntry=true;
+  for(const z of span.slice(0,-1))z.preparedFrames=frames;
+  seq[exit-1].repeatEntry=landing;seq[exit-1].preparedEntry=true;
+  climb[0].preparedFrames=landing;
+ }
+ // Coming off an open string, a run that fits first position uses its natural index note.
+ // A coming high peak is excluded: it may legitimately prepare a different frame on finger 2.
+ for(let i=1;i<seq.length-3;i++){
+  const p=seq[i-1],x=seq[i],key=keyOf(x.t),next=seq.slice(i+1,i+4);
+  if(x.afterRest||x.t.grace||!tuning.includes(p.t.midi)||next.some(z=>z.afterRest||z.t.grace||keyOf(z.t)!==key))continue;
+  const home=candidates(x.t.midi,tuning,key).filter(c=>c.f===1&&c.a===c.nat&&next.every(z=>(hasTrill(z.t)?trillCandidates(z.t,tuning,key):candidates(z.t.midi,tuning,key)).some(v=>sameHand(c,v)&&!v.ext)));
+  if(home.length)x.homeEntry=home;
+ }
  const result=new Map();let unplayable=0,trillUnavailable=0;
  const cache=new Map(),manualIssues=new Map();
  const fingerings=x=>{
-  const t=x.t,key=keyOf(t),trill=hasTrill(t),id=`${t.midi}|${key}|${trill?trillUpper(t,key):'plain'}|${isolatedPeaks.has(t)}|${x.unisonRole||''}|${!!x.preparedEntry}|${!!x.outerApproach}|${x.trillExitAnchors?.join(",")||""}|${x.settledPositions?.join(",")||""}`;
+  const t=x.t,key=keyOf(t),trill=hasTrill(t),id=`${t.midi}|${key}|${trill?trillUpper(t,key):'plain'}|${isolatedPeaks.has(t)}|${x.unisonRole||''}|${!!x.preparedEntry}|${!!x.outerApproach}|${x.trillExitAnchors?.join(",")||""}|${x.settledPositions?.join(",")||""}|${!!x.homeApproach}|${x.preparedFrames?.map(c=>c.s+':'+c.a).join(',')||''}|${x.repeatEntry?.map(c=>c.s+':'+c.a).join(',')||''}|${x.homeEntry?.map(c=>c.s+':'+c.a).join(',')||''}`;
   if(!cache.has(id))cache.set(id,(trill?trillCandidates(t,tuning,key):candidates(t.midi,tuning,key)).map(c=>{
    let cost=c.cost;
    if(c.ext&&isolatedPeaks.has(t))cost-=5;
@@ -207,6 +236,10 @@ function annotate(lines,{tuning=[62,69],keyOf=()=>0,respectManual=true}={}){
    if(x.outerApproach&&!(c.s===1&&c.f===2))cost+=6;
    if(x.trillExitAnchors&&!(c.s===1&&c.f===1&&x.trillExitAnchors.includes(c.a)))cost+=4;
    if(x.settledPositions&&!x.settledPositions.includes(c.a-c.nat))cost+=4;
+   if(x.homeApproach&&c.a!==c.nat)cost+=3;
+   if(x.preparedFrames){if(!x.preparedFrames.some(v=>v.s===c.s&&v.a===c.a))cost+=6;else if(c.ext)cost-=5}
+   if(x.repeatEntry&&!x.repeatEntry.some(v=>sameHand(v,c)))cost+=4;
+   if(x.homeEntry&&!x.homeEntry.some(v=>sameHand(v,c)))cost+=3;
    return {...c,cost};
   }));
   const all=cache.get(id),o=respectManual&&t.erhu?parseOverride(t.erhu):{};
@@ -363,4 +396,4 @@ function applyOverrides(lines,map){
 }
 window.ErhuFingering={annotate,label,parseOverride,applyOverride,applyOverrides,autoTuning,tuningLabel,stringsName,TUNINGS:[['D–A（标准定弦）',[62,69]],['C–G',[60,67]],['E♭–B♭',[63,70]],['E–B',[64,71]],['F–C',[65,72]],['G–D（二泉调 / 中胡）',[55,62]]]};
 })();
-// Modified by AI on 2026-10-11 14:29:02
+// Modified by AI on 2026-10-11 21:19:12

@@ -1042,4 +1042,37 @@ body:has(#floatPlayer:not([hidden])) main{padding-bottom:110px}
 .edit-line.edit-selected{background:var(--accent-soft);box-shadow:inset 3px 0 var(--accent)}
 .edit-selected-note>.jp-main{background:var(--accent-soft);outline:2px solid var(--accent);outline-offset:1px;border-radius:3px}
 @media print{.jp-n.jp-review,.anno-review .anno-low,.anno-review .anno-top{background:transparent!important}}
-/* Modified by AI on 2026-10-11 14:29:02 */
+/* Keep the session summary beside the practice title even when the mistake list is long. */
+.practice-top{display:grid;grid-template-columns:minmax(180px,1fr) minmax(0,2fr);align-items:start;gap:12px 24px}
+.practice-top>div{min-width:0}
+.practice-top .practice-stats{margin:0;min-width:0;max-width:100%;justify-content:flex-end;align-items:center}
+.practice-top #practiceWeak{order:1;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
+.practice-top #practiceReset{flex:none;min-height:36px}
+.backup-sheet{width:min(720px,calc(100vw - 32px))}
+.backup-sheet .sheet-body{gap:18px;padding:26px}
+.backup-sheet .sheet-head button{height:36px;min-height:36px;padding:0 12px;border-radius:10px}
+.backup-sheet #backupPanel{display:grid;gap:16px;margin:0}
+.backup-intro{font-size:14px;color:var(--muted);line-height:1.6}
+.backup-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.backup-card{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--fill)}
+.backup-badge{font-size:12px;font-weight:600;color:var(--accent-text);background:var(--accent-soft);padding:3px 8px;border-radius:6px}
+.backup-card h3{margin:0;font-size:17px}
+.backup-card p{font-size:13px;color:var(--muted);line-height:1.6;min-height:42px;flex:none}
+.backup-card #pdfBackup,.backup-choose{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;box-sizing:border-box;margin:4px 0 0;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+.backup-choose{position:relative;background:var(--paper,#fff);box-shadow:inset 0 0 0 1px var(--line);color:var(--ink)}
+.backup-choose:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.backup-file{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%)}
+.backup-file-name{max-width:100%;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.backup-note{padding:12px 14px;background:var(--fill);border-radius:10px;font-size:12px;color:var(--muted);line-height:1.7}
+.backup-sheet #pdfBackupStatus{padding:10px 12px;border-radius:10px;background:var(--accent-soft);font-size:13px}
+@media(max-width:599px){
+ .practice-top{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:center}
+ .practice-top .intro{display:none}
+ .practice-top .practice-stats{flex-wrap:wrap;gap:4px 8px}
+ .practice-top #practiceSession{width:100%;font-size:12px;text-align:right;justify-content:flex-end}
+ .practice-top #practiceReset{min-height:30px;height:30px}
+ .backup-sheet .sheet-body{padding:20px;gap:14px}
+ .backup-grid{grid-template-columns:1fr;gap:12px}
+ .backup-card{padding:16px}
+}
+/* Modified by AI on 2026-10-11 21:18:11 */

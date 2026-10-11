@@ -56,6 +56,7 @@
   function validDate(value,fallback) { return typeof value==='string' && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : fallback; }
   function newId() { return 'score-'+Date.now().toString(36)+'-'+Array.from(crypto.getRandomValues(new Uint8Array(8)),v=>v.toString(16).padStart(2,'0')).join(''); }
   function report(id, message, error = false) { const el=byId(id);el.textContent=message;el.classList.toggle('error',error); }
+  function backupReport(message,error=false){report('pdfArchiveStatus',message,error);const el=byId('pdfBackupStatus');if(el){el.hidden=false;el.textContent=message;el.classList.toggle('error',error)}}
   function syncControls() {
     const locked=state.loading||state.rendering||state.busy;
     for(const id of ['pdfFile','pdfReload','pdfPage','pdfPrev','pdfNext','pdfGo','pdfPages','pdfMode','pdfRun']) byId(id).disabled=locked || (id!=='pdfFile' && id!=='pdfReload' && !state.doc && !state.image && !state.word);
@@ -405,7 +406,7 @@
     finally{if(request===archivesRequest)byId('pdfRefresh').disabled=false}
   }
   async function importBackup(file) {
-    if(!file)return;
+    if(!file)return;backupReport('正在读取备份…');
     try{
       if(/\.zip$/i.test(file.name)||/zip/.test(file.type)){
         const {records,files}=await ScoreLibrary.readBackupZip(file);
@@ -419,7 +420,7 @@
           if(record.fileId&&files.has(record.fileId))await ScoreLibrary.putFile({id:record.fileId,blob:files.get(record.fileId),name:record.fileName,type:record.fileType,size:record.fileSize});
           await ScoreLibrary.putRecord(record);added++;
         }
-        await refreshArchives();report('pdfArchiveStatus',`已恢复 ${added} 份存档${incoming.length>added?`，${incoming.length-added} 份本机已有较新版本，已跳过`:''}。`);
+        await refreshArchives();backupReport(`已恢复 ${added} 份存档${incoming.length>added?`，${incoming.length-added} 份本机已有较新版本，已跳过`:''}。`);
         return;
       }
       if(file.size>25*1024*1024)throw new Error('JSON 备份超过 25 MB。');
@@ -428,8 +429,8 @@
       const records=data.records.map(record=>checkedRecord(record,true));
       if(!confirm(`导入 ${records.length} 份旧版存档？会添加为副本，保留已有存档。`))return;
       for(const record of records)await ScoreLibrary.putRecord(record);
-      await refreshArchives();report('pdfArchiveStatus',`已导入 ${records.length} 份存档副本。`);
-    }catch(error){report('pdfArchiveStatus',`导入失败：${error.message}`,true);}finally{byId('pdfImport').value='';}
+      await refreshArchives();backupReport(`已导入 ${records.length} 份存档副本。`);
+    }catch(error){backupReport(`导入失败：${error.message}`,true);}finally{byId('pdfImport').value='';}
   }
   // ---------- WebDAV ----------
   function davForm(){return {...ScoreLibrary.davConfig(),url:byId('davUrl').value.trim(),user:byId('davUser').value.trim(),pass:byId('davPass').value||(byId('davPass').dataset.stored==='1'?SecureCredentials.TOKEN:''),folder:byId('davFolder').value.trim()||'笛调之间'};}
@@ -489,8 +490,8 @@
     try{const record=state.archiveId?await ScoreLibrary.getRecord(state.archiveId):null;if(record&&!record.deleted&&record.results.some(r=>r.page===row.page))bindScore(record,[row.page]);else window.detachScoreArchive();byId('scoreInput').value=row.text;updateScore();showTab('score');byId('scoreInput').focus()}catch(error){report('pdfResultStatus',error.message,true)}
   };
   byId('pdfRefresh').onclick=refreshArchives;
-  byId('pdfBackup').onclick=async()=>{byId('pdfBackup').disabled=true;report('pdfArchiveStatus','正在打包…');try{const zip=await ScoreLibrary.exportZip();await ScoreLibrary.saveBlob(zip,`笛调之间-谱库备份-${new Date().toISOString().slice(0,10)}.zip`,'application/zip');report('pdfArchiveStatus',`备份已打包（${sizeText(zip.size)}），请选择保存位置。`);}catch(error){report('pdfArchiveStatus',error.message,true);}finally{byId('pdfBackup').disabled=false;}};
-  byId('pdfImport').onchange=()=>importBackup(byId('pdfImport').files[0]);
+  byId('pdfBackup').onclick=async()=>{byId('pdfBackup').disabled=true;backupReport('正在打包…');try{const zip=await ScoreLibrary.exportZip();await ScoreLibrary.saveBlob(zip,`笛调之间-谱库备份-${new Date().toISOString().slice(0,10)}.zip`,'application/zip');backupReport(`备份已打包（${sizeText(zip.size)}），请选择保存位置。`);}catch(error){backupReport(error.message,true);}finally{byId('pdfBackup').disabled=false;}};
+  byId('pdfImport').onchange=()=>{const file=byId('pdfImport').files[0],name=byId('pdfImportName');if(name)name.textContent=file?.name||'尚未选择文件';return importBackup(file)};
   byId('archiveScore').onclick=()=>saveScoreArchive();
   byId('archiveScoreAs').onclick=()=>saveScoreArchive(true);
   syncScoreSource();
@@ -499,4 +500,4 @@
   window.PdfWorkbenchCore={parsePages,joinText,usableText,checkedRecord};
   syncControls();setLibraryView(true);
 })();
-// Modified by AI on 2026-10-11 12:29:53
+// Modified by AI on 2026-10-11 21:11:00
