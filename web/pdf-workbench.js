@@ -412,7 +412,7 @@
         const {records,files}=await ScoreLibrary.readBackupZip(file);
         const incoming=records.filter(r=>!r.deleted).map(r=>checkedRecord(r));
         if(!incoming.length)throw new Error('备份里没有存档。');
-        if(!confirm(`从备份恢复 ${incoming.length} 份存档（含 ${files.size} 个原文件）？同一份存档以较新的为准。`))return;
+        if(!confirm(`从备份恢复 ${incoming.length} 份存档（含 ${files.size} 个原文件）？同一份存档以较新的为准。`)){backupReport('已取消恢复。');return;}
         let added=0;
         for(const record of incoming){
           const existing=await ScoreLibrary.getRecord(record.id);
@@ -427,7 +427,7 @@
       const data=JSON.parse(await file.text());
       if(data.format!=='flute-key-lab-archives'||data.version!==1||!Array.isArray(data.records)||!data.records.length||data.records.length>200)throw new Error('请选择本工具导出的 zip 备份或旧版 JSON 备份。');
       const records=data.records.map(record=>checkedRecord(record,true));
-      if(!confirm(`导入 ${records.length} 份旧版存档？会添加为副本，保留已有存档。`))return;
+      if(!confirm(`导入 ${records.length} 份旧版存档？会添加为副本，保留已有存档。`)){backupReport('已取消恢复。');return;}
       for(const record of records)await ScoreLibrary.putRecord(record);
       await refreshArchives();backupReport(`已导入 ${records.length} 份存档副本。`);
     }catch(error){backupReport(`导入失败：${error.message}`,true);}finally{byId('pdfImport').value='';}
@@ -500,4 +500,4 @@
   window.PdfWorkbenchCore={parsePages,joinText,usableText,checkedRecord};
   syncControls();setLibraryView(true);
 })();
-// Modified by AI on 2026-10-11 21:11:00
+// Modified by AI on 2026-10-11 21:28:09
