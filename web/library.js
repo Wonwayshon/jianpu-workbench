@@ -53,19 +53,21 @@ function extOf(name,type){const m=/\.([A-Za-z0-9]{1,5})$/.exec(name||'');if(m)re
 const request=(...args)=>Platform.request(...args);
 const saveBlob=(...args)=>Platform.saveBlob(...args);
 
-// ---------- zip (store on write; store or deflate on read) ----------
+// ---------- zip (optional deflate on write; store or deflate on read) ----------
 const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
 function crc32(bytes){let c=0xFFFFFFFF;for(let i=0;i<bytes.length;i++)c=CRC[(c^bytes[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
-async function makeZip(entries){
+async function makeZip(entries,{compress=false}={}){
  const parts=[],central=[];let offset=0;const enc=new TextEncoder();
  for(const e of entries){
   const data=e.blob?new Uint8Array(await e.blob.arrayBuffer()):enc.encode(e.text),name=enc.encode(e.name),crc=crc32(data);
+  let payload=data,method=0;
+  if(compress&&data.length){const packed=new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());if(packed.length<data.length){payload=packed;method=8}}
   const local=new DataView(new ArrayBuffer(30));
-  local.setUint32(0,0x04034b50,true);local.setUint16(4,20,true);local.setUint16(6,0x0800,true);local.setUint32(14,crc,true);local.setUint32(18,data.length,true);local.setUint32(22,data.length,true);local.setUint16(26,name.length,true);
-  parts.push(local,name,data);
+  local.setUint32(0,0x04034b50,true);local.setUint16(4,20,true);local.setUint16(6,0x0800,true);local.setUint32(14,crc,true);local.setUint16(8,method,true);local.setUint32(18,payload.length,true);local.setUint32(22,data.length,true);local.setUint16(26,name.length,true);
+  parts.push(local,name,payload);
   const c=new DataView(new ArrayBuffer(46));
-  c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint32(16,crc,true);c.setUint32(20,data.length,true);c.setUint32(24,data.length,true);c.setUint16(28,name.length,true);c.setUint32(42,offset,true);
-  central.push(c,name);offset+=30+name.length+data.length;
+  c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint32(16,crc,true);c.setUint16(10,method,true);c.setUint32(20,payload.length,true);c.setUint32(24,data.length,true);c.setUint16(28,name.length,true);c.setUint32(42,offset,true);
+  central.push(c,name);offset+=30+name.length+payload.length;
  }
  const size=central.reduce((n,p)=>n+p.byteLength,0),end=new DataView(new ArrayBuffer(22));
  end.setUint32(0,0x06054b50,true);end.setUint16(8,entries.length,true);end.setUint16(10,entries.length,true);end.setUint32(12,size,true);end.setUint32(16,offset,true);
@@ -183,6 +185,6 @@ async function sync(progress=()=>{}){
  return {up,down,removed};
 }
 
-window.ScoreLibrary={recovery,restoreRecovery,clearRecovery,readZip,records,getRecord,putRecord,removeRecord,putFile,getFile,deleteFile,newFileId,extOf,saveBlob,exportZip,readBackupZip,davConfig,saveDavConfig,saveDavConfigAsync,testDav,sync};
+window.ScoreLibrary={recovery,restoreRecovery,clearRecovery,makeZip,readZip,records,getRecord,putRecord,removeRecord,putFile,getFile,deleteFile,newFileId,extOf,saveBlob,exportZip,readBackupZip,davConfig,saveDavConfig,saveDavConfigAsync,testDav,sync};
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-12 09:33:46

@@ -45,7 +45,8 @@
       unique.add(item.page);
       const preview = typeof item.preview === 'string' ? item.preview : '';
       if (preview && (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(preview) || preview.length > 700000)) throw new Error('存档中的页面预览无效或过大。');
-      return {page:item.page,text:item.text,preview,method:String(item.method || '导入').slice(0,80),reviewed:item.reviewed === true,convertedText:typeof item.convertedText === 'string' ? item.convertedText.slice(0,200000) : ''};
+      const erhuEdits=window.ErhuDeveloper?.checkedHistory(item.erhuEdits,item.text);
+      return {page:item.page,text:item.text,...(erhuEdits?{erhuEdits}:{}),preview,method:String(item.method || '导入').slice(0,80),reviewed:item.reviewed === true,convertedText:typeof item.convertedText === 'string' ? item.convertedText.slice(0,200000) : ''};
     }).sort((a,b)=>a.page-b.page);
     const settings = raw.settings || {};
     const now = new Date().toISOString();
@@ -287,14 +288,14 @@
     byId('scoreArchiveSource').textContent=scoreSource?'当前关联：'+scoreSource.title+' · '+(scoreSource.rows.length===1?'第 '+scoreSource.rows[0].page+' 页':scoreSource.rows.length+' 页')+'；保存将更新这份存档。':'尚未关联存档，首次保存会新建。';
     byId('archiveScore').disabled=byId('archiveScoreAs').disabled=scoreSaving;
   }
-  function bindScore(record,pages){scoreSource=ArchiveWorkspace.bind(record,pages);syncScoreSource()}
-  window.detachScoreArchive=()=>{scoreSource=null;syncScoreSource()};
+  function bindScore(record,pages){scoreSource=ArchiveWorkspace.bind(record,pages);window.ErhuDeveloper?.begin(record,pages);syncScoreSource()}
+  window.detachScoreArchive=()=>{scoreSource=null;window.ErhuDeveloper?.begin(null);window.ErhuDeveloper?.endReview();syncScoreSource()};
   byId('archiveDetach').onclick=()=>{window.detachScoreArchive();byId('copyStatus').textContent='已取消关联，当前文字保留；下次保存会新建存档。'};
   async function loadToScore(record,{fullscreen=false}={}){
     const fresh=await ScoreLibrary.getRecord(record.id);if(!fresh||fresh.deleted)throw new Error('这份存档已被删除。');
     const source=ArchiveWorkspace.bind(fresh),text=source.text;
     const input=byId('scoreInput');if(input.value.trim()&&input.value.trim()!==text.trim()&&!await AppDialogs.confirm({title:fullscreen?'打开简谱':'加载到转谱',message:'将「'+fresh.title+'」加载到转谱？当前文字会被替换；尚未保存的修改请先存档。',accept:fullscreen?'打开':'加载'}))return;
-    scoreSource=source;input.value=text;putSettings(fresh.settings);syncScoreSource();setLibraryView(false);showTab('score');window.scrollTo({top:0,behavior:'smooth'});
+    scoreSource=source;window.ErhuDeveloper?.endReview();window.ErhuDeveloper?.begin(fresh);input.value=text;putSettings(fresh.settings);syncScoreSource();setLibraryView(false);showTab('score');window.scrollTo({top:0,behavior:'smooth'});
     if(fullscreen)await window.openScoreViewer();
   }
   async function saveScoreArchive(asNew=false){
@@ -315,6 +316,7 @@
         if(state.archiveId===source.id&&state.dirty&&source.rows.some(old=>{const local=state.results.find(r=>r.page===old.page);return local&&local.text!==old.text&&local.text!==text}))throw new Error('逐页校对里也有未保存的修改，请先保存那些修改再重新加载，或将当前内容另存为新存档。');
         record=checkedRecord(ArchiveWorkspace.merge(fresh,source,text,settings,converted,now));
       }else record=checkedRecord({id:newId(),title:title.trim()||'未命名简谱',sourceName:'简谱转换器',pageCount:1,createdAt:now,updatedAt:now,settings,results:[{page:1,text,preview:'',method:'手动 / 图片校对稿',reviewed:false,convertedText:converted}]});
+      record=checkedRecord(window.ErhuDeveloper?.attach(record,text)||record);
       await ScoreLibrary.putRecord(record);
       // Update only the affected PDF pages; leave other unsaved page drafts in place.
       if(source&&!asNew&&state.archiveId===source.id){const ids=new Set(source.rows.map(r=>r.page));state.results=state.results.map(row=>ids.has(row.page)?{...record.results.find(r=>r.page===row.page)}:row);state.dirty=JSON.stringify(state.results)!==JSON.stringify(record.results)||byId('pdfTitle').value.trim()!==record.title;renderResults()}
@@ -500,4 +502,4 @@
   window.PdfWorkbenchCore={parsePages,joinText,usableText,checkedRecord};
   syncControls();setLibraryView(true);
 })();
-// Modified by AI on 2026-10-11 21:28:09
+// Modified by AI on 2026-10-12 09:30:59

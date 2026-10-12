@@ -162,7 +162,7 @@ function erhuFor(lines,v){
  if(v==='source'){res.map=ErhuFingering.applyOverrides(whole,res.map);lastErhuMap=res.map}
  return res.map.size?res:null;
 }
-function erhuOpts(lines,v,base={}){base={...base,partNames:scoreParts(),...scoreDisplayOptions(lines,v)};const res=erhuFor(lines,v);if(!res)return base;return {...base,annotations:res.map,label:ErhuFingering.label,summary:res}}
+function erhuOpts(lines,v,base={}){base={...base,partNames:scoreParts(),...scoreDisplayOptions(lines,v),developerChanges:v==='source'?window.ErhuDeveloper?.reviewMap(lastConverted?.source?.lines||lines):null};const res=erhuFor(lines,v);if(!res)return base;return {...base,annotations:res.map,label:ErhuFingering.label,summary:res}}
 function fillErhuParts(){
  const parts=scoreParts(),button=$('erhuPart'),ids=erhuPartIds();button.hidden=parts.length<2||!$('erhuFinger').checked;
  button.textContent=ids.length?`二胡声部 · 已选 ${ids.length} 个`:'选择二胡声部（未选择）';
@@ -448,9 +448,11 @@ function writeErhu(t,text){
  const ta=$('scoreInput'),lines=ta.value.replace(/\r\n?/g,'\n').split('\n'),i=(t.line||0)-1,line=lines[i];
  if(line==null||t.col==null||!t.len)return;
  if(Jianpu.normalize(line).length!==line.length||Jianpu.normalize(line).slice(t.col,t.col+t.len)!==noteSlice(line,t)){$('copyStatus').textContent='这一行有需要规范化的字符，请直接在乐谱文本里修改。';return}
+ const beforeText=ta.value,beforeShown=lastErhuMap?.get(t),tuning=$('erhuTuning').value;
  const end=t.col+t.len;lines[i]=line.slice(0,end)+(text?`[${text}]`:'')+line.slice(end+(t.erhuLen||0));
  if(vEdit){const inp=$('viewerBody').querySelector(`.edit-line[data-i="${i}"]`);editFocus={i,start:t.col,end:end+(text?text.length+2:0),scrollLeft:inp?.scrollLeft||0}}
  ta.value=lines.join('\n');ta.dispatchEvent(new Event('input',{bubbles:true}));
+ const afterToken=lastConverted?.source?.notes.find(n=>n.line===t.line&&n.col===t.col);window.ErhuDeveloper?.recordEdit(beforeText,ta.value,t,beforeShown,lastErhuMap?.get(afterToken),tuning);
  $('copyStatus').textContent=text?'已修改这个音的二胡标记，会随乐谱一起保存和导出。':'已恢复自动推算的标记。';
  if(viewerOpen)rebuild(vIndex);
 }
@@ -458,11 +460,12 @@ function writeErhu(t,text){
 function clearAllErhu(){
  const ta=$('scoreInput'),before=ta.value,after=before.replace(/(^|[^\s\[])\[([^\]\d\s][^\]\s]{0,15})\]/gm,(m,a,b,o,str)=>{const lineStart=str.lastIndexOf('\n',o)+1;return /^\s*$/.test(str.slice(lineStart,o+a.length))?m:a});
  if(after===before){$('copyStatus').textContent='这首谱子没有手改的二胡标记。';return}
- ta.value=after;ta.dispatchEvent(new Event('input',{bubbles:true}));$('copyStatus').textContent='已把整首的二胡标记恢复为自动推算。';if(viewerOpen)rebuild(vIndex);
+ const snapshots=new Map((lastConverted?.source.notes||[]).map(t=>[t.line+':'+t.col,lastErhuMap?.get(t)]));
+ ta.value=after;ta.dispatchEvent(new Event('input',{bubbles:true}));window.ErhuDeveloper?.recordReset(before,after,snapshots,new Map((lastConverted?.source.lines.flatMap(l=>l.kind==='music'?l.tokens.filter(t=>t.t==='note'):[])||[]).map((t,i)=>[i,lastErhuMap?.get(t)])),$('erhuTuning').value);$('copyStatus').textContent='已把整首的二胡标记恢复为自动推算。';if(viewerOpen)rebuild(vIndex);
 }
 const noteSlice=(line,t)=>Jianpu.normalize(line).slice(t.col,t.col+t.len);
 document.addEventListener('click',e=>{
- const a=e.target.closest?.('.jp-anno');if(!a||!a.closest('#scorePreview,.viewer-body')||a.closest('.viewer.perform'))return;
+ const a=e.target.closest?.('.jp-anno');if(!a||a.closest('.jp-dev-change')||!a.closest('#scorePreview,.viewer-body')||a.closest('.viewer.perform'))return;
  const t=tokenAt(a);if(!t||t.t!=='note')return;e.stopPropagation();
  if(t.src||!t.line){$('copyStatus').textContent='请在「原调」简谱里修改二胡标记。';return}
  openErhuEditor(t);
@@ -820,7 +823,7 @@ function closeViewer(){
  viewerRenderId++;
  if(perform)setPerform(false);
  if(vEdit){clearTimeout(editTimer);flushEdit(false);vEdit=false;editorBuildId++;$('scoreViewer').classList.remove('editing')}
- viewerOpen=false;$('scoreViewer').hidden=true;document.body.classList.remove('viewer-open');$('viewerBody').replaceChildren();clearViewerHighlight();
+ window.ErhuDeveloper?.endReview();viewerOpen=false;$('scoreViewer').hidden=true;document.body.classList.remove('viewer-open');$('viewerBody').replaceChildren();clearViewerHighlight();
  syncFloatPlayer();
  // The viewer re-rendered tokens into its own cells; draw the card again so highlights land there.
  renderMain();scrollTo(0,savedScroll);
@@ -855,6 +858,17 @@ $('viewerBody').addEventListener('click',e=>{
  if(!perform||vLayout==='width')return;
  (e.clientX<innerWidth/2?$('viewerPrev'):$('viewerNext')).click();
 });
+window.openDeveloperScore=async data=>{
+ const text=ArchiveWorkspace.textFor(data.record.results);
+ if($('scoreInput').value.trim()&&$('scoreInput').value.trim()!==text.trim()&&!await AppDialogs.confirm({title:'打开改善资料',message:'将加载这份资料到转谱。当前尚未保存的修改请先存档。',accept:'打开'}))return false;
+ window.detachScoreArchive?.();window.ErhuDeveloper.begin(data.record);$('scoreInput').value=text;
+ for(const [id,key] of [['songKey','key'],['tonicOctave','octave'],['shift','shift']])$(id).value=data.record.settings[key];
+ $('erhuFinger').checked=true;$('erhuTuning').value='auto';partSel='all';selectedParts=[];updateScore();
+ const ids=[...new Set(data.changes.map(c=>c[3]))];try{localStorage.setItem('flute.erhuParts',JSON.stringify({signature:JSON.stringify(scoreParts()),ids}))}catch{}
+ const tuning=[...new Set(data.changes.map(c=>c[10]))];if(tuning.length===1&&[...$('erhuTuning').options].some(o=>o.value===tuning[0]))$('erhuTuning').value=tuning[0];
+ showTab('score');renderMain();setView('source');await openViewer();return true;
+};
+window.refreshDeveloperScore=()=>{renderMain();if(viewerOpen)rebuild(vIndex)};
 window.openScoreViewer=async()=>{setView('source');await openViewer()};
 $('fullView').onclick=openViewer;$('editView').onclick=openEditor;$('viewerClose').onclick=closeViewer;
 $('viewerTrans').onclick=()=>setViewerView('trans');$('viewerFlute').onclick=()=>setViewerView('flute');$('viewerSource').onclick=()=>setViewerView('source');$('viewerStaff').onclick=()=>setViewerView('staff');
@@ -871,4 +885,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-11 14:37:40
+// Modified by AI on 2026-10-12 09:46:02

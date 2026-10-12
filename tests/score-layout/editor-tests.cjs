@@ -9,7 +9,7 @@ input.oninput({isComposing:true});assert.equal(timers.size,0);input.compositione
 [...timers.values()][0]();assert.equal(flushes,1);
 // One text parse/update per manual Save, and its exact note remains selected after annotation text changes.
 let dispatches=0,rebuilds=0;const ta={value:'1/2/',dispatchEvent:()=>dispatches++};
-const body={querySelector:()=>({scrollLeft:18})},status={};c.$=id=>({scoreInput:ta,viewerBody:body,copyStatus:status}[id]);c.Jianpu={normalize:s=>s};c.noteSlice=(line,t)=>line.slice(t.col,t.col+t.len);c.vEdit=true;c.viewerOpen=true;c.vIndex=3;c.rebuild=k=>{assert.equal(k,3);rebuilds++};c.Event=class{};
+const body={querySelector:()=>({scrollLeft:18})},status={};c.$=id=>({scoreInput:ta,viewerBody:body,copyStatus:status,erhuTuning:{value:'auto'}}[id]);c.lastErhuMap=new Map();c.lastConverted=null;c.window={};c.Jianpu={normalize:s=>s};c.noteSlice=(line,t)=>line.slice(t.col,t.col+t.len);c.vEdit=true;c.viewerOpen=true;c.vIndex=3;c.rebuild=k=>{assert.equal(k,3);rebuilds++};c.Event=class{};
 vm.runInContext(code.slice(code.indexOf('function writeErhu('),code.indexOf('// Removes every')),c);
 c.writeErhu({line:1,col:0,len:2},'外二');assert.equal(ta.value,'1/[外二]2/');assert.equal(dispatches,1);assert.equal(rebuilds,1);assert.equal(c.editFocus.start,0);assert.equal(c.editFocus.end,6);assert.equal(c.editFocus.scrollLeft,18);
 // Selection follows ranges and clears the previously selected row and note without timed removal.
@@ -21,4 +21,4 @@ c.markEditSelection(a);assert.ok(a.classList.contains('edit-selected'));assert.d
 c.markEditSelection(b);assert.ok(!a.classList.contains('edit-selected')&&b.classList.contains('edit-selected'));assert.deepEqual(cells.map(e=>e.classList.contains('edit-selected-note')),[true,false,false]);
 a.selectionStart=a.selectionEnd=4;c.markEditSelection(a);assert.deepEqual(cells.map(e=>e.classList.contains('edit-selected-note')),[false,false,true]);
 console.log('PASS: IME preserves pending input, fingering Save parses once and keeps exact selection, persistent preview/text selection clears previous highlights.');
-// Modified by AI on 2026-10-11 14:36:43
+// Modified by AI on 2026-10-12 09:35:02

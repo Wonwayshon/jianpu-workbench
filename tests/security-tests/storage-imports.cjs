@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),{indexedDB,IDBObjectStore:FDBObjectStore}=require('fake-indexeddb'),zlib=require('node:zlib'),{Transform}=require('node:stream');
 class Inflate {constructor(){return Transform.toWeb(zlib.createInflateRaw())}}
 class Deflate {constructor(){return Transform.toWeb(zlib.createDeflateRaw())}}
-const c=vm.createContext({window:{DecompressionStream:Inflate},document:{readyState:'loading',addEventListener(){}},indexedDB,Blob,TextEncoder,TextDecoder,URL,crypto:require('node:crypto').webcrypto,DecompressionStream:Inflate,CompressionStream:Deflate,Response,setTimeout,clearTimeout,console});
+const c=vm.createContext({window:{DecompressionStream:Inflate},document:{readyState:'loading',addEventListener(){}},indexedDB,Blob,TextEncoder,TextDecoder,URL,crypto:require('node:crypto').webcrypto,DecompressionStream:Inflate,CompressionStream:Deflate,btoa,atob,Response,setTimeout,clearTimeout,console});
 for(const name of ['security-limits','library','share']){vm.runInContext(fs.readFileSync('web/'+name+'.js','utf8'),c);Object.assign(c,c.window)}
 const L=c.ScoreLibrary,S=c.ScoreShare,Limits=c.SecurityLimits;
 const record=(id='score-a',title='旧版')=>({id,title,fileId:'file-original',createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-01T00:00:00Z',results:[{page:1,text:'1 2 3 4'}]});
@@ -22,11 +22,11 @@ async function seedV2(){await new Promise((ok,no)=>{const req=indexedDB.open('fl
  const badPath=original.slice();badPath.set(new TextEncoder().encode('../'),central+46);await assert.rejects(L.readZip(new Blob([badPath])),/路径/);
  await assert.rejects(L.readZip(new Blob([original.subarray(0,40)])),/有效/);
  const qr=data=>'DTZJ1:'+S.b45encode(zlib.deflateRawSync(Buffer.from(JSON.stringify(data))));assert.equal((await S.decode(qr({t:'谱',p:[[1,'1 2 3 4']]}))).pages[0].text,'1 2 3 4');await assert.rejects(S.decode(qr({t:'谱',p:[[1,'1'],[1,'2']]})),/页码/);await assert.rejects(S.decode(qr({t:'谱',p:[[1,'1'.repeat(3*1024*1024)]]})),/限制/);
- // Hand-edited erhu markings ride in an optional field; the page text stays plain Jianpu for older versions.
+ // Compatible codes carry inline manual overrides; legacy sidecar codes still restore correctly.
  const marked="1=D\n[笛] 3[外二⊓] 5. 6[↓一]/ |\n[胡] 1 2 3[V] 5 |";const sp=S.splitMarks(marked);
  assert.equal(sp.clean,"1=D\n[笛] 3 5. 6/ |\n[胡] 1 2 3 5 |",'part labels stay, markings leave the text');assert.equal(S.joinMarks(sp.clean,sp.marks),marked,'markings return to the same notes');
  const shared=await S.encode({title:'谱',results:[{page:1,text:marked},{page:2,text:'1 2[外] 3'}]}),raw=JSON.parse(zlib.inflateRawSync(Buffer.from(S.b45decode(shared.slice(6)))).toString());
- assert.equal(raw.p[0][1],sp.clean,'old versions read only the clean page text');assert.equal(raw.e.length,4);
+ assert.equal(raw.p[0][1],marked,'existing parsers keep inline fingering corrections');assert.equal(raw.e,undefined);
  assert.equal(JSON.stringify((await S.decode(shared)).pages.map(p=>p.text)),JSON.stringify([marked,'1 2[外] 3']),'new versions restore every marking');
  assert.equal((await S.decode(qr({t:'谱',p:[[1,'1 2 3']],e:[[1,3,'外'],[9,0,'外'],[1,99,'外'],[1,1,'1'],[1,1,'a]b'],'x']}))).pages[0].text,'1 2[外] 3','bad markings are dropped, the score still imports');
  assert.equal(JSON.parse(zlib.inflateRawSync(Buffer.from(S.b45decode((await S.encode({title:'谱',results:[{page:1,text:'1 2 3'}]})).slice(6)))).toString()).e,undefined,'no field without markings');
@@ -34,4 +34,4 @@ async function seedV2(){await new Promise((ok,no)=>{const req=indexedDB.open('fl
  await assert.rejects(Limits.readStream(new ReadableStream({}),10,5),/超时/);
  console.log('PASS: IndexedDB v2 migration, 3-version retention, atomic rollback, delete/restore copies, shared-file backup, safe cleanup, ZIP corruption/path/size rejection, QR decompression/page checks and stream timeout.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-11 15:33:49
+// Modified by AI on 2026-10-12 09:32:52
