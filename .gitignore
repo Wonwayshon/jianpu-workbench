@@ -28,3 +28,5 @@
 **/secrets.json
 **/tokens.json
 /private/
+
+/android/build/

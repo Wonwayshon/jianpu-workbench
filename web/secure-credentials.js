@@ -11,7 +11,7 @@ function protect(id,kind,url,user,secret){
  }
  return TOKEN;
 }
-async function prepare(id,kind,url,user,secret){if(!secret)return '';if(Platform.kind==='desktop')return Platform.credentials.prepare(id,kind,url,user,secret);return protect(id,kind,url,user,secret)}
+async function prepare(id,kind,url,user,secret){if(!secret)return '';if(Platform.credentials?.prepare)return Platform.credentials.prepare(id,kind,url,user,secret);return protect(id,kind,url,user,secret)}
 function has(id){return native()?Platform.credentials.has(id):memory.has(id)}
 function remove(id){if(native()&&!Platform.credentials.remove(id))throw new Error('凭据删除失败，请重试。');memory.delete(id)}
 async function removeAsync(id){if(Platform.credentials?.removeAsync){await Platform.credentials.removeAsync(id);memory.delete(id)}else remove(id)}
@@ -22,4 +22,4 @@ function headers(id,secret,kind,user,url){
 async function requestHeaders(...args){await Platform.ready;return headers(...args)}
 window.SecureCredentials={TOKEN,protect,prepare,has,remove,removeAsync,headers,requestHeaders,native};
 })();
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-12 15:22:20

@@ -1,18 +1,24 @@
 plugins { id 'com.android.application' }
 def workspaceRoot = rootProject.projectDir.parentFile
-def release = new groovy.json.JsonSlurper().parse(new File(workspaceRoot, 'project.json'))
+def appRelease = new groovy.json.JsonSlurper().parse(new File(workspaceRoot, 'project.json'))
 android {
-    namespace release.identifier
-    compileSdk 35
+    namespace = appRelease.identifier
+    compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId release.identifier
-        minSdk release.minAndroidSdk
-        targetSdk release.targetAndroidSdk
-        versionCode release.androidVersionCode
-        versionName release.version
+        applicationId = appRelease.identifier
+        minSdk = appRelease.minAndroidSdk
+        targetSdk = appRelease.targetAndroidSdk
+        versionCode = appRelease.androidVersionCode
+        versionName = appRelease.version
     }
-    sourceSets { main { assets.srcDirs = [new File(workspaceRoot, 'dist/android/assets')] } }
-    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+    sourceSets { main { assets.srcDirs = [new File(workspaceRoot, 'dist/android/capacitor-assets')] } }
+    compileOptions { sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
+    buildTypes { release { minifyEnabled = true; shrinkResources = true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
+}
+dependencies {
+    implementation project(':capacitor-android')
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.activity:activity:1.11.0'
 }
 tasks.register('syncWebAssets', Exec) {
     workingDir workspaceRoot

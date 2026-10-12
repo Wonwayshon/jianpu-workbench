@@ -26,13 +26,31 @@ export function buildWeb(target='web'){
   const cfg={...JSON.parse(read('desktop/tauri.template.json')),version:project.version,productName:project.displayName,identifier:project.identifier};cfg.app.security.csp=policy;write('desktop/src-tauri/tauri.conf.json',JSON.stringify(cfg,null,2)+'\n');
   const cargo=read('desktop/src-tauri/Cargo.toml').replace(/^version = "[^"]+"/m,`version = "${project.version}"`);write('desktop/src-tauri/Cargo.toml',cargo);
  }
+ if(target==='android'){
+  const nativeDest=path.join(root,'dist/android/capacitor-assets');fs.rmSync(nativeDest,{recursive:true,force:true});
+  fs.mkdirSync(nativeDest,{recursive:true});fs.cpSync(dest,path.join(nativeDest,'public'),{recursive:true});
+  fs.copyFileSync(path.join(root,'capacitor.config.json'),path.join(nativeDest,'capacitor.config.json'));
+  fs.writeFileSync(path.join(nativeDest,'capacitor.plugins.json'),'[]\n');
+ }
  console.log(`Built ${target} ${project.version}: ${path.relative(root,dest)} (${Object.keys(manifest.assets).length} assets)`);return dest;
 }
 function manifestForAndroid(){return mark(read('android/app/src/main/AndroidManifest.xml').replace(/ android:versionCode="\d+" android:versionName="[^"]+"/,'').replace('<manifest ',`<manifest android:versionCode="${project.androidVersionCode}" android:versionName="${project.version}" `),'.xml')}
 export function exportAndroid(){
- const assets=buildWeb('android'),dest=path.join(root,'outputs/android-source');fs.mkdirSync(dest,{recursive:true});for(const e of fs.readdirSync(dest)){if(e!=='.git')fs.rmSync(path.join(dest,e),{recursive:true,force:true})}fs.cpSync(path.join(root,'android'),dest,{recursive:true,filter:p=>!p.includes(`${path.sep}.git`)&&!p.includes(`${path.sep}.gradle`)&&!p.includes(`${path.sep}build${path.sep}`)});fs.cpSync(assets,path.join(dest,'app/src/main/assets'),{recursive:true});fs.writeFileSync(path.join(dest,'app/src/main/AndroidManifest.xml'),manifestForAndroid());
- fs.writeFileSync(path.join(dest,'app/build.gradle'),`// Generated standalone Android export. Edit android/app/build.gradle in the workspace.\nplugins { id 'com.android.application' }\nandroid {\n namespace '${project.identifier}'\n compileSdk 35\n defaultConfig { applicationId '${project.identifier}'; minSdk ${project.minAndroidSdk}; targetSdk ${project.targetAndroidSdk}; versionCode ${project.androidVersionCode}; versionName '${project.version}' }\n compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }\n}\n`);fs.writeFileSync(path.join(dest,'README.md'),`# 笛调之间 Android ${project.version} 独立源码\n\n本目录由统一项目自动导出，包含完整 assets，可作为独立 Android Studio 工程打开。需要 JDK 17、Android SDK 35、Gradle 8.9。也可执行 gradle :app:assembleDebug；调试签名不能覆盖原发布版。源码包不含签名私钥。\n\n日常开发应修改完整项目的 web/platform/android，并重新导出；不要维护第二份导出源码。\n`);console.log('Exported standalone Android source.');
+ buildWeb('android');const dest=path.join(root,'outputs/android-source');fs.mkdirSync(dest,{recursive:true});
+ for(const e of fs.readdirSync(dest)){if(e!=='.git')fs.rmSync(path.join(dest,e),{recursive:true,force:true})}
+ fs.cpSync(path.join(root,'android'),dest,{recursive:true,filter:p=>!p.includes(`${path.sep}.git`)&&!p.includes(`${path.sep}.gradle`)&&!p.includes(`${path.sep}build${path.sep}`)});
+ fs.cpSync(path.join(root,'dist/android/capacitor-assets'),path.join(dest,'app/src/main/assets'),{recursive:true});
+ fs.cpSync(path.join(root,'node_modules/@capacitor/android/capacitor'),path.join(dest,'capacitor-android'),{recursive:true,filter:p=>!p.includes(`${path.sep}build${path.sep}`)&&!p.endsWith(`${path.sep}build`)&&!p.includes(`${path.sep}.gradle`)});
+ fs.copyFileSync(path.join(root,'node_modules/@capacitor/android/LICENSE'),path.join(dest,'capacitor-android/LICENSE'));
+ fs.writeFileSync(path.join(dest,'project.json'),JSON.stringify(project,null,2)+'\n');
+ fs.writeFileSync(path.join(dest,'app/src/main/AndroidManifest.xml'),manifestForAndroid());
+ let settings=read('android/settings.gradle').replace('../node_modules/@capacitor/android/capacitor','capacitor-android');fs.writeFileSync(path.join(dest,'settings.gradle'),settings);
+ let gradle=read('android/app/build.gradle').replace('rootProject.projectDir.parentFile','rootProject.projectDir').replace(/    sourceSets .*\n/,'');
+ gradle=gradle.slice(0,gradle.indexOf("tasks.register('syncWebAssets'"));fs.writeFileSync(path.join(dest,'app/build.gradle'),gradle);
+ fs.writeFileSync(path.join(dest,'README.md'),`# 笛调之间 Android ${project.version} 独立源码\n\n包含网页 assets、Capacitor Android 源码及许可证，可作为独立 Android Studio 工程打开。需要 JDK 21、Android SDK 36；执行 ./gradlew :app:assembleDebug。调试签名不能覆盖原发布版，源码包不含签名私钥。\n\n日常开发修改完整项目，再重新导出。\n`);
+ console.log('Exported standalone Capacitor Android source.');
 }
+
 export function buildChecker(){
  const parser=read('web/jianpu.js'),ocr=read('web/score-ocr.js'),info={toolVersion:'1.3.0',appVersion:project.version,format:'乐谱文本格式 v1',parserSha256:hash(parser),promptSha256:hash(ocr),builtAt:systemStamp()};
  let body=read('scripts/checker-cli.cjs');
@@ -54,4 +72,4 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
  switch(task){case 'web':buildWeb(process.argv.includes('--target')?target:'web');break;case 'check':check();break;case 'export-android':exportAndroid();break;case 'checker':buildChecker();break;case 'android':exportAndroid();run('zsh',['scripts/build-android.sh']);break;case 'source':run('python3',['scripts/export-source.py']);break;default:throw Error('Unknown build command: '+task)}
  }catch(e){console.error(e.message);process.exitCode=1}
 }
-// Modified by AI on 2026-10-08 14:35:52
+// Modified by AI on 2026-10-12 15:46:51

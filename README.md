@@ -79,7 +79,7 @@ npm run export:android      # 导出 Android Studio 工程
 npm run build:checker       # 供 AI 自检的简谱检查器
 ```
 
-将 `dist/web` 部署到 HTTPS 静态站点即可使用网页版。Android 构建需要 JDK 17、Android SDK 35、Gradle 8.9 和自己的签名；桌面构建需要 Rust stable，以及 macOS 的 Xcode Command Line Tools 或 Windows 的 MSVC / Windows SDK。桌面使用系统 WebView。
+将 `dist/web` 部署到 HTTPS 静态站点即可使用网页版。Android 手机壳使用 Capacitor 8.5.3，构建需要 JDK 21、Android SDK 36、项目自带的 Gradle Wrapper 和自己的签名；桌面构建需要 Rust stable，以及 macOS 的 Xcode Command Line Tools 或 Windows 的 MSVC / Windows SDK。桌面使用系统 WebView。
 
 | 目录 | 内容 |
 |---|---|

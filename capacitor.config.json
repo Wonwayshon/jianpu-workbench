@@ -1,0 +1,26 @@
+{
+  "appId": "wang.weixuan.flutekeylab",
+  "appName": "笛调之间",
+  "webDir": "dist/android/assets",
+  "server": {
+    "hostname": "appassets.androidplatform.net",
+    "androidScheme": "https",
+    "appStartPath": "/index.html"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "disable"
+    },
+    "CapacitorHttp": {
+      "enabled": false
+    },
+    "CapacitorCookies": {
+      "enabled": false
+    }
+  },
+  "loggingBehavior": "none"
+}

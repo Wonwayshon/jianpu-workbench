@@ -1075,4 +1075,6 @@ body:has(#floatPlayer:not([hidden])) main{padding-bottom:110px}
  .backup-grid{grid-template-columns:1fr;gap:12px}
  .backup-card{padding:16px}
 }
-/* Modified by AI on 2026-10-11 21:18:11 */
+/* The desktop-only collapse control must not create a second phone navigation row. */
+@media screen and (max-width:899px){body nav[aria-label="工具"] #navCollapse{display:none!important}}
+/* Modified by AI on 2026-10-12 15:44:04 */

@@ -13,6 +13,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import java.nio.charset.StandardCharsets;
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 /** Encrypted credentials. No bridge API exposes decrypted values to JavaScript. */
 final class CredentialVault {
@@ -43,6 +44,19 @@ final class CredentialVault {
         cipher.updateAAD(id.getBytes(StandardCharsets.UTF_8));
         return new JSONObject(new String(cipher.doFinal(Base64.decode(box.getString("data"), Base64.NO_WRAP)), StandardCharsets.UTF_8));
     }
+    synchronized JSONArray metadata() {
+        JSONArray entries = new JSONArray();
+        for (String id : prefs.getAll().keySet()) {
+            try {
+                JSONObject value = read(id);
+                if (value != null) entries.put(new JSONObject().put("id", id).put("kind", value.getString("kind"))
+                        .put("url", value.getString("url")).put("user", value.getString("user")));
+            } catch (Exception unavailable) {
+                // Match exists(): an unreadable credential is unavailable, without erasing it or blocking others.
+            }
+        }
+        return entries;
+    }
     synchronized boolean save(String id, String kind, String url, String user, String secret) throws Exception {
         validId(id); if (!("bearer".equals(kind) || "basic".equals(kind))) return false;
         if (secret == null || secret.length() > 8192 || user == null || user.length() > 512) return false;
@@ -71,4 +85,4 @@ final class CredentialVault {
     }
 
 }
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-12 16:06:12

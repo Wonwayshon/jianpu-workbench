@@ -1,6 +1,5 @@
 package wang.weixuan.flutekeylab;
 
-import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -17,18 +16,19 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.os.Build;
-import android.webkit.JavascriptInterface;
+import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.CapConfig;
+import com.getcapacitor.BridgeWebViewClient;
+import com.getcapacitor.BridgeWebChromeClient;
+import androidx.activity.OnBackPressedCallback;
 import android.webkit.PermissionRequest;
 import android.content.pm.PackageManager;
 import android.Manifest;
 import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
 import android.widget.Toast;
 import java.io.ByteArrayInputStream;
 import java.io.BufferedInputStream;
@@ -36,7 +36,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.net.Socket;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -52,9 +51,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /** A local-content WebView with narrow, user-driven Android integrations. */
-public final class MainActivity extends Activity {
+public final class MainActivity extends BridgeActivity {
     private static final String ORIGIN = "appassets.androidplatform.net";
-    private static final String START = "https://" + ORIGIN + "/assets/index.html";
+    private static final String START = "https://" + ORIGIN + "/index.html";
     private static final int PICK_IMAGE = 1001;
     private static final int SAVE_TEXT = 1002;
     private static final int SAVE_TRANSFER = 1003;
@@ -64,19 +63,29 @@ public final class MainActivity extends Activity {
     private File pendingTransfer;
     private WebView webView;
     private volatile boolean trustedDocument = false;
-    private CredentialVault vault;
+    CredentialVault vault;
+    final NativeTools tools = new NativeTools();
     private final java.util.concurrent.Semaphore networkSlots = new java.util.concurrent.Semaphore(4);
     private ValueCallback<Uri[]> pendingImage;
     private String pendingText;
     private String pendingFileKind = "image";
 
     @Override public void onCreate(Bundle state) {
+        // Capacitor may receive JS calls during its initial load; initialise the unchanged vault first.
+        config = CapConfig.loadDefault(this);
+        if (!ORIGIN.equals(config.getHostname()) || !"https".equals(config.getAndroidScheme()) || config.getServerUrl() != null)
+            throw new IllegalStateException("存储来源配置不一致，已停止启动以保护旧存档");
+        vault = new CredentialVault(this);
+        trustedDocument = true;
+        registerPlugin(FluteNativePlugin.class);
         super.onCreate(state);
+        if (bridge == null) return;
         getWindow().setStatusBarColor(Color.rgb(241, 245, 250));
         getWindow().setNavigationBarColor(Color.rgb(241, 245, 250));
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        FrameLayout root = new FrameLayout(this);
+        webView = bridge.getWebView();
+        View root = (View) webView.getParent();
         root.setBackgroundColor(Color.rgb(241, 245, 250));
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
@@ -87,12 +96,8 @@ public final class MainActivity extends Activity {
         if (!transferDir.isDirectory()) transferDir.mkdirs();
         File[] stale = transferDir.listFiles();
         if (stale != null) for (File f : stale) f.delete();
-        webView = new WebView(this);
-        root.addView(webView, new FrameLayout.LayoutParams(-1, -1));
-        setContentView(root);
         root.requestApplyInsets();
         WebSettings settings = webView.getSettings();
-        vault = new CredentialVault(this);
         WebView.setWebContentsDebuggingEnabled(false);
         settings.setSafeBrowsingEnabled(true);
         settings.setJavaScriptEnabled(true);
@@ -103,9 +108,9 @@ public final class MainActivity extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
         webView.setBackgroundColor(Color.rgb(241, 245, 250));
-        webView.addJavascriptInterface(new NativeTools(), "AndroidTools");
-        webView.setWebViewClient(new WebViewClient() {
+        webView.setWebViewClient(new BridgeWebViewClient(bridge) {
             @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
                 trustedDocument = isAppPage(Uri.parse(url));
                 if (!trustedDocument) view.stopLoading();
             }
@@ -118,18 +123,9 @@ public final class MainActivity extends Activity {
                         return new WebResourceResponse("application/octet-stream", null, new FileInputStream(new File(transferDir, path.substring(10))));
                     } catch (IOException error) { return localError("Not found"); }
                 }
-                if ("https".equals(uri.getScheme()) && path != null && path.startsWith("/assets/")
-                        && !path.contains("..") && !path.contains("\\") && path.indexOf(0) < 0) {
-                    String asset = path.substring("/assets/".length());
-                    String mime = asset.endsWith(".html") ? "text/html" : asset.endsWith(".css") ? "text/css"
-                            : asset.endsWith(".js") || asset.endsWith(".mjs") ? "application/javascript"
-                            : asset.endsWith(".wasm") ? "application/wasm" : "application/octet-stream";
-                    try {
-                        return new WebResourceResponse(mime, mime.startsWith("text/") || mime.equals("application/javascript") ? "UTF-8" : null, getAssets().open(asset));
-                    } catch (IOException error) { return localError("Not found"); }
-                }
-                return localError("Not found");
+                return super.shouldInterceptRequest(view, request);
             }
+
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return routeNavigation(request.getUrl());
             }
@@ -137,7 +133,7 @@ public final class MainActivity extends Activity {
                 return routeNavigation(Uri.parse(url));
             }
         });
-        webView.setWebChromeClient(new WebChromeClient() {
+        webView.setWebChromeClient(new BridgeWebChromeClient(bridge) {
             // Microphone (tuner) or camera (share-code scanner): only for our own page, one device at a time,
             // and only after the user allows the matching Android permission.
             @Override public void onPermissionRequest(PermissionRequest request) {
@@ -188,8 +184,14 @@ public final class MainActivity extends Activity {
                 return true;
             }
         });
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() { handleBack(); }
+        });
+        trustedDocument = isAppPage(Uri.parse(webView.getUrl() == null ? START : webView.getUrl()));
         webView.loadUrl(START);
     }
+
+    boolean trustedPage() { return trustedDocument; }
 
     private File transferFile(String id, String suffix) {
         if (id == null || !id.matches("[A-Za-z0-9_-]{1,80}")) return null;
@@ -299,7 +301,7 @@ public final class MainActivity extends Activity {
     }
 
     private boolean isAppPage(Uri uri) {
-        return "https".equals(uri.getScheme()) && ORIGIN.equals(uri.getHost()) && (uri.getPort() == -1 || uri.getPort() == 443) && uri.getUserInfo() == null && "/assets/index.html".equals(uri.getPath());
+        return "https".equals(uri.getScheme()) && ORIGIN.equals(uri.getHost()) && (uri.getPort() == -1 || uri.getPort() == 443) && uri.getUserInfo() == null && "/index.html".equals(uri.getPath());
     }
     private JSONObject authorizedHeaders(String raw, String target) throws Exception {
         CredentialVault.endpoint(target);
@@ -325,21 +327,21 @@ public final class MainActivity extends Activity {
     private void toast(String message) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show(); }
 
     public final class NativeTools {
-        @JavascriptInterface public void openExternal(String url) {
+        public void openExternal(String url) {
             runOnUiThread(() -> { try { routeNavigation(Uri.parse(CredentialVault.endpoint(url).toString())); }
                 catch (Exception error) { toast("链接无效。"); } });
         }
 
-        @JavascriptInterface public boolean storeCredential(String id, String kind, String url, String user, String secret) {
+        public boolean storeCredential(String id, String kind, String url, String user, String secret) {
             if (!trustedDocument) return false;
             try { return vault.save(id, kind, url, user, secret); } catch (Exception error) { return false; }
         }
-        @JavascriptInterface public boolean hasCredential(String id) { return trustedDocument && vault.exists(id); }
-        @JavascriptInterface public boolean deleteCredential(String id) {
+        public boolean hasCredential(String id) { return trustedDocument && vault.exists(id); }
+        public boolean deleteCredential(String id) {
             if (!trustedDocument) return false;
             try { return vault.remove(id); } catch (Exception error) { return false; }
         }
-        @JavascriptInterface public void copyText(String text) {
+        public void copyText(String text) {
             if (!trustedDocument) return;
             if (text == null || text.length() > 1000000) return;
             runOnUiThread(() -> {
@@ -350,7 +352,7 @@ public final class MainActivity extends Activity {
         }
         // Clipboard text for 「粘贴 AI 结果」: the WebView does not grant navigator.clipboard.readText. Read on the
         // UI thread (Android 10+ only allows it while the app has focus, which it has when the button is tapped).
-        @JavascriptInterface public String readClipboard() {
+        public String readClipboard() {
             if (!trustedDocument) return "";
             java.util.concurrent.FutureTask<String> task = new java.util.concurrent.FutureTask<>(() -> {
                 ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
@@ -363,11 +365,11 @@ public final class MainActivity extends Activity {
             runOnUiThread(task);
             try { return task.get(2, java.util.concurrent.TimeUnit.SECONDS); } catch (Exception e) { return ""; }
         }
-        @JavascriptInterface public void saveText(String text) {
+        public void saveText(String text) {
             if (!trustedDocument) return;
             saveFile("长笛数字谱.txt", "text/plain", text);
         }
-        @JavascriptInterface public void saveFile(String filename, String mime, String text) {
+        public void saveFile(String filename, String mime, String text) {
             if (!trustedDocument) return;
             if (text == null || text.length() > 20000000 || filename == null) return;
             if (!"text/plain".equals(mime) && !"application/json".equals(mime)) return;
@@ -389,7 +391,7 @@ public final class MainActivity extends Activity {
          * HTTPS request for the user-configured vision model API. Runs off the UI thread and reports back via
          * window.__nativeHttpDone(id, status, body); status 0 means the request itself failed.
          */
-        @JavascriptInterface public void httpRequest(String id, String method, String url, String headersJson, String body) {
+        public void httpRequest(String id, String method, String url, String headersJson, String body) {
             if (!trustedDocument) return;
             if (id == null || !id.matches("[A-Za-z0-9_-]{1,100}") || url == null || (body != null && body.length() > 40000000)) return;
             if (!networkSlots.tryAcquire()) { runOnUiThread(() -> webView.evaluateJavascript("window.__nativeHttpDone(" + JSONObject.quote(id) + ",0,\"同时请求过多，请稍后重试\")", null)); return; }
@@ -442,7 +444,7 @@ public final class MainActivity extends Activity {
             }, "model-request").start();
         }
         /** Appends a base64 chunk to the upload buffer for transfer {@code id}. */
-        @JavascriptInterface public boolean uploadChunk(String id, String base64) {
+        public boolean uploadChunk(String id, String base64) {
             if (!trustedDocument) return false;
             File file = transferFile(id, ".up");
             if (file == null || base64 == null || base64.length() > 1500000) return false;
@@ -453,7 +455,7 @@ public final class MainActivity extends Activity {
                 return file.length() <= 300L * 1024 * 1024;
             } catch (IOException | IllegalArgumentException error) { return false; }
         }
-        @JavascriptInterface public void releaseTransfer(String id) {
+        public void releaseTransfer(String id) {
             if (!trustedDocument) return;
             File up = transferFile(id, ".up"), down = transferFile(id, ".down");
             if (up != null) up.delete();
@@ -464,7 +466,7 @@ public final class MainActivity extends Activity {
          * uploaded transfer buffer. The response body is written to /transfer/{id}.down for the page to fetch;
          * completion calls window.__nativeFetchDone(id, status, headersJson, error).
          */
-        @JavascriptInterface public void httpFetch(String id, String method, String url, String headersJson, String bodyMode, String text) {
+        public void httpFetch(String id, String method, String url, String headersJson, String bodyMode, String text) {
             if (!trustedDocument) return;
             final File up = transferFile(id, ".up"), down = transferFile(id, ".down");
             if (up == null || method == null || !method.matches("GET|HEAD|PUT|POST|DELETE|MKCOL|PROPFIND") || url == null || (text != null && text.length() > 20000000)) return;
@@ -485,7 +487,7 @@ public final class MainActivity extends Activity {
             }, "transfer").start();
         }
         /** Lets the user save the uploaded transfer buffer (a backup zip, an original score file) with the system picker. */
-        @JavascriptInterface public void saveTransfer(String id, String filename, String mime) {
+        public void saveTransfer(String id, String filename, String mime) {
             if (!trustedDocument) return;
             final File up = transferFile(id, ".up");
             if (up == null || !up.isFile() || filename == null) return;
@@ -506,7 +508,7 @@ public final class MainActivity extends Activity {
             });
         }
         /** Performance mode: hide the system bars (swipe from an edge shows them briefly) and keep the screen on. */
-        @JavascriptInterface public void setImmersive(boolean on) {
+        public void setImmersive(boolean on) {
             if (!trustedDocument) return;
             runOnUiThread(() -> {
                 if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -526,9 +528,9 @@ public final class MainActivity extends Activity {
                 }
             });
         }
-        @JavascriptInterface public void printScore() { printScoreTitled("笛调之间"); }
+        public void printScore() { printScoreTitled("笛调之间"); }
         // The job name becomes the default PDF file name; keep it short and free of path characters.
-        @JavascriptInterface public void printScoreTitled(String title) {
+        public void printScoreTitled(String title) {
             if (!trustedDocument) return;
             String clean = title == null ? "" : title.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", " ").trim();
             if (clean.isEmpty()) clean = "笛调之间";
@@ -620,19 +622,19 @@ public final class MainActivity extends Activity {
         pendingMic = null;
     }
 
-    @Override public void onBackPressed() {
+    private void handleBack() {
         webView.evaluateJavascript("(function(){if(window.handleAppBack&&window.handleAppBack())return true;if(typeof showTab==='function' && document.getElementById('instrumentPanel').hidden){showTab('instrument');return true;}if(window.pdfWorkbenchCanLeave && !window.pdfWorkbenchCanLeave())return true;return false;})()",
                 handled -> { if (!"true".equals(handled)) finish(); });
     }
-    @Override protected void onSaveInstanceState(Bundle state) {
-        webView.saveState(state);
+    @Override public void onSaveInstanceState(Bundle state) {
+        if (webView != null) webView.saveState(state);
         super.onSaveInstanceState(state);
     }
-    @Override protected void onDestroy() {
+    @Override public void onDestroy() {
         if (pendingImage != null) pendingImage.onReceiveValue(null);
-        webView.removeJavascriptInterface("AndroidTools");
-        webView.destroy();
+        trustedDocument = false;
         super.onDestroy();
+        webView = null;
     }
 }
-// Modified by AI on 2026-10-11 12:30:14
+// Modified by AI on 2026-10-12 16:00:56
