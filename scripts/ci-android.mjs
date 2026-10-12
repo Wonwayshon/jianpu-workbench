@@ -9,6 +9,7 @@ const sdk=process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT;
 const tools=path.join(sdk||'', 'build-tools/36.0.0'),androidJar=path.join(sdk||'','platforms/android-36/android.jar');
 for(const name of ['ANDROID_KEYSTORE_BASE64','ANDROID_STORE_PASSWORD','ANDROID_CERT_SHA256'])if(!process.env[name])throw Error(`Missing release secret: ${name}`);
 if(!sdk||!fs.existsSync(androidJar))throw Error('Install Android platform 36 and build-tools 36.0.0');
+if(!fs.existsSync(path.join(root,'node_modules/@capacitor/android/capacitor/build.gradle')))throw Error('Run npm ci before building the Capacitor Android shell');
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'jianpu-sign-'));
 const command=(cmd,args,cwd=root)=>{const r=spawnSync(cmd,args,{cwd,encoding:'utf8',maxBuffer:16*1024*1024});if(r.status!==0)throw Error(`${path.basename(cmd)} failed: ${r.stderr}`);return r.stdout};
 try{
@@ -27,4 +28,4 @@ try{
  for(const value of [`name='${project.identifier}'`,`versionCode='${project.androidVersionCode}'`,`versionName='${project.version}'`])if(!badging.includes(value))throw Error('APK metadata mismatch');
  console.log(`Verified signed Android ${project.version}, original certificate, SHA256 ${crypto.createHash('sha256').update(fs.readFileSync(out)).digest('hex')}`);
 }finally{fs.rmSync(dir,{recursive:true,force:true})}
-// Modified by AI on 2026-10-12 15:33:36
+// Modified by AI on 2026-10-12 16:25:09
