@@ -27,8 +27,8 @@ function b45decode(str){
 }
 async function pipe(bytes,stream){return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer())}
 
-// Hand-edited erhu markings (3[外二⊓]) travel beside the text as [page, offset, marking] in an optional "e" field.
-// The page text itself stays plain Jianpu, so versions without the syntax read a clean score and ignore "e".
+// Legacy sidecar codes carried overrides as [page, offset, marking] in an optional e field.
+// Keep their decoder; newly generated codes preserve overrides inline in the exact original text.
 const MARK=/(^|[^\s\[])\[([^\]\d\s][^\]\s]{0,15})\]/gm,MARK_TEXT=/^[^\]\d\s\[][^\]\s\[]{0,15}$/;
 function splitMarks(text){
  const marks=[];let removed=0;
@@ -58,29 +58,83 @@ async function decode(code){
  return {title:data.t,note:typeof data.n==='string'?data.n:'',pages:data.p.map(([page,text])=>({page,text:joinMarks(text,(marks.get(page)||[]).filter(([at])=>at<=text.length))}))};
 }
 
-function qrSvg(code){
- let qr=null,level='M';
- if(code.length>MAX_L)return null;
- if(code.length>MAX_M)level='L';
+function qrSvg(code,{level=code.length>MAX_M?'L':'M'}={}){
+ let qr=null;
+ if(!['M','L'].includes(level))throw new Error('无效的二维码纠错等级。');
+ if(code.length>(level==='M'?MAX_M:MAX_L))return null;
  qr=qrcode(0,level);qr.addData(code,'Alphanumeric');qr.make();
  const n=qr.getModuleCount(),q=4;let d='';
  for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(qr.isDark(r,c))d+=`M${c+q} ${r+q}h1v1h-1z`;
  return {svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n+2*q} ${n+2*q}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#000"/></svg>`,modules:n,level};
 }
 
-const $=id=>document.getElementById(id);
+// Workers are local and bounded. Closing the sheet aborts every pending compression attempt.
+function strongDeflate(bytes,{iterations,signal,timeout=2000}){
+ return new Promise((resolve,reject)=>{
+  let worker=null,timer=0,settled=false;
+  const finish=(error,value)=>{if(settled)return;settled=true;clearTimeout(timer);worker?.terminate();signal?.removeEventListener('abort',abort);error?reject(error):resolve(value)};
+  const abort=()=>finish(new DOMException('分享已取消','AbortError'));
+  if(signal?.aborted){abort();return}
+  try{worker=new Worker(new URL('share-compression-worker.js',document.baseURI));
+   worker.onmessage=({data})=>{if(data.error)finish(new Error(data.error));else if(data.bytes instanceof Uint8Array)finish(null,data.bytes);else finish(new Error('压缩结果无效'))};
+   worker.onerror=e=>{e.preventDefault?.();finish(new Error('压缩组件无法运行'))};
+   signal?.addEventListener('abort',abort,{once:true});timer=setTimeout(()=>finish(new Error('压缩计算超时')),timeout);
+   const input=bytes.slice();worker.postMessage({bytes:input,iterations},[input.buffer]);
+  }catch(e){finish(e)}
+ });
+}
+function encoded(packed,prefix){const code=prefix+(prefix===PREFIX?b45encode(packed):b64encode(packed));if(code.length>100000)throw new Error('分享码超过长度限制，请拆分谱子。');return code}
+function resultFor(packed,stage,initialLevel){
+ const code=encoded(packed,PREFIX);let qr=qrSvg(code);
+ // Do not accidentally increase density when stronger compression crosses the automatic L→M boundary.
+ if(initialLevel==='L'&&qr?.level==='M'){const low=qrSvg(code,{level:'L'});if(low.modules<qr.modules)qr=low}
+ return {code,shortCode:encoded(packed,TEXT_PREFIX),qr,packedBytes:packed.length,stage};
+}
+async function verified(packed,original){
+ const blob=await SecurityLimits.readStream(new Blob([packed]).stream().pipeThrough(new DecompressionStream('deflate-raw')),original.length);
+ const bytes=new Uint8Array(await blob.arrayBuffer());return bytes.length===original.length&&bytes.every((v,i)=>v===original[i]);
+}
+async function prepare(record,{onProgress,signal,compressor=strongDeflate,budget=4000}={}){
+ const bytes=new TextEncoder().encode(JSON.stringify(content(record)));if(bytes.length>2*1024*1024)throw new Error('分享内容超过 2 MB。');
+ const check=()=>{if(signal?.aborted)throw new DOMException('分享已取消','AbortError')};check();
+ const packed=await pipe(bytes,new CompressionStream('deflate-raw'));check();let best=resultFor(packed,'fast');
+ const fastBytes=best.packedBytes,fastModules=best.qr?.modules||null,initialLevel=best.qr?.level;
+ onProgress?.({stage:'fast',result:best});
+ let attempted=false,fallback=false;
+ if(!best.qr||best.qr.modules>121){const end=performance.now()+Math.max(0,Math.min(4000,budget));
+  for(const [iterations,stage] of [[5,'strong'],[15,'maximum']]){
+   check();const remaining=end-performance.now();if(remaining<100)break;attempted=true;onProgress?.({stage,result:best});
+   try{const trial=await compressor(bytes,{iterations,signal,timeout:Math.min(remaining,iterations===5?2000:2500)});check();
+    if(!(trial instanceof Uint8Array)||trial.length>=best.packedBytes)continue;
+    if(!await verified(trial,bytes)){fallback=true;continue}check();const candidate=resultFor(trial,stage,initialLevel||best.qr?.level);
+    if((candidate.qr?.modules??Infinity)<=(best.qr?.modules??Infinity))best=candidate;
+   }catch(e){check();fallback=true;break}
+   if(best.qr&&best.qr.modules<=121)break;
+  }
+ }
+ return {...best,fastBytes,fastModules,attempted,fallback,savedBytes:fastBytes-best.packedBytes};
+}
+const $=id=>document.getElementById(id);let shareTicket=0,shareAbort=null;const shareCloseBound=new WeakSet();
 async function show(record){
- const dlg=$('shareDialog');$('shareTitle').textContent=`分享「${record.title}」`;$('shareStatus').textContent='';$('shareQr').replaceChildren();
- let code;try{code=await encode(record)}catch(e){$('shareInfo').textContent=e.message;$('shareCopy').hidden=true;if($('shareCopyShort'))$('shareCopyShort').hidden=true;$('shareSave').hidden=true;dlg.showModal();return}
- const q=qrSvg(code);$('shareCopy').hidden=false;$('shareSave').hidden=!q;
+ shareAbort?.abort();const controller=shareAbort=new AbortController(),ticket=++shareTicket,dlg=$('shareDialog');
+ let short=$('shareCopyShort');if(!short){short=document.createElement('button');short.id='shareCopyShort';short.type='button';short.textContent='复制短分享码';$('shareCopy').after(short)}
+ $('shareTitle').textContent=`分享「${record.title}」`;$('shareStatus').textContent='正在生成二维码…';$('shareStatus').setAttribute('aria-live','polite');$('shareQr').replaceChildren();$('shareInfo').textContent='';
+ for(const b of [$('shareCopy'),$('shareSave'),short]){b.hidden=false;b.disabled=true} $('shareSave').hidden=true;
+ if(!shareCloseBound.has(dlg)){shareCloseBound.add(dlg);dlg.addEventListener('close',()=>{if(!dlg.open)shareAbort?.abort()})}if(!dlg.open)dlg.showModal?dlg.showModal():dlg.setAttribute('open','');
+ const current=()=>ticket===shareTicket&&dlg.open&&!controller.signal.aborted;
+ let result;
+ try{result=await prepare(record,{signal:controller.signal,onProgress:({stage,result:r})=>{if(!current())return;if(r.qr)$('shareQr').innerHTML=r.qr.svg;$('shareStatus').textContent=stage==='fast'?'正在检查二维码容量…':stage==='strong'?'数据较大，正在尝试加强压缩…':'正在尝试更充分的压缩…'}})}
+ catch(e){if(current()){$('shareInfo').textContent=e.message;$('shareStatus').textContent='';for(const b of [$('shareCopy'),$('shareSave'),short])b.hidden=true}return}
+ if(!current())return;const {code,shortCode,qr:q}=result;
  const raw=new TextEncoder().encode(JSON.stringify(record.results.map(r=>r.text))).length;
  const marked=record.results.reduce((n,r)=>n+splitMarks(r.text).marks.length,0),erhu=marked?` 含 ${marked} 处手改的二胡标记。`:'';
  if(q){$('shareQr').innerHTML=q.svg;$('shareInfo').textContent=`${record.results.length} 页文字 · 压缩后 ${code.length} 字符（原文约 ${(raw/1024).toFixed(1)} KB）· ${q.modules}×${q.modules} 码点。用本 App「谱库 → 扫码导入」扫描。`+erhu+(q.modules>121?' 码点较密，扫描时让屏幕亮一些、镜头离近一点。':'')}
- else $('shareInfo').textContent=`内容太长（压缩后 ${code.length} 字符，二维码最多约 ${MAX_L}），放不进一个二维码。可以复制分享码用聊天软件发送，或用「导出备份」。`+erhu;
+ else{$('shareQr').replaceChildren();$('shareInfo').textContent=`压缩后仍超过单张二维码容量（${code.length} 字符，最多 ${MAX_L}）。请复制分享码发送，或用「导出备份」。`+erhu}
+ $('shareStatus').textContent=result.savedBytes?`已自动加强压缩，减少 ${result.savedBytes} 字节${result.fastModules&&q&&q.modules<result.fastModules?`，二维码从 ${result.fastModules}×${result.fastModules} 减至 ${q.modules}×${q.modules}`:''}。`:result.attempted?'已保留最小的有效压缩结果。':'';
+ for(const b of [$('shareCopy'),$('shareSave'),short])b.disabled=false;$('shareSave').hidden=!q;
  $('shareCopy').onclick=()=>{copy(code);$('shareStatus').textContent='分享码已复制。对方在「谱库 → 扫码导入 → 粘贴分享码」导入。'};
- let short=$('shareCopyShort');if(!short){short=document.createElement('button');short.id='shareCopyShort';short.textContent='复制短分享码';$('shareCopy').after(short)}short.hidden=false;short.onclick=async()=>{try{const value=await encode(record,{text:true});await Platform.copyText(value);$('shareStatus').textContent=`短分享码已复制（${value.length} 字符），接收方需要支持短码的新版 App。`}catch(e){$('shareStatus').textContent=e.message}};
+ short.onclick=async()=>{try{await Platform.copyText(shortCode);$('shareStatus').textContent=`短分享码已复制（${shortCode.length} 字符），接收方需要支持短码的新版 App。`}catch(e){$('shareStatus').textContent=e.message}};
  $('shareSave').onclick=()=>saveQrPng(q.svg,record.title);
- dlg.showModal?dlg.showModal():dlg.setAttribute('open','');
 }
 function copy(text){Platform.copyText(text).catch(()=>{})}
 async function saveQrPng(svg,title){
@@ -128,6 +182,6 @@ function bind(){
  $('scanPaste').onclick=async()=>{let t='';try{t=await Platform.readClipboard()}catch{}if(!t.includes(PREFIX)&&!t.includes(TEXT_PREFIX))t=prompt('粘贴分享码（以 DTZJ1: 或 DTZJ1B: 开头）：',t)||'';if(t)await handle(t)};
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
-window.ScoreShare={encode,decode,show,scan,qrSvg,b45encode,b45decode,splitMarks,joinMarks,pack,unpack};
+window.ScoreShare={encode,decode,show,scan,qrSvg,b45encode,b45decode,splitMarks,joinMarks,pack,unpack,prepare,strongDeflate,capacity:{maxCharacters:MAX_L,maxCompressedBytes:2860,maxModules:177}};
 })();
-// Modified by AI on 2026-10-12 09:33:46
+// Modified by AI on 2026-10-12 11:11:51

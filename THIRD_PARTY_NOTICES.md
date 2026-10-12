@@ -9,6 +9,7 @@
 | PDF.js | `web/vendor/pdfjs/LICENSE`（Apache-2.0） |
 | PDF.js 字符映射、字体与 WASM 组件 | `web/vendor/pdfjs/cmaps/LICENSE`、`standard_fonts/LICENSE_*`、`wasm/LICENSE_*` |
 | jsQR | `web/vendor/jsQR.LICENSE`（Apache-2.0） |
+| Zopfli WebAssembly（@gfx/zopfli 1.0.15） | `web/vendor/zopfli/LICENSE.md`、`NOTICE.md`（Apache-2.0） |
 | qrcode-generator | `web/vendor/qrcode-generator.js` 中的 MIT 声明 |
 
 Node 与 Rust 依赖由 `package-lock.json` 和 `desktop/src-tauri/Cargo.lock` 锁定，各自许可证以相应上游包为准。
