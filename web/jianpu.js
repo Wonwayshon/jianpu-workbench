@@ -299,6 +299,15 @@ function layoutBeatGrid(lane,ticks){
  for(const item of lane.children){if(item.classList.contains('jp-bar-cell')){item.style.gridColumn=String(ticks.length);item.style.gridRow='1'}else place(item)}
 }
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e}
+function ornamentMark(name){
+ const mark=el('span','jp-orn'+(name==='~'?' jp-mordent':''));
+ if(name!=='~'){mark.textContent=ORNAMENTS[name];return mark}
+ // An open musical zigzag stays legible across fonts; the mathematical ∽ glyph can look like infinity.
+ mark.setAttribute('role','img');mark.setAttribute('aria-label','波音');mark.title='波音';
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'),path=document.createElementNS('http://www.w3.org/2000/svg','path');
+ svg.setAttribute('viewBox','0 0 32 14');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');
+ path.setAttribute('d','M2 10 L7 3 L12 10 L17 3 L22 10 L29 3');svg.append(path);mark.append(svg);return mark;
+}
 function noteCell(t){
  const cell=el('span','jp-n');
  const up=el('span','jp-up'),main=el('span','jp-main'),lines=el('span','jp-lines'),down=el('span','jp-down');
@@ -326,7 +335,7 @@ function noteCell(t){
  else if(t.t==='volta')main.append(el('span','jp-volta',t.text));
  else main.append(el('span','jp-digit jp-text',t.text));
  if(t.dot)main.append(el('span','jp-aug','·'.repeat(t.dot)));
- for(const o of t.orns||[]){if(o==='breath')main.append(el('span','jp-breath','V'));else cell.append(el('span','jp-orn',ORNAMENTS[o]))}
+ for(const o of t.orns||[]){if(o==='breath')main.append(el('span','jp-breath','V'));else cell.append(ornamentMark(o))}
  for(let k=0;k<(t.under||0);k++)lines.append(el('i'));
  cell.prepend(up,main,lines,down);t._cell=cell;cell._token=t;return cell;
 }
@@ -376,7 +385,7 @@ function render(host,lines,opts={}){
    const cell=noteCell(t),change=opts.developerChanges?.get(t);if(change){cell.classList.add('jp-dev-change');cell._developerChange=change;cell.tabIndex=0;cell.setAttribute('role','button');cell.setAttribute('aria-label',`修改前 ${change[4]}；修改后 ${change[5]}`);cell.title=`改前：${change[4]}\n改后：${change[5]}\n${change[6]}`;cell.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();cell.click()}})}
    const isNote=t.t==='note'||t.t==='rest'||t.t==='chord'||t.t==='percussion',under=isNote&&!t.grace&&t.under>0;
    const review=t.t==='note'&&opts.annotations?.get(t);if(review&&(review.review?.length||review.finger==null)){cell.classList.add('jp-review');cell.title='指法需核对：'+(review.review?.join('；')||'没有可用的指法手型')}
-   if(opts.annotations&&t.t==='note'){const lab=opts.label?.(opts.annotations.get(t));if(lab){const orns=[...cell.querySelectorAll(':scope>.jp-orn')];if(orns.length){const row=document.createElement('span');row.className='anno-orn';for(const o of orns){o.remove();row.append(o.textContent)}lab.prepend(row)}cell.append(lab)}}
+   if(opts.annotations&&t.t==='note'){const lab=opts.label?.(opts.annotations.get(t));if(lab){const orns=[...cell.querySelectorAll(':scope>.jp-orn')];if(orns.length){const row=document.createElement('span');row.className='anno-orn';for(const o of orns)row.append(o);lab.prepend(row)}cell.append(lab)}}
    if(t.grace){graces.push(cell);continue}
    // Keep the small notes beside their following main note, including inside a shared beam.
    // Appending grace cells directly to the row used to put them AFTER an already-open beam's next note.
@@ -497,4 +506,4 @@ function drawOverlay(host){
 
 window.Jianpu={parse,tempoWarnings,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline,numberMeasures};
 })();
-// Modified by AI on 2026-10-21 10:27:40
+// Modified by AI on 2026-10-21 14:06:41

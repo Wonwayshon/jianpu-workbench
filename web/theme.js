@@ -45,6 +45,8 @@ root.dataset.theme = scheme; root.dataset.appearance = getMode(); root.style.col
 for (const [k, v] of Object.entries(tokens(accent, scheme))) root.style.setProperty(k, v);
 const meta = document.querySelector('meta[name="theme-color"]');
 if (meta) meta.setAttribute('content', scheme === 'dark' ? '#13151A' : '#F6F7F9');
+const icon = document.getElementById('appFavicon'), logo = `assets/logo-${scheme}.png`;
+if (icon && icon.getAttribute('href') !== logo) icon.setAttribute('href', logo);
 syncNative();
 }
 // Native Android supplies the device scheme; WebView media queries can reflect its host theme instead.
@@ -104,4 +106,4 @@ if (media?.addEventListener) media.addEventListener('change', mediaChanged); els
 window.addEventListener('storage', e => { if (!e.key || e.key === KEY || e.key === MODE_KEY) { apply(read()); render(); } });
 window.AppTheme = { DEFAULT, PRESETS, get: read, set, reset, tokens, getMode, setMode, resolved, systemChanged };
 })();
-// Modified by AI on 2026-10-21 11:05:14
+// Modified by AI on 2026-10-21 14:20:30
