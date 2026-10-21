@@ -5,7 +5,7 @@
 @media screen{
 :root[data-theme=dark]{--ink:#E8EAF0;--muted:#A7ADBA;--faint:#969DAD;--line:#383E4B;--line-soft:#2E3440;--bg:#13151A;--fill:#292E38;--fill-2:#333947;--paper:#1C1F26;--ok:#7DD8A1;--ok-bg:#18382B;--warn:#F5C17A;--warn-bg:#3D2E1C;--danger:#FFAAA4;--danger-bg:#41262A}
 /* Surfaces and controls, including the wide workbench and editing columns. */
-:root[data-theme=dark] :is(header,body nav[aria-label="工具"],.tool-subtabs,.settings-card,.settings-link,.pop-menu,.out-pill,.play-bar,.viewer,.viewer-bar,.viewer-page,.archive-entry,.archive-detail,.archive-split-list,.finger-detail,.practice-fields .field,.archive-filter-grid>div,.library-actions button,.practice-staff,.edit-left,.pattern-btn,.file-btn,.viewer-bar .viewer-nav,.api-side>button,.api-item:not(.on)){background-color:var(--paper);color:var(--ink)}
+:root[data-theme=dark] :is(header:not(.page-head),body nav[aria-label="工具"],.tool-subtabs,.settings-card,.settings-link,.pop-menu,.out-pill,.play-bar,.viewer,.viewer-bar,.viewer-page,.archive-entry,.archive-detail,.archive-split-list,.finger-detail,.practice-fields .field,.archive-filter-grid>div,.library-actions button,.practice-staff,.edit-left,.pattern-btn,.file-btn,.viewer-bar .viewer-nav,.api-side>button,.api-item:not(.on)){background-color:var(--paper);color:var(--ink)}
 :root[data-theme=dark] :is(dialog.sheet,.sheet-body){background:var(--paper);color:var(--ink)}
 :root[data-theme=dark] .sheet::backdrop{background:#0009}
 :root[data-theme=dark] :is(.settings-row,.settings-link,.theme-swatches){border-color:var(--line-soft)}
@@ -18,7 +18,7 @@
 :root[data-theme=dark] input::placeholder,:root[data-theme=dark] textarea::placeholder{color:var(--faint);opacity:1}
 :root[data-theme=dark] :is(.app-segments button[aria-pressed=true],.app-segments button[aria-selected=true],.chips-seg .chip[aria-checked=true],.compact-octs button[aria-pressed=true]){background:var(--fill-2);color:var(--ink)}
 :root[data-theme=dark] :is(.practice-top #practiceSession,.practice-top #practiceTotal,.parts-menu .part-mixer .part-row){background:var(--paper)}
-:root[data-theme=dark] #scorePanel :is(.ws-head,.score-work>.score-controls){background:var(--paper)}
+:root[data-theme=dark] #scorePanel .score-work>.score-controls{background:var(--paper)}
 :root[data-theme=dark] #scorePanel .editor-wrap,:root[data-theme=dark] .viewer.editing .edit-right{background:var(--bg)}
 :root[data-theme=dark] .viewer.editing .viewer-sym{background:var(--paper);border-color:var(--line)}
 :root[data-theme=dark] :is(#fullView,#viewerPerform,#tunerToggle,.timbre-chip[aria-checked=true],.import-src-on,#copyStatus:not(:empty)){background:var(--fill-2);color:var(--ink)}
@@ -67,4 +67,4 @@
 /* Printed scores remain legible regardless of the on-screen selection and accent colour. */
 #printArea{--ink:#0F1115;--muted:#5B616E;--faint:#6B7180;--line:#D9DCE2;--line-soft:#E7E9EE;--paper:#fff;--bg:#fff;--accent-ink:#47328B;color:#000;background:#fff;color-scheme:light}
 @media print{html{color-scheme:light!important}body{color:#000!important}#printArea .jp-system{background:#fff}#printArea .jp-part-label{color:#333}}
-/* Modified by AI on 2026-10-21 11:05:32 */
+/* Modified by AI on 2026-10-21 11:41:23 */

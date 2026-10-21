@@ -267,9 +267,9 @@ numbers();
 
 // ---------- workspace title and compact archive status ----------
 (() => {
-const h1 = document.querySelector('.ws-title h1'), src = $('scoreArchiveSource'), ta = $('scoreInput');
+const piece = $('scorePieceTitle'), src = $('scoreArchiveSource'), ta = $('scoreInput');
 const chip = document.createElement('span'); chip.id = 'wsStatus'; chip.className = 'ws-status'; src.after(chip);
-function title() { const m = ta.value.match(/^@title[ \t]+(.+)$/m); h1.textContent = m ? m[1].trim() : '转谱'; }
+function title() { const m = ta.value.match(/^@title[ \t]+(.+)$/m); piece.textContent = m ? m[1].trim() : '编辑文字，预览、试听与转调'; piece.title = piece.textContent; }
 function status() {
 const t = src.textContent.trim(); chip.title = t;
 const linked = /关联|已保存/.test(t) && !/尚未/.test(t);
@@ -319,4 +319,4 @@ const ver = (document.querySelector('meta[name="app-version"]') || {}).content |
 if ($('navVersion') && /^\d+\.\d+/.test(ver)) $('navVersion').textContent = ver.match(/^\d+\.\d+/)[0];
 })();
 })();
-// Modified by AI on 2026-10-11 10:46:46
+// Modified by AI on 2026-10-21 11:41:23

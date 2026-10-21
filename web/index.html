@@ -83,11 +83,11 @@ nav{flex-wrap:wrap}.erhu-tuning{display:flex;flex-wrap:wrap;gap:12px;margin:20px
 <div class="smallprint"><p>适用范围：常见六孔竹笛，以及七孔唄用／ドレミ调篠笛。古典调、囃子用的音阶不一定符合本表，不能直接据此选笛。点孔只记录全按或全开；半孔和吹奏力度请用实测校准。自定义校准仅修正所选主音，不能把非平均律音阶整体校正。</p><p>上三孔指法以八本篠笛的 F 音位置为基准。部分制作者的准确 F 需要加按笛尾小指孔或使用叉指；请以厂家指法表、调音器为准。本数对应的是标准「一」音，与你另选指法作 1 的乐曲调名是两回事。</p></div>
 </section>
 <section id="scorePanel" role="tabpanel" aria-labelledby="scoreTab" hidden>
-<div class="ws-head no-print"><div class="ws-title"><h1>转谱</h1><p id="scoreArchiveSource" class="subtle" role="status"></p></div>
+<header class="page-head ws-head no-print"><div class="ws-title"><h1>转谱</h1><p class="ws-context"><span id="scorePieceTitle" class="ws-piece">编辑文字，预览、试听与转调</span><span id="scoreArchiveSource" class="subtle" role="status"></span></p></div>
 <div class="ws-actions"><button type="button" id="openImport"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3M12 4v12m-5-5 5 5 5-5"/></svg>导入 / 识别</button>
 <div class="menu-wrap"><button type="button" id="exportBtn" aria-haspopup="true" aria-expanded="false">导出<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div id="exportMenu" class="pop-menu export-menu" hidden><button id="copyScore">复制数字谱</button><button id="downloadScore">下载文本</button><button id="printScore">另存为 PDF</button><details class="export-text"><summary>展开数字谱与音名文本</summary><p class="subtle" id="conversionCaption"></p><p id="letterOutput" class="monospace"></p></details></div></div>
 <button id="archiveScoreAs" hidden>另存为新存档</button><button id="archiveDetach" hidden>取消存档关联</button><button id="archiveScore" class="primary">存入谱库</button></div>
-<span id="copyStatus" class="status" role="status"></span></div>
+<span id="copyStatus" class="status" role="status"></span></header>
 <div class="score-work">
 <div class="card score-controls no-print" aria-label="乐谱文本">
 <div class="pane-head"><span class="pane-title">乐谱文本</span><div class="app-segments src-tabs" role="group" aria-label="左栏内容"><button type="button" data-src="text" aria-pressed="true">文本</button><button type="button" data-src="img" aria-pressed="false">原图对照</button></div><span class="grow"></span><div class="menu-wrap"><button type="button" id="helpBtn" class="out-pill" aria-haspopup="true" aria-expanded="false">写法速查</button><div id="helpMenu" class="pop-menu help-menu" hidden><p class="subtle" id="syntaxHelp">1' = 高音 1，1, = 低音 1，可重复；也支持 1̇ / 1̣。#4 或 ♯4 为升音，b7 或 ♭7 为降音；0 为休止，X 为无固定音高的敲击（X/ 八分、X// 十六分）。升降号只影响紧随的一个音。调号可另起一行写 1=F；请去掉歌词、拍号和其他文字。</p>
@@ -478,4 +478,4 @@ showTab(TAB_NAMES.includes(location.hash.slice(1))?location.hash.slice(1):'instr
 </script>
 </body>
 </html>
-<!-- Modified by AI on 2026-10-21 10:57:18 -->
+<!-- Modified by AI on 2026-10-21 11:41:23 -->
