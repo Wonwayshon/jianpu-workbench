@@ -62,6 +62,7 @@ public final class MainActivity extends BridgeActivity {
     private File transferDir;
     private File pendingTransfer;
     private WebView webView;
+    private boolean darkAppearance;
     private volatile boolean trustedDocument = false;
     CredentialVault vault;
     final NativeTools tools = new NativeTools();
@@ -69,6 +70,33 @@ public final class MainActivity extends BridgeActivity {
     private ValueCallback<Uri[]> pendingImage;
     private String pendingText;
     private String pendingFileKind = "image";
+
+    String systemTheme() {
+        return (getApplicationContext().getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES ? "dark" : "light";
+    }
+    @Override public void onConfigurationChanged(android.content.res.Configuration configuration) {
+        super.onConfigurationChanged(configuration);
+        if (webView != null) webView.post(() -> {
+            if (trustedPage()) webView.evaluateJavascript("window.AppTheme?.systemChanged(" + JSONObject.quote(systemTheme()) + ")", null);
+        });
+    }
+
+    private void applyAppearance() {
+        int color = darkAppearance ? Color.rgb(19, 21, 26) : Color.rgb(246, 247, 249);
+        getWindow().setStatusBarColor(color);
+        getWindow().setNavigationBarColor(color);
+        int flags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        View decor = getWindow().getDecorView();
+        decor.setSystemUiVisibility(darkAppearance ? decor.getSystemUiVisibility() & ~flags : decor.getSystemUiVisibility() | flags);
+        if (Build.VERSION.SDK_INT >= 30 && getWindow().getInsetsController() != null) {
+            int mask = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+            getWindow().getInsetsController().setSystemBarsAppearance(darkAppearance ? 0 : mask, mask);
+        }
+        if (webView != null) {
+            webView.setBackgroundColor(color);
+            ((View) webView.getParent()).setBackgroundColor(color);
+        }
+    }
 
     @Override public void onCreate(Bundle state) {
         // Capacitor may receive JS calls during its initial load; initialise the unchanged vault first.
@@ -80,10 +108,6 @@ public final class MainActivity extends BridgeActivity {
         registerPlugin(FluteNativePlugin.class);
         super.onCreate(state);
         if (bridge == null) return;
-        getWindow().setStatusBarColor(Color.rgb(241, 245, 250));
-        getWindow().setNavigationBarColor(Color.rgb(241, 245, 250));
-        getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         webView = bridge.getWebView();
         View root = (View) webView.getParent();
         root.setBackgroundColor(Color.rgb(241, 245, 250));
@@ -107,7 +131,9 @@ public final class MainActivity extends BridgeActivity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
-        webView.setBackgroundColor(Color.rgb(241, 245, 250));
+        darkAppearance = getPreferences(MODE_PRIVATE).getBoolean("darkAppearance",
+                (getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES);
+        applyAppearance();
         webView.setWebViewClient(new BridgeWebViewClient(bridge) {
             @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
@@ -507,7 +533,16 @@ public final class MainActivity extends BridgeActivity {
                 catch (ActivityNotFoundException error) { keep.delete(); pendingTransfer = null; toast("找不到文件保存器。"); }
             });
         }
-        /** Performance mode: hide the system bars (swipe from an edge shows them briefly) and keep the screen on. */
+        /** Keep native system bars in step with the selected web appearance. */
+        public void setTheme(boolean dark) {
+            if (!trustedDocument) return;
+            runOnUiThread(() -> {
+                darkAppearance = dark;
+                getPreferences(MODE_PRIVATE).edit().putBoolean("darkAppearance", dark).apply();
+                applyAppearance();
+            });
+        }
+        /** Performance mode: hide the system bars and keep the screen on. */
         public void setImmersive(boolean on) {
             if (!trustedDocument) return;
             runOnUiThread(() -> {
@@ -524,7 +559,7 @@ public final class MainActivity extends BridgeActivity {
                 } else {
                     getWindow().getDecorView().setSystemUiVisibility(on
                             ? View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+                            : (darkAppearance ? 0 : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR));
                 }
             });
         }
@@ -637,4 +672,4 @@ public final class MainActivity extends BridgeActivity {
         webView = null;
     }
 }
-// Modified by AI on 2026-10-12 16:00:56
+// Modified by AI on 2026-10-21 11:05:14

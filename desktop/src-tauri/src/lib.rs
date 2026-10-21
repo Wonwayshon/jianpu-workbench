@@ -106,6 +106,11 @@ fn read_clipboard()->Result<String,String>{let text=arboard::Clipboard::new().an
 #[tauri::command]
 fn print_score(window:WebviewWindow)->Result<(),String>{window.print().map_err(|_|"无法打开系统打印".into())}
 #[tauri::command]
+fn set_theme(window:WebviewWindow,mode:String)->Result<(),String>{
+    let theme=match mode.as_str(){"dark"=>Some(tauri::Theme::Dark),"light"=>Some(tauri::Theme::Light),"system"=>None,_=>return Err("不支持的显示模式".into())};
+    window.set_theme(theme).map_err(|_|"无法切换窗口主题".into())
+}
+#[tauri::command]
 fn set_immersive(window:WebviewWindow,on:bool)->Result<(),String>{window.set_fullscreen(on).map_err(|_|"无法切换全屏".into())}
 #[tauri::command]
 fn open_external(url:String)->Result<(),String>{endpoint(&url)?;webbrowser::open(&url).map_err(|_|"无法打开系统浏览器".into())}
@@ -116,7 +121,7 @@ pub fn run(){
         .background_throttling(tauri::utils::config::BackgroundThrottlingPolicy::Disabled)
         .on_navigation(|url|url.scheme()=="tauri"||url.host_str()==Some("tauri.localhost")||(cfg!(debug_assertions)&&[Some("localhost"),Some("127.0.0.1")].contains(&url.host_str())&&url.port()==Some(1420)))
         .build()?;Ok(())})
-    .invoke_handler(tauri::generate_handler![credential_list,credential_store,credential_remove,http_request,save_file,copy_text,read_clipboard,print_score,set_immersive,open_external])
+    .invoke_handler(tauri::generate_handler![credential_list,credential_store,credential_remove,http_request,save_file,copy_text,read_clipboard,print_score,set_theme,set_immersive,open_external])
     .run(tauri::generate_context!()).expect("desktop application");
 }
 

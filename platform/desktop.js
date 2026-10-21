@@ -21,6 +21,6 @@ async function request(method,url,headers={},body=null,options={}){
  return {status:res.status,headers:res.headers,blob:async()=>blob,text:async()=>{if(blob.size>(options.textLimit||25*1024*1024))throw new Error('文字响应过大');return blob.text()}};
 }
 registry.desktop={kind:'desktop',available,ready,credentials,request,
- saveBlob:async(blob,name)=>invoke('save_file',{name,data:await toBase64(blob)}),copyText:async text=>{await invoke('copy_text',{text});return true},readClipboard:()=>invoke('read_clipboard'),printScore:title=>withTitle(title,()=>invoke('print_score')),setImmersive:on=>invoke('set_immersive',{on}),openExternal:url=>invoke('open_external',{url})};
+ saveBlob:async(blob,name)=>invoke('save_file',{name,data:await toBase64(blob)}),copyText:async text=>{await invoke('copy_text',{text});return true},readClipboard:()=>invoke('read_clipboard'),printScore:title=>withTitle(title,()=>invoke('print_score')),setImmersive:on=>invoke('set_immersive',{on}),setTheme:(scheme,mode=scheme)=>invoke('set_theme',{mode}),openExternal:url=>invoke('open_external',{url})};
 })();
-// Modified by AI on 2026-10-11 12:29:53
+// Modified by AI on 2026-10-21 10:59:47

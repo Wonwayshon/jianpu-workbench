@@ -12,6 +12,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
   if(action==='saveTransfer')assert.equal(uploads.get(args[0]).length,1600000,'all awaited chunks arrive before saving');
   if(action==='httpRequest')queueMicrotask(()=>ctx.window.__nativeHttpDone(args[0],200,JSON.stringify({choices:[{message:{content:'OK'}}]})));
   if(action==='httpFetch')queueMicrotask(()=>ctx.window.__nativeFetchDone(args[0],200,'{}',''));
+  if(action==='systemTheme')value='dark';
   if(action==='readClipboard')value='native clipboard';
   return {value};
  }};
@@ -26,10 +27,11 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
  await S.prepare('webdav','basic','https://dav.test','user','test-only-key');assert.equal(S.protect('webdav','basic','https://dav.test','user',S.TOKEN),S.TOKEN);
  assert.ok(!JSON.stringify([...disk.values()]).includes('test-only-key'));
  await P.saveBlob(new Blob(['x'.repeat(1600000)]),'backup.zip','application/zip');
+ assert.equal(await P.systemTheme(),'dark');await P.setTheme('dark');await P.setTheme('light');assert.deepEqual(calls.filter(c=>c.action==='setTheme').map(c=>c.args[0]),[true,false]);
  assert.equal(await P.readClipboard(),'native clipboard');await P.copyText('copy');
  const file=await P.request('GET','https://dav.test/');assert.equal(await file.text(),'download');assert.ok(calls.some(c=>c.action==='releaseTransfer'));
  fail=true;await assert.rejects(P.request('POST','https://model.test',{},null,{model:true}),/dispatch failed/);fail=false;
  await S.removeAsync('webdav');assert.equal(S.has('webdav'),false);
  console.log('PASS: Capacitor async bridge, old credential metadata/binding, secret-free settings, ordered binary chunks, callback dispatch failure cleanup, clipboard and vault deletion.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-12 15:37:22
+// Modified by AI on 2026-10-21 11:03:41

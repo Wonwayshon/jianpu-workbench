@@ -3,7 +3,7 @@
 const registry=window.FlutePlatformAdapters||(window.FlutePlatformAdapters={});
 const capacitor=window.Capacitor?.getPlatform?.()==='android',plugin=capacitor?window.Capacitor.Plugins.FluteNative:null;
 const metadata=new Map(),TOKEN='__FLUTE_STORED_CREDENTIAL__',call=(action,...args)=>plugin.invoke({action,args}).then(r=>r.value);
-const capNative=plugin?Object.fromEntries(['httpRequest','httpFetch','uploadChunk','releaseTransfer','saveTransfer','copyText','readClipboard','printScore','printScoreTitled','setImmersive','openExternal'].map(action=>[action,(...args)=>call(action,...args)])):null;
+const capNative=plugin?Object.fromEntries(['httpRequest','httpFetch','uploadChunk','releaseTransfer','saveTransfer','copyText','readClipboard','printScore','printScoreTitled','setImmersive','setTheme','systemTheme','openExternal'].map(action=>[action,(...args)=>call(action,...args)])):null;
 const native=()=>capNative||window.AndroidTools;
 const ready=plugin?call('credentialList').then(entries=>{for(const e of entries)metadata.set(e.id,e)}):Promise.resolve();ready.catch(()=>{});
 const credentials=plugin?{
@@ -28,7 +28,7 @@ async function request(method,url,headers={},body=null,options={}){
  }catch(e){await native().releaseTransfer(key);throw e}
 }
 async function saveBlob(blob,name,mime){const key=id('save');try{await upload(key,blob);await native().saveTransfer(key,name,mime||blob.type||'application/octet-stream');return true}catch(e){await native().releaseTransfer(key);throw e}}
-registry.android={kind:'android',available:()=>!!native(),ready,request,saveBlob,copyText:async text=>{await native().copyText(text);return true},readClipboard:async()=>(await native().readClipboard())||'',printScore:async title=>title&&native().printScoreTitled?native().printScoreTitled(String(title)):native().printScore(),setImmersive:async on=>native().setImmersive(on),openExternal:async url=>{if(native().openExternal)native().openExternal(url);else location.href=url},
+registry.android={kind:'android',available:()=>!!native(),ready,request,saveBlob,copyText:async text=>{await native().copyText(text);return true},readClipboard:async()=>(await native().readClipboard())||'',printScore:async title=>title&&native().printScoreTitled?native().printScoreTitled(String(title)):native().printScore(),setImmersive:async on=>native().setImmersive(on),setTheme:async scheme=>native().setTheme?.(scheme==='dark'),systemTheme:async()=>native().systemTheme?.(),openExternal:async url=>{if(native().openExternal)native().openExternal(url);else location.href=url},
  credentials};
 })();
-// Modified by AI on 2026-10-12 15:29:00
+// Modified by AI on 2026-10-21 11:03:41

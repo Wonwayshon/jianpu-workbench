@@ -6,6 +6,7 @@
 <meta name="app-version" content="development">
 <meta name="app-platform" content="browser">
 <meta name="app-arch" content="unknown">
+<meta name="theme-color" content="#F6F7F9">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="pdf-workbench.css">
 <script src="theme.js?v=1.20.0"></script>
@@ -52,6 +53,7 @@ nav{flex-wrap:wrap}.erhu-tuning{display:flex;flex-wrap:wrap;gap:12px;margin:20px
 <link rel="stylesheet" href="app-shell.css?v=1.20.0">
 <link rel="stylesheet" href="developer.css?v=1.20.0">
 <link rel="stylesheet" href="modern.css?v=1.20.0">
+<link rel="stylesheet" href="appearance.css">
 </head>
 <body>
 <main>
@@ -199,7 +201,7 @@ nav{flex-wrap:wrap}.erhu-tuning{display:flex;flex-wrap:wrap;gap:12px;margin:20px
 
 <section id="settingsPanel" role="tabpanel" aria-labelledby="settingsTab" hidden><div class="settings-page">
 <h1>设置</h1>
-<section class="settings-group" aria-labelledby="setLook"><h2 id="setLook">外观</h2><div class="settings-card"><div class="settings-row"><div><strong>主题色</strong><p id="themeCurrent" class="subtle"></p></div></div><div id="themeSwatches" class="theme-swatches" role="radiogroup" aria-label="主题色"></div><div class="settings-row theme-custom"><label for="themeCustom">自定义颜色</label><input id="themeCustom" type="color" value="#4f46e5"><span class="grow"></span><button id="themeReset" type="button" class="small-btn">恢复默认</button></div></div></section>
+<section class="settings-group" aria-labelledby="setLook"><h2 id="setLook">外观</h2><div class="settings-card"><div class="settings-row appearance-row"><div><label for="themeMode"><strong>显示模式</strong></label><p id="themeModeStatus" class="subtle" role="status"></p></div><select id="themeMode" aria-describedby="themeModeStatus"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div><div class="settings-row"><div><strong>主题色</strong><p id="themeCurrent" class="subtle"></p></div></div><div id="themeSwatches" class="theme-swatches" role="radiogroup" aria-label="主题色"></div><div class="settings-row theme-custom"><label for="themeCustom">自定义颜色</label><input id="themeCustom" type="color" value="#4f46e5"><span class="grow"></span><button id="themeReset" type="button" class="small-btn">恢复默认</button></div></div></section>
 <section class="settings-group" aria-labelledby="setApp"><h2 id="setApp">应用</h2><div class="settings-card"><div class="settings-row"><div><strong>笛调之间</strong><p id="appVersion" class="subtle"></p></div><button id="appUpdate" type="button" class="primary">检查更新</button></div><button id="appReleases" type="button" class="settings-link"><span>打开 GitHub 发布页<small>从 GitHub 获取新版，下载后按系统提示安装</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div></section>
 <section class="settings-group" aria-labelledby="setOcr"><h2 id="setOcr">识谱模型</h2><div class="settings-card"><button id="settingsModels" type="button" class="settings-link"><span>管理模型配置<small>DeepSeek 官方服务，或其他支持图片的兼容接口</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div></section>
 <section class="settings-group" aria-labelledby="setPlay"><h2 id="setPlay">播放</h2><div class="settings-card"><div class="settings-row settings-col"><strong>默认音色</strong><div id="settingsTimbres" class="timbre-chips" role="radiogroup" aria-label="默认音色"></div></div></div></section>
@@ -476,4 +478,4 @@ showTab(TAB_NAMES.includes(location.hash.slice(1))?location.hash.slice(1):'instr
 </script>
 </body>
 </html>
-<!-- Modified by AI on 2026-10-12 09:37:20 -->
+<!-- Modified by AI on 2026-10-21 10:57:18 -->

@@ -31,6 +31,8 @@ public final class FluteNativePlugin extends Plugin {
                 case "httpFetch": tools.httpFetch(a.getString(0), a.getString(1), a.getString(2), a.getString(3), a.getString(4), a.optString(5, "")); break;
                 case "printScoreTitled": tools.printScoreTitled(a.optString(0, "笛调之间")); break;
                 case "printScore": tools.printScore(); break;
+                case "systemTheme": value = activity.systemTheme(); break;
+                case "setTheme": tools.setTheme(a.getBoolean(0)); break;
                 case "setImmersive": tools.setImmersive(a.getBoolean(0)); break;
                 case "openExternal": tools.openExternal(a.getString(0)); break;
                 default: call.reject("不支持的系统操作"); return;
@@ -41,4 +43,4 @@ public final class FluteNativePlugin extends Plugin {
         } catch (Exception error) { call.reject("系统操作失败：" + error.getMessage()); }
     }
 }
-// Modified by AI on 2026-10-12 15:20:38
+// Modified by AI on 2026-10-21 11:03:41

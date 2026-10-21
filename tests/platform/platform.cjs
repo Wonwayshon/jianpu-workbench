@@ -19,6 +19,7 @@ function create(window={}){
  const changed={...cfg,profiles:[{...cfg.profiles[0],baseUrl:'https://other.test',apiKey:S.TOKEN}]};assert.equal(await desktop.ScoreOCR.saveConfigAsync(changed),false);assert.equal(desktop.ScoreOCR.loadConfig().baseUrl,'https://model.test');
  assert.equal(await desktop.ScoreLibrary.saveDavConfigAsync({url:'https://dav.test/root/',user:'test',pass:'desktop-test-pass',folder:'scores'}),true);assert.ok(!disk.get('flute.webdav.v1').includes('desktop-test-pass'));await desktop.SecureCredentials.removeAsync('webdav');assert.equal(stored.has('webdav'),false);
  await desktop.Platform.saveBlob(new Blob(['bytes']),'score.txt');assert.ok(commands.some(c=>c.cmd==='save_file'&&c.args.data===btoa('bytes')));assert.equal(await desktop.Platform.readClipboard(),'desktop clipboard');
+ await desktop.Platform.setTheme('dark','system');assert.equal(commands.at(-1).cmd,'set_theme');assert.equal(commands.at(-1).args.mode,'system');await desktop.Platform.setTheme('dark','dark');assert.equal(commands.at(-1).args.mode,'dark');
  console.log('PASS: browser session-only credentials, Android callbacks/binary transfer/save, desktop asynchronous secure-save/header references/address binding/forget/file/clipboard adapters.');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-21 10:59:47

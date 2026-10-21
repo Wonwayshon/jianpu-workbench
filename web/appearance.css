@@ -1,0 +1,70 @@
+/* Appearance layer. Screen-only dark palette keeps PDF/printing on the original light palette. */
+.appearance-row label{margin:0;color:var(--ink);font-size:15px}
+.appearance-row select{width:142px;flex:none}
+@media(max-width:380px){.appearance-row{gap:10px;padding:14px}.appearance-row select{width:124px}}
+@media screen{
+:root[data-theme=dark]{--ink:#E8EAF0;--muted:#A7ADBA;--faint:#969DAD;--line:#383E4B;--line-soft:#2E3440;--bg:#13151A;--fill:#292E38;--fill-2:#333947;--paper:#1C1F26;--ok:#7DD8A1;--ok-bg:#18382B;--warn:#F5C17A;--warn-bg:#3D2E1C;--danger:#FFAAA4;--danger-bg:#41262A}
+/* Surfaces and controls, including the wide workbench and editing columns. */
+:root[data-theme=dark] :is(header,body nav[aria-label="工具"],.tool-subtabs,.settings-card,.settings-link,.pop-menu,.out-pill,.play-bar,.viewer,.viewer-bar,.viewer-page,.archive-entry,.archive-detail,.archive-split-list,.finger-detail,.practice-fields .field,.archive-filter-grid>div,.library-actions button,.practice-staff,.edit-left,.pattern-btn,.file-btn,.viewer-bar .viewer-nav,.api-side>button,.api-item:not(.on)){background-color:var(--paper);color:var(--ink)}
+:root[data-theme=dark] :is(dialog.sheet,.sheet-body){background:var(--paper);color:var(--ink)}
+:root[data-theme=dark] .sheet::backdrop{background:#0009}
+:root[data-theme=dark] :is(.settings-row,.settings-link,.theme-swatches){border-color:var(--line-soft)}
+:root[data-theme=dark] :is(.settings-text,body nav[aria-label="工具"] button,.page-head,.settings-link){color:var(--ink)}
+:root[data-theme=dark] :is(button:hover,.settings-link:hover,.archive-entry:hover){background-color:var(--fill-2)}
+:root[data-theme=dark] button.primary:hover{background:var(--accent-hover)}
+:root[data-theme=dark] :is(textarea,.editor-wrap,.viewer.editing .edit-right,.viewer.editing .edit-line,.score-preview,.ocr-engine,.file-pick,.api-side,.prompt-text,.notation-rules,.part-mixer,#metroOpts){background-color:var(--bg);color:var(--ink);border-color:var(--line)}
+:root[data-theme=dark] :is(select,input[type=number],input[type=text],input[type=password],input[type=url],input[type=search],input[type=date],.llm-settings input,.api-form input,.api-form select,.pdf-fields input,.pdf-title){background-color:var(--fill);color:var(--ink);border-color:var(--line)}
+:root[data-theme=dark] :is(select,input,textarea):focus{background-color:var(--paper)}
+:root[data-theme=dark] input::placeholder,:root[data-theme=dark] textarea::placeholder{color:var(--faint);opacity:1}
+:root[data-theme=dark] :is(.app-segments button[aria-pressed=true],.app-segments button[aria-selected=true],.chips-seg .chip[aria-checked=true],.compact-octs button[aria-pressed=true]){background:var(--fill-2);color:var(--ink)}
+:root[data-theme=dark] :is(.practice-top #practiceSession,.practice-top #practiceTotal,.parts-menu .part-mixer .part-row){background:var(--paper)}
+:root[data-theme=dark] #scorePanel :is(.ws-head,.score-work>.score-controls){background:var(--paper)}
+:root[data-theme=dark] #scorePanel .editor-wrap,:root[data-theme=dark] .viewer.editing .edit-right{background:var(--bg)}
+:root[data-theme=dark] .viewer.editing .viewer-sym{background:var(--paper);border-color:var(--line)}
+:root[data-theme=dark] :is(#fullView,#viewerPerform,#tunerToggle,.timbre-chip[aria-checked=true],.import-src-on,#copyStatus:not(:empty)){background:var(--fill-2);color:var(--ink)}
+:root[data-theme=dark] :is(.out-pill.on,.archive-entry.selected,.pattern-btn[aria-checked=true]){background:var(--accent-soft);color:var(--accent-ink)}
+:root[data-theme=dark] .library-actions button.primary{background:var(--accent);color:var(--on-accent)}
+:root[data-theme=dark] .theme-swatch{background:var(--swatch)}
+:root[data-theme=dark] .theme-swatch[aria-checked=true]{box-shadow:0 0 0 3px var(--paper),0 0 0 5px var(--swatch)}
+:root[data-theme=dark] .api-form #apiDelete{color:var(--danger)}
+/* Musical notation uses native colours, never a whole-page inversion filter. */
+:root[data-theme=dark] .score,:root[data-theme=dark] #scorePanel .output-card .score{background:var(--paper);color:var(--ink)}
+:root[data-theme=dark] .jp-full-score .jp-system{background:var(--paper);border-color:var(--line);border-left-color:var(--faint)}
+:root[data-theme=dark] .jp-full-score .jp-system>.jp-line:nth-child(even),:root[data-theme=dark] .jp-compact-staves>.jp-staff-row{background:var(--bg)!important}
+:root[data-theme=dark] .jp-full-score .jp-system>.jp-line+.jp-line,:root[data-theme=dark] .jp-compact-staves>.jp-staff-row+.jp-staff-row{border-color:var(--line)!important}
+:root[data-theme=dark] :is(.jp-part-label,.jp-measure-number){color:var(--muted)}
+:root[data-theme=dark] .jp-anno{color:#E6B476}
+:root[data-theme=dark] .anno-bow{color:var(--ink)}
+:root[data-theme=dark] .anno-string{color:#8CC5EE}
+:root[data-theme=dark] .jp-playing .jp-main{color:var(--on-accent)}
+:root[data-theme=dark] :is(.practice-staff,.staff-score){color:var(--ink)}
+:root[data-theme=dark] :is(.practice-staff,.staff-score) svg{color:var(--ink)}
+:root[data-theme=dark] .practice-staff .pr-cursor{fill:var(--accent-soft-2);opacity:.7}
+:root[data-theme=dark] :is(.jp-dev-change,.edit-flash-note){background:#59471B!important;color:var(--ink);box-shadow:inset 0 0 0 1px #BB9340}
+:root[data-theme=dark] :is(.edit-line.edit-flash,.edit-line.edit-flash:focus){background:#59471B;border-color:#BB9340}
+:root[data-theme=dark] :is(.erhu-bar,.finger-tip,.erhu-special .pill,#scoreError,.play-bar .play-btn.playing){background:var(--warn-bg);color:var(--warn)}
+:root[data-theme=dark] :is(.edit-line.has-error,.edit-line.has-error:focus,.viewer.editing .edit-status.error,.editor-wrap>.err-band,#scoreInput.has-error){background:var(--danger-bg);color:var(--danger)}
+:root[data-theme=dark] .type-pdf{background:var(--danger-bg);color:var(--danger)}
+:root[data-theme=dark] :is(.pdf-preview,.pdf-result-image){background:#292E38}
+/* Real document images, camera previews and QR codes retain their original colours. */
+:root[data-theme=dark] .share-qr{background:#fff;color:#000}
+:root[data-theme=dark] .practice-pad .piano-key.white{background:linear-gradient(#D7DBE4,#B6BFCD);color:#17202E;border-color:#8995A6}
+:root[data-theme=dark] .practice-pad .piano-key.white:active{background:var(--accent-soft-2);color:var(--ink)}
+:root[data-theme=dark] .practice-pad .piano-key.black{background:linear-gradient(#353C49,#11151D);color:#E8EAF0}
+:root[data-theme=dark] :is(.hole,.hole-dot,.legend-hole){border-color:var(--ink)}
+:root[data-theme=dark] :is(.hole.closed,.hole-toggle.closed .hole-dot,.legend-hole.closed){background:var(--ink)}
+:root[data-theme=dark] .hole:not(.closed){background:transparent}
+:root[data-theme=dark] #shinoChartView .fingering-groups{background:var(--paper)}
+:root[data-theme=dark] .chart-holes :is(circle,path)[fill="#294459"]{fill:var(--ink)}
+:root[data-theme=dark] .chart-holes circle[fill="white"],:root[data-theme=dark] .chart-holes circle[fill="#fff"]{fill:var(--paper)}
+:root[data-theme=dark] .chart-holes :is(circle,path)[stroke="#294459"]{stroke:var(--ink)}
+:root[data-theme=dark] #tunerNeedle :is(line,circle){stroke:var(--ink);fill:var(--ink)}
+:root[data-theme=dark] .tuner-gauge g[fill="#5B616E"]{fill:var(--muted)}
+:root[data-theme=dark] .tuner-gauge path[stroke="#E7E9EE"]{stroke:var(--line)}
+:root[data-theme=dark] .result button{background:var(--fill-2);color:var(--ink)}
+:root[data-theme=dark] .erhu-card.selected .erhu-string{background:var(--fill)}
+}
+/* Printed scores remain legible regardless of the on-screen selection and accent colour. */
+#printArea{--ink:#0F1115;--muted:#5B616E;--faint:#6B7180;--line:#D9DCE2;--line-soft:#E7E9EE;--paper:#fff;--bg:#fff;--accent-ink:#47328B;color:#000;background:#fff;color-scheme:light}
+@media print{html{color-scheme:light!important}body{color:#000!important}#printArea .jp-system{background:#fff}#printArea .jp-part-label{color:#333}}
+/* Modified by AI on 2026-10-21 11:05:32 */
