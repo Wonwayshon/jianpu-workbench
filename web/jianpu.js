@@ -8,8 +8,6 @@ const KEY_PC={C:0,D:2,E:4,F:5,G:7,A:9,B:11},LETTERS='CDEFGAB',MAJOR=[0,2,4,5,7,9
 // Tempo words (Italian and Chinese) -> a typical quarter-note speed, used when no number is given.
 const TEMPO_WORDS=[['prestissimo',208],['presto',184],['vivacissimo',176],['vivace',160],['allegro assai',152],['allegro moderato',120],['allegretto',116],['allegro',132],['moderato',108],['andantino',96],['andante',84],['adagietto',72],['adagio',66],['larghetto',60],['lento',54],['largo',50],['grave',40],
  ['小快板',116],['中快板',120],['急板',184],['快板',132],['中板',104],['中速',96],['小行板',96],['行板',84],['慢板',60],['柔板',66],['广板',50],['庄板',40]];
-// Relative changes and expression marks have no fixed BPM; preserve them without inventing a speed.
-const TEMPO_TEXT=['稍慢','突慢','原速','渐慢','欢快地'];
 // Pitch names instead of digits (models often write C D E for staff notation): an absolute letter name becomes the
 // scale degree of the current key. Unmarked letters lie in the @octave group (C4–B4 by default); a digit right after
 // the letter gives the octave directly (C5 = C in octave 5); ' and , work as for digits.
@@ -40,12 +38,11 @@ function parseDirective(name,value,fail){
  if(name==='octave'){const n=Number(value);if(!Number.isInteger(n)||n<2||n>6)fail('@octave 后应为 2–6 的整数（中央 C 所在为第 4 组）。');return {kind:'meta',name,value:n}}
  if(name==='time'){if(!/^\d{1,2}\/\d{1,2}$/.test(value.trim()))fail('@time 后应为 2/4、3/4、6/8 这样的拍号。');return {kind:'meta',name,value:value.trim()}}
  if(name==='tempo'){
-  // 72 / ♩=72 / Andante / Andante 76 / 行板 ♩=72 / Allegro (♩≈132)
-  const v=value.trim(),num=/(\d{2,3})/.exec(v),low=v.toLowerCase(),word=TEMPO_WORDS.find(([w])=>low.includes(w));
-  const text=v.replace(/[(（]?\s*[♩=≈约\s]*\d{2,3}\s*[)）]?/g,'').replace(/[♩=≈]/g,'').trim();
-  if(!num&&!word&&TEMPO_TEXT.includes(v))return {kind:'meta',name,value:null,text:v,exact:false};
-  const n=num?Number(num[1]):word?word[1]:NaN;
-  if(!(n>=20&&n<=300))fail('@tempo 后应为 20–300 的数字，或速度文字，如 稍慢、突慢、原速、渐慢、中板、欢快地、小快板、快板、Andante。');
+  // Any expression is valid; only a supported word or an explicit 20–300 BPM sets playback speed.
+  const v=value.trim(),num=/(?<![\d.])\d+(?:\.\d+)?(?![\d.])/.exec(v);
+  const word=TEMPO_WORDS.find(([w])=>v.toLowerCase()===w),n=num?Number(num[0]):word?.[1];
+  if(!(n>=20&&n<=300))return {kind:'meta',name,value:null,text:v,exact:false};
+  const text=v.replace(/[(（]?\s*[♩=≈约\s]*\d+(?:\.\d+)?\s*[)）]?/g,'').replace(/[♩=≈]/g,'').trim();
   return {kind:'meta',name,value:n,text:text||null,exact:!!num};
  }
  if(name==='page'){const n=Number(value||0);return {kind:'page',value:Number.isFinite(n)&&n>0?n:null}}
@@ -131,7 +128,12 @@ function parse(text){
   if((m=src.match(/^\s*1\s*=\s*([#b♯♭]?[A-Ga-g][#b♯♭]?)\s*$/))){const d=parseDirective('key',m[1],fail);lines.push(d);setKey(d);if(!meta.key)meta.key=d;return}
   lines.push({kind:'music',tokens:parseMusic(src,lineNo,notes,fail,key)});
  });
- return {lines,notes,meta,parts};
+ return {lines,notes,meta,parts,warnings:tempoWarnings(lines)};
+}
+
+// Advisory only: arbitrary tempo expressions remain importable and never invent a BPM.
+function tempoWarnings(lines){
+ return lines.flatMap((l,i)=>l.kind==='meta'&&l.name==='tempo'&&l.value==null?[{code:'TEMPO_MANUAL',line:i+1,message:`第 ${i+1} 行：速度标记「${l.text||'空白'}」未指定可用 BPM，已保留原文；播放沿用当前设置，请在播放设置中手动调整速度。`}]:[]);
 }
 
 function noteText(t){
@@ -147,7 +149,7 @@ function serialize(lines){
   if(line.kind==='page')return '@page'+(line.value?' '+line.value:'');
   if(line.kind==='meta'&&line.name==='part')return `@part ${line.value.id}${line.value.name&&line.value.name!==line.value.id?' · '+line.value.name:''}`;
   if(line.kind==='meta'&&line.name==='origKey')return `% 原谱 1=${String(line.value).replace('♯','#').replace('♭','b')}`;
-  if(line.kind==='meta'&&line.name==='tempo')return `@tempo ${line.text?line.text+(line.exact?' '+line.value:''):line.value}`;
+  if(line.kind==='meta'&&line.name==='tempo')return line.value==null?`@tempo${line.text?' '+line.text:''}`:`@tempo ${line.text?line.text+(line.exact?' '+line.value:''):line.value}`;
   if(line.kind==='meta')return line.name==='key'?`@key 1=${String(line.value).replace('♯','#').replace('♭','b')}`:`@${line.name} ${line.value}`;
   return (line.part?`[${line.part}] `:'')+line.tokens.map(t=>{
    if(t.t==='space')return ' ';if(t.t==='bar')return t.text;if(t.t==='dash')return '-';if(t.t==='open')return '(';if(t.t==='close')return ')';
@@ -493,6 +495,6 @@ function drawOverlay(host){
  for(const [row,L] of layers)row.append(L.svg);
 }
 
-window.Jianpu={parse,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline,numberMeasures};
+window.Jianpu={parse,tempoWarnings,serialize,render,normalize,parseKey,ORNAMENTS,redraw:drawOverlay,fitWidth,justify,alignSystems,groupSystems,filterParts,staffIdentity,measureTimeline,numberMeasures};
 })();
-// Modified by AI on 2026-10-12 09:30:59
+// Modified by AI on 2026-10-21 10:27:40

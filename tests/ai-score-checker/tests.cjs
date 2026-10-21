@@ -15,6 +15,8 @@ const cases=[
  "@key 1=bB\nBb3 C4 D4 |",'1 b7 ♮7 #4', '0 - - - ||', 'C4 E4 G4', '1 (2 3) 4', '@key 1=C\n<1 3 5>!fermata'
 ];
 for(const text of cases){let pass=true,msg='';try{context.window.Jianpu.parse(text)}catch(e){pass=false;msg=e.message}const report=tool.validate(text,opts,app).report;assert.equal(report.appParseOk,pass,text);if(!pass)assert.equal(report.issues[0].message,msg,text);}
+const customTempo=tool.validate('@tempo 稍快一些，轻盈地\n1 2 3 4 |',opts,app).report;
+assert.equal(customTempo.ok,true);assert.equal(customTempo.issues.length,0);assert.equal(customTempo.warnings[0].code,'TEMPO_MANUAL');
 assert.equal(tool.validate('1 ?',{kind:'jianpu'},app).report.reviewRequired,true);
 assert.equal(tool.validate('',opts,app).report.appParseOk,true);assert.equal(tool.validate('',opts,app).report.ok,false);
 assert.equal(tool.validate('@title 无谱子',opts,app).report.ok,false);
@@ -47,4 +49,4 @@ r=loop('empty');assert.equal(r.status,1);assert.equal(r.json.stopReason,'adapter
 r=loop('timeout');assert.equal(r.status,1);assert.equal(r.json.stopReason,'ETIMEDOUT');
 const old=path.join(root,'repeat-final.txt');fs.writeFileSync(old,'1 2 3');r=loop('repeat');assert.equal(r.json.existingOutputPreserved,true);assert.equal(fs.readFileSync(old,'utf8'),'1 2 3');
 console.log('PASS: '+cases.length+' cases match App parsing; staff mode; cleaning; uncertain source; exit codes; same-file guard; two-round repair; stagnation/cycle/limit/failure/timeout; failure preserves existing output.');
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-21 10:27:40

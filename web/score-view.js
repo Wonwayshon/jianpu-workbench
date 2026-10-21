@@ -210,9 +210,9 @@ function renderMain(){
 }
 function showStaff(){if(!staffDirty||!lastConverted)return;staffDirty=false;renderStaff($('staffOutput'),F(lastConverted.lines))}
 function syncTimingWarning(lines){
- const warnings=ScorePlayer.timingWarnings?.(lines||[])||[],text=warnings.slice(0,3).join(' ')+(warnings.length>3?` 另有 ${warnings.length-3} 处。`:'');
+ const timing=ScorePlayer.timingWarnings?.(lines||[])||[],tempo=Jianpu.tempoWarnings(lines||[]).map(w=>w.message),warnings=[...timing,...tempo],text=warnings.slice(0,3).join(' ')+(warnings.length>3?` 另有 ${warnings.length-3} 处。`:'');
  $('playbackWarning').textContent=text;$('playbackWarning').hidden=!text;
- $('viewerPlaybackWarning').hidden=!text;$('viewerPlaybackWarning').textContent=text?'声部时值不齐':' ';$('viewerPlaybackWarning').title=text;
+ $('viewerPlaybackWarning').hidden=!text;$('viewerPlaybackWarning').textContent=text?[timing.length?'声部时值不齐':'',tempo.length?'速度需手动设置':''].filter(Boolean).join(' · '):' ';$('viewerPlaybackWarning').title=text;
 }
 window.onScoreConverted=()=>{
  if(ScorePlayer.isPlaying())ScorePlayer.stop();
@@ -885,4 +885,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-12 09:46:02
+// Modified by AI on 2026-10-21 10:27:40

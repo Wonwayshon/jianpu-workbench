@@ -45,8 +45,8 @@ const NOTATION_RULES=`【乐谱文本格式 v1】
    @key 1=F      调号；升降写 # 或 b，如 1=bB、1=#F。乐曲中途转调时在该处再写一行 @key
    @octave 4     中音 1 所在的八度组（中央 C 在第 4 组），可省略
    @time 2/4     拍号，中途变拍时再写一行
-   @tempo 72     速度（每分钟四分音符数）；也可写速度术语：@tempo Andante、@tempo Allegro 132、@tempo 行板、@tempo 稍慢、@tempo 突慢、@tempo 原速、@tempo 渐慢、@tempo 中板、@tempo 欢快地、@tempo 小快板、@tempo 快板
-   速度或表情文字照抄原谱，写在对应乐段前。稍慢、突慢、原速、渐慢、欢快地没有固定 BPM，不要猜造数字；原图明确给数字时可写 @tempo 稍慢 72。
+   @tempo 72     速度（每分钟四分音符数）；也可写速度术语：@tempo Andante、@tempo Allegro 132、@tempo 行板、@tempo 稍慢、@tempo 稍快、@tempo 突慢、@tempo 原速、@tempo 渐慢、@tempo 中板、@tempo 欢快地、@tempo 小快板、@tempo 快板
+   速度或表情文字照抄原谱，写在对应乐段前。@tempo 后允许任意速度或表情文字，未内置的写法也照抄，不必改成固定术语。稍慢、稍快、突慢、原速、渐慢、欢快地等没有固定 BPM，不要猜造数字；无法确定 BPM 时只提示，由用户在播放设置中手动设速。原图明确给数字时可写 @tempo 稍慢 72。
    @page 2       换页：之后的内容属于第 2 页
 3. % 之后直到行尾是注释，不参与解析。
 
@@ -198,7 +198,7 @@ function cleanReply(raw){
  const lines=text.split('\n');const start=lines.findIndex(l=>/^\s*(@|%|[#b♯♭^(\[]?[0-7Xx]|\|)/.test(l));
  return (start>0?lines.slice(start):lines).join('\n').trim();
 }
-function check(text){try{Jianpu.parse(text);return []}catch(e){return ['返回内容有不符合格式的地方：'+e.message]}}
+function check(text){try{return Jianpu.parse(text).warnings.map(w=>w.message)}catch(e){return ['返回内容有不符合格式的地方：'+e.message]}}
 async function llmTranscribe(cfg,source,progress){
  const host=new URL(endpoint(cfg)).host,consent='flute.ocrConsent.'+host;if(localStorage.getItem(consent)!=='1'){if(!confirm('本次图片和识谱提示词将发送到 '+host+'，使用你填写的 API Key 并可能产生费用。是否继续？'))throw new Error('已取消发送');localStorage.setItem(consent,'1')}
  progress('压缩图片');
@@ -223,4 +223,4 @@ async function createScoreRecognizer(progress=()=>{}){
 window.ScoreOCR={DEEPSEEK,loadConfig,saveConfig,saveConfigAsync,profileName,newProfileId,testConnection,createScoreRecognizer,promptFor,cleanReply,check,NOTATION_RULES};
 window.createScoreRecognizer=createScoreRecognizer;
 })();
-// Modified by AI on 2026-10-08 20:21:31
+// Modified by AI on 2026-10-21 10:27:40

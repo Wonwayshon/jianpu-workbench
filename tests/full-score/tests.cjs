@@ -103,7 +103,8 @@ hits=[];P.play(fermata.lines,{tempo:60,metronome:true},()=>{});contexts.at(-1).c
 const afterHold=hits.filter(h=>h.node.buffer?.m===62);assert.equal(afterHold.length,2);assert.ok(afterHold.every(h=>Math.abs(h.time-1.72)<1e-8));assert.ok(hits.some(h=>!h.node.buffer?.m&&Math.abs(h.time-1.72)<1e-8));P.stop();
 // Starting after a hold preserves count-in spacing and does not repeat the hold.
 hits=[];P.play(fermata.lines,{tempo:60,metronome:true,countIn:true,startToken:fermata.notes[1]},()=>{});contexts.at(-1).currentTime=3.1;audioPump();raf();const resumed=hits.filter(h=>h.node.buffer?.m===62);assert.ok(resumed.every(h=>Math.abs(h.time-4.12)<1e-8));assert.equal(resumed.length,2);P.stop();
-vm.runInContext(view.slice(view.indexOf('function syncTimingWarning('),view.indexOf('window.onScoreConverted=')),u);u.ScorePlayer.timingWarnings=()=>['笛一第 52 行 10 拍；笛二第 53 行 14 拍'];u.syncTimingWarning([]);assert.equal($('playbackWarning').hidden,false);assert.match($('playbackWarning').textContent,/14 拍/);assert.equal($('viewerPlaybackWarning').hidden,false);u.ScorePlayer.timingWarnings=()=>[];u.syncTimingWarning([]);assert.equal($('playbackWarning').hidden,true);
+u.Jianpu=J;vm.runInContext(view.slice(view.indexOf('function syncTimingWarning('),view.indexOf('window.onScoreConverted=')),u);u.ScorePlayer.timingWarnings=()=>['笛一第 52 行 10 拍；笛二第 53 行 14 拍'];u.syncTimingWarning([]);assert.equal($('playbackWarning').hidden,false);assert.match($('playbackWarning').textContent,/14 拍/);assert.equal($('viewerPlaybackWarning').hidden,false);u.ScorePlayer.timingWarnings=()=>[];u.syncTimingWarning([]);assert.equal($('playbackWarning').hidden,true);
+u.syncTimingWarning(J.parse('@tempo 稍快\n1 2 |').lines);assert.equal($('playbackWarning').hidden,false);assert.match($('playbackWarning').textContent,/手动调整速度/);assert.equal($('viewerPlaybackWarning').textContent,'速度需手动设置');u.syncTimingWarning([]);assert.equal($('playbackWarning').hidden,true);
 console.log('PASS: real scheduling synchronizes post-fermata notes/metronome, count-in from a selected note, and timing-warning UI clear/update.');
 
 // No animation callbacks run while another application covers the WebView. Audio must continue anyway.
@@ -123,4 +124,4 @@ assert.equal(hits.filter(h=>!h.node.buffer?.m).length,1,'no old percussion or cl
 const count=hits.length;raf();raf();assert.equal(hits.length,count,'visual frames never schedule sound');
 P.stop();assert.equal(timerActive,false);audioPump();assert.equal(hits.length,count,'stopped timer callback cannot revive audio');
 console.log('PASS: audio and metronome run with animation suspended; missed notes/clicks are not replayed in a burst; stop releases the audio timer.');
-// Modified by AI on 2026-10-11 06:17:18
+// Modified by AI on 2026-10-21 10:28:26

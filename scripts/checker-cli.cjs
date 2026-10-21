@@ -138,6 +138,7 @@ function validate(raw, options, app) {
     report.issues.push({code:message.includes('看不清')?'UNREADABLE_NOTE':'APP_PARSE_ERROR',line,message,hint:hintFor(message),context:issueContext(text,line)});
   }
   if (parsed) {
+    report.warnings.push(...(parsed.warnings||[]));
     let rests=0,chords=0,percussion=0,musicLines=0;
     for (const line of parsed.lines) if (line.kind==='music') {
       musicLines++;
@@ -297,4 +298,4 @@ if (require.main===module) {
   }
 }
 module.exports={validate,feedback,aiPrompt,loadApp,BUNDLE_INFO};
-// Modified by AI on 2026-10-08 10:06:28
+// Modified by AI on 2026-10-21 10:27:40
