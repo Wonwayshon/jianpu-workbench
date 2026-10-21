@@ -5,6 +5,7 @@ const assert=require('node:assert/strict');
  assert.equal(expectedFiles().length,7);assert.equal(new Set(expectedFiles()).size,7);
  assert.ok(!expectedFiles().includes('instrument-audition.html'));
  const workflow=require('node:fs').readFileSync(require('node:path').join(__dirname,'../../.github/workflows/release.yml'),'utf8');
+ assert.match(workflow,/node scripts\/ci-release.mjs published/);assert.equal((workflow.match(/if: needs\.verify\.outputs\.published != 'true'/g)||[]).length,3);
  assert.ok(!workflow.includes('build:audition'));assert.ok(!workflow.includes('instrument-audition.html'));
  assert.equal(verifyTag(`v${project.version}`),`v${project.version}`);assert.throws(()=>verifyTag('v0.0.1'));
  const files=expectedFiles().map(name=>({name,size:10,hash:'a'.repeat(64)})),assets=files.map(f=>({...f,state:'uploaded',digest:`sha256:${f.hash}`}));
@@ -13,4 +14,4 @@ const assert=require('node:assert/strict');
  assert.deepEqual(obsoleteReleases(releases,'v1.21.4').map(x=>x.tag_name),['v1.21.3']);
  console.log('PASS: tag/version mismatch fails; all asset counts/sizes/digests required; only strictly older stable releases removed');
 })().catch(e=>{console.error(e);process.exitCode=1});
-// Modified by AI on 2026-10-11 13:05:22
+// Modified by AI on 2026-10-21 13:51:18

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import crypto from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
@@ -21,6 +22,22 @@ export function obsoleteReleases(releases,current){
 function command(cmd,args,input){const r=spawnSync(cmd,args,{cwd:root,input,encoding:'utf8',maxBuffer:32*1024*1024});if(r.status!==0)throw Error(`${cmd} failed: ${r.stderr}`);return r.stdout.trim()}
 const gh=(...args)=>command('gh',args);
 const api=(p,method='GET',body)=>JSON.parse(command('gh',['api',p,'--method',method,...(body?['--input','-']:[])],body?JSON.stringify(body):undefined));
+// Rebuilds contain timestamps/signatures. Verify the published files against their own
+// manifest and GitHub digests, never against a second build of the same source tag.
+export function verifyPublishedRelease(release,repo,tag){
+ if(release.draft||release.prerelease||release.tag_name!==tag)throw Error('Expected a published stable release');
+ const names=expectedFiles();
+ if(release.assets.length!==names.length||new Set(release.assets.map(a=>a.name)).size!==names.length||release.assets.some(a=>!names.includes(a.name)))throw Error('Unexpected Release asset count or names');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'jianpu-release-verify-'));
+ try{
+  gh('release','download',tag,'--repo',repo,'--dir',dir);
+  const files=names.map(name=>{const data=fs.readFileSync(path.join(dir,name));if(!data.length)throw Error('Empty published asset');return {name,size:data.length,hash:crypto.createHash('sha256').update(data).digest('hex')}});
+  const rows=fs.readFileSync(path.join(dir,names.at(-1)),'utf8').trim().split(/\r?\n/),hashes=new Map();
+  for(const row of rows){const m=/^([a-f0-9]{64})  (.+)$/.exec(row);if(!m||hashes.has(m[2]))throw Error('Invalid published checksum manifest');hashes.set(m[2],m[1])}
+  if(hashes.size!==names.length-1||files.slice(0,-1).some(f=>hashes.get(f.name)!==f.hash))throw Error('Published checksum verification failed');
+  verifyAssets(release.assets,files);
+ }finally{fs.rmSync(dir,{recursive:true,force:true})}
+}
 export function validateRelease(tag){
  verifyTag(tag);const head=command('git',['rev-parse','HEAD']),tagHead=command('git',['rev-parse',`${tag}^{commit}`]);
  if(head!==tagHead)throw Error('Release must build the exact tagged commit');return head;
@@ -34,16 +51,25 @@ async function main(){
   const data=fs.readFileSync(path.join(dir,files[0]));if(data.subarray(0,2).toString()!=='MZ')throw Error('Invalid Windows executable');
   fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,expectedFiles()[3]),data);return;
  }
- if(task!=='publish')throw Error('Use validate, windows or publish');
+ if(task==='published'){
+  const head=validateRelease(tag),repo=process.env.GITHUB_REPOSITORY;if(repo!=='Wonwayshon/jianpu-workbench')throw Error('Unexpected release repository');
+  const ref=api(`repos/${repo}/git/ref/tags/${tag}`),resolved=ref.object.type==='tag'?api(`repos/${repo}/git/tags/${ref.object.sha}`).object.sha:ref.object.sha;
+  if(resolved!==head)throw Error('Remote tag changed since checkout');
+  const releases=api(`repos/${repo}/releases?per_page=100`),existing=releases.find(r=>r.tag_name===tag&&!r.draft);
+  if(existing)verifyPublishedRelease(existing,repo,tag);
+  if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,`published=${!!existing}\n`);
+  console.log(existing?'Published release verified; skip duplicate build and publication':'No published release; continue building');return;
+ }
+ if(task!=='publish')throw Error('Use validate, windows, published or publish');
  const head=validateRelease(tag),repo=process.env.GITHUB_REPOSITORY;if(repo!=='Wonwayshon/jianpu-workbench')throw Error('Publishing is restricted to the upstream repository');
+ const endpoint=`repos/${repo}`,ref=api(`${endpoint}/git/ref/tags/${tag}`),resolved=ref.object.type==='tag'?api(`${endpoint}/git/tags/${ref.object.sha}`).object.sha:ref.object.sha;
+ if(resolved!==head)throw Error('Remote tag changed since the build');
+ const releases=JSON.parse(gh('api',`${endpoint}/releases?per_page=100`)),existing=releases.find(r=>r.tag_name===tag);
+ if(existing&&!existing.draft){verifyPublishedRelease(existing,repo,tag);console.log('Release already published and verified');return}
  fs.copyFileSync(path.join(root,'LICENSE'),path.join(out,'LICENSE'));
  const payload=expectedFiles().slice(0,-1).map(name=>{const data=fs.readFileSync(path.join(out,name));if(!data.length)throw Error('Empty release asset');return {name,size:data.length,hash:crypto.createHash('sha256').update(data).digest('hex')}});
  const sum=expectedFiles().at(-1);fs.writeFileSync(path.join(out,sum),payload.map(f=>`${f.hash}  ${f.name}`).join('\n')+'\n');
  const sums=fs.readFileSync(path.join(out,sum)),files=[...payload,{name:sum,size:sums.length,hash:crypto.createHash('sha256').update(sums).digest('hex')}];
- const endpoint=`repos/${repo}`,ref=api(`${endpoint}/git/ref/tags/${tag}`),resolved=ref.object.type==='tag'?api(`${endpoint}/git/tags/${ref.object.sha}`).object.sha:ref.object.sha;
- if(resolved!==head)throw Error('Remote tag changed since the build');
- const releases=JSON.parse(gh('api',`${endpoint}/releases?per_page=100`)),existing=releases.find(r=>r.tag_name===tag);
- if(existing&&!existing.draft){verifyAssets(existing.assets,files);console.log('Release already published and verified');return}
  const previous=releases.filter(r=>!r.draft&&!r.prerelease&&/^v\d+\.\d+\.\d+$/.test(r.tag_name)).sort((a,b)=>compareVersions(b.tag_name,a.tag_name))[0];
  if(previous){
   if(compareVersions(tag,previous.tag_name)<=0)throw Error('Refuse to replace a newer stable release with an older version');
@@ -65,4 +91,4 @@ async function main(){
  console.log(`Published and verified ${release.html_url} (${files.length} assets)`);
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))await main();
-// Modified by AI on 2026-10-11 13:09:53
+// Modified by AI on 2026-10-21 13:51:18

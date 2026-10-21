@@ -12,22 +12,34 @@ jobs:
   verify:
     if: github.repository == 'Wonwayshon/jianpu-workbench' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.existing.outputs.published }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '22', cache: npm}
       - run: npm ci
       - run: node scripts/ci-release.mjs validate
-      - run: npm run security:check
-      - run: npm test
-      - run: npm run release:source
-      - uses: actions/upload-artifact@v4
+      - name: Verify an existing published Release
+        id: existing
+        run: node scripts/ci-release.mjs published
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - if: steps.existing.outputs.published != 'true'
+        run: npm run security:check
+      - if: steps.existing.outputs.published != 'true'
+        run: npm test
+      - if: steps.existing.outputs.published != 'true'
+        run: npm run release:source
+      - if: steps.existing.outputs.published != 'true'
+        uses: actions/upload-artifact@v4
         with:
           name: release-source
           path: |
             outputs/flute-key-lab-project-*.zip
           if-no-files-found: error
   android:
+    if: needs.verify.outputs.published != 'true'
     needs: verify
     runs-on: ubuntu-latest
     steps:
@@ -54,6 +66,7 @@ jobs:
           path: outputs/flute-key-lab-*.apk
           if-no-files-found: error
   desktop:
+    if: needs.verify.outputs.published != 'true'
     needs: verify
     strategy:
       fail-fast: false
@@ -92,6 +105,7 @@ jobs:
             outputs/flute-key-lab-windows-x64-*.exe
           if-no-files-found: error
   publish:
+    if: needs.verify.outputs.published != 'true'
     needs: [verify, android, desktop]
     runs-on: ubuntu-latest
     permissions:
