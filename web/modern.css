@@ -107,11 +107,11 @@ nav[aria-label="工具"] .nav-brand,nav[aria-label="工具"] .nav-group,nav[aria
 .settings-link svg{width:16px;height:16px;fill:none;stroke:#A3A8B3;stroke-width:2.2;stroke-linecap:round}
 .settings-text{padding:14px 18px;font-size:13px;color:#3F4450}
 .settings-text p{margin:0 0 8px}.settings-text p:last-child{margin:0}
-.theme-swatches{display:flex;flex-wrap:wrap;gap:10px;padding:4px 18px 16px;border-bottom:1px solid #F3F4F6}
+.theme-swatches{display:flex;flex-wrap:wrap;align-items:center;gap:14px 10px;padding:16px 18px;border-bottom:1px solid #F3F4F6}
 .theme-swatch{width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;background:var(--swatch);box-shadow:inset 0 0 0 2px #ffffff55}
 .theme-swatch:hover{background:var(--swatch);transform:scale(1.06)}
 .theme-swatch[aria-checked=true]{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--swatch)}
-.theme-custom label{color:var(--ink);font-size:14px}
+.theme-custom label{margin:0;color:var(--ink);font-size:14px}
 .theme-custom input[type=color]{width:44px;height:36px;padding:0;border:0;border-radius:10px;background:none;cursor:pointer}
 
 /* Shared helpers */
@@ -1083,4 +1083,4 @@ body:has(#floatPlayer:not([hidden])) main{padding-bottom:110px}
 }
 /* The desktop-only collapse control must not create a second phone navigation row. */
 @media screen and (max-width:899px){body nav[aria-label="工具"] #navCollapse{display:none!important}}
-/* Modified by AI on 2026-10-21 11:41:23 */
+/* Modified by AI on 2026-10-23 11:13:33 */

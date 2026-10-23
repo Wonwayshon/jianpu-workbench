@@ -24,8 +24,8 @@
 :root[data-theme=dark] :is(#fullView,#viewerPerform,#tunerToggle,.timbre-chip[aria-checked=true],.import-src-on,#copyStatus:not(:empty)){background:var(--fill-2);color:var(--ink)}
 :root[data-theme=dark] :is(.out-pill.on,.archive-entry.selected,.pattern-btn[aria-checked=true]){background:var(--accent-soft);color:var(--accent-ink)}
 :root[data-theme=dark] .library-actions button.primary{background:var(--accent);color:var(--on-accent)}
-:root[data-theme=dark] .theme-swatch{background:var(--swatch)}
-:root[data-theme=dark] .theme-swatch[aria-checked=true]{box-shadow:0 0 0 3px var(--paper),0 0 0 5px var(--swatch)}
+:root[data-theme=dark] .theme-swatch,:root[data-theme=dark] .theme-swatch:hover{background:var(--swatch)}
+:root[data-theme=dark] .theme-swatch[aria-checked=true]{box-shadow:0 0 0 3px var(--paper),0 0 0 5px var(--accent)}
 :root[data-theme=dark] .api-form #apiDelete{color:var(--danger)}
 /* Musical notation uses native colours, never a whole-page inversion filter. */
 :root[data-theme=dark] .score,:root[data-theme=dark] #scorePanel .output-card .score{background:var(--paper);color:var(--ink)}
@@ -53,7 +53,11 @@
 :root[data-theme=dark] .practice-pad .piano-key.black{background:linear-gradient(#353C49,#11151D);color:#E8EAF0}
 :root[data-theme=dark] :is(.hole,.hole-dot,.legend-hole){border-color:var(--ink)}
 :root[data-theme=dark] :is(.hole.closed,.hole-toggle.closed .hole-dot,.legend-hole.closed){background:var(--ink)}
-:root[data-theme=dark] .hole:not(.closed){background:transparent}
+/* Open holes stay hollow; closed, half and slight positions retain distinct silhouettes. */
+:root[data-theme=dark] .hole-toggle .hole-dot{background:transparent}
+:root[data-theme=dark] .hole:not(.closed),:root[data-theme=dark] .legend-hole:not(.closed):not(.half):not(.slight):not(.trill){background:transparent}
+:root[data-theme=dark] .hole-toggle.half .hole-dot,:root[data-theme=dark] .legend-hole.half{background:linear-gradient(to bottom,var(--ink) 50%,var(--bg) 50%)}
+:root[data-theme=dark] .hole-toggle.slight .hole-dot,:root[data-theme=dark] .legend-hole.slight{background:linear-gradient(to right,var(--ink) 72%,var(--bg) 72%)}
 :root[data-theme=dark] #shinoChartView .fingering-groups{background:var(--paper)}
 :root[data-theme=dark] .chart-holes :is(circle,path)[fill="#294459"]{fill:var(--ink)}
 :root[data-theme=dark] .chart-holes circle[fill="white"],:root[data-theme=dark] .chart-holes circle[fill="#fff"]{fill:var(--paper)}
@@ -67,4 +71,4 @@
 /* Printed scores remain legible regardless of the on-screen selection and accent colour. */
 #printArea{--ink:#0F1115;--muted:#5B616E;--faint:#6B7180;--line:#D9DCE2;--line-soft:#E7E9EE;--paper:#fff;--bg:#fff;--accent-ink:#47328B;color:#000;background:#fff;color-scheme:light}
 @media print{html{color-scheme:light!important}body{color:#000!important}#printArea .jp-system{background:#fff}#printArea .jp-part-label{color:#333}}
-/* Modified by AI on 2026-10-21 11:41:23 */
+/* Modified by AI on 2026-10-23 11:16:22 */
