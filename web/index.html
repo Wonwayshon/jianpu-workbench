@@ -113,7 +113,7 @@ nav{flex-wrap:wrap}.erhu-tuning{display:flex;flex-wrap:wrap;gap:12px;margin:20px
 <p class="subtle" id="viewHint">按原谱写法排版，便于对照原图核对。</p>
 <div id="rangeNote" class="warning" hidden></div>
 <div id="scoreError" class="error" role="alert" hidden></div><div id="scoreOutput" class="score" aria-live="polite"></div><div id="scorePreview" class="score" aria-label="简谱" hidden></div><div id="staffOutput" class="score staff-box" aria-label="五线谱" hidden></div><div id="transBox" hidden><div id="transControls" class="trans-controls" hidden><label for="transShow">显示</label><select id="transShow"><option value="jianpu">简谱</option><option value="staff">五线谱</option></select></div><div id="transOutput" class="score" aria-label="转调后的简谱"></div><div id="transStaff" class="score staff-box" aria-label="转调后的五线谱" hidden></div></div>
-<p id="playbackWarning" class="error no-print" role="status" hidden></p><div class="play-bar no-print"><button id="playScore" class="play-btn">▶ 试听</button><div class="play-pos"><div class="play-pos-top"><span id="playTime">0:00 / 0:00</span><span id="beatDots" class="beat-dots" aria-hidden="true"></span></div><span class="play-prog" aria-hidden="true"><i id="playProg"></i></span></div><button id="playSettings" aria-haspopup="dialog" aria-label="播放设置"><span id="playTempoLabel">♩=80</span></button><span class="grow"></span><button id="editView" title="左边谱面、右边文本逐行对照修改">对照编辑</button><button id="fullView">演奏视图</button></div>
+<button id="playbackWarning" type="button" class="error no-print" aria-live="polite" aria-expanded="true" title="点击折叠提示" hidden></button><div class="play-bar no-print"><button id="playScore" class="play-btn">▶ 试听</button><div class="play-pos"><div class="play-pos-top"><span id="playTime">0:00 / 0:00</span><span id="beatDots" class="beat-dots" aria-hidden="true"></span></div><span class="play-prog" aria-hidden="true"><i id="playProg"></i></span></div><button id="playSettings" aria-haspopup="dialog" aria-label="播放设置"><span id="playTempoLabel">♩=80</span></button><span class="grow"></span><button id="editView" title="左边谱面、右边文本逐行对照修改">对照编辑</button><button id="fullView">演奏视图</button></div>
 </div>
 </div>
 <dialog id="importDialog" class="sheet import-sheet" aria-labelledby="importHead"><div class="sheet-body">
@@ -480,4 +480,4 @@ showTab(TAB_NAMES.includes(location.hash.slice(1))?location.hash.slice(1):'instr
 </script>
 </body>
 </html>
-<!-- Modified by AI on 2026-10-21 14:20:30 -->
+<!-- Modified by AI on 2026-10-27 14:03:07 -->

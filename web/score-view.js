@@ -214,6 +214,10 @@ function syncTimingWarning(lines){
  $('playbackWarning').textContent=text;$('playbackWarning').hidden=!text;
  $('viewerPlaybackWarning').hidden=!text;$('viewerPlaybackWarning').textContent=text?[timing.length?'声部时值不齐':'',tempo.length?'速度需手动设置':''].filter(Boolean).join(' · '):' ';$('viewerPlaybackWarning').title=text;
 }
+$('playbackWarning').onclick=()=>{
+ const warning=$('playbackWarning'),collapse=warning.getAttribute('aria-expanded')==='true';
+ warning.setAttribute('aria-expanded',String(!collapse));warning.title=collapse?'点击展开提示':'点击折叠提示';
+};
 window.onScoreConverted=()=>{
  if(ScorePlayer.isPlaying())ScorePlayer.stop();
  fillTunings();renderMain();syncTimingWarning(lastConverted?.lines);
@@ -885,4 +889,4 @@ window.handleAppBack=()=>{const modal=[...document.querySelectorAll('dialog[open
 
 setView(view);syncTempoLabel();if(lastConverted)window.onScoreConverted();
 })();
-// Modified by AI on 2026-10-21 10:27:40
+// Modified by AI on 2026-10-27 14:03:07

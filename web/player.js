@@ -83,19 +83,53 @@ function timingWarnings(lines){
  return warnings;
 }
 function scheduleStream(stream){
- const events=[],bars=[];let last=null,repeatStart=0,pos=0;const repeated=new Set();
- const slurStack=[],tup=[],timeChanges=[{at:0,time:'4/4'}];let pendingGrace=[],time='4/4',repeatTime=time;
+ // Match written repeat boundaries before walking them: each visit owns its own pass counter.
+ // A new inner or adjacent repeat must not inherit the previous repeat's second pass.
+ const starts=new Map(),ends=new Map(),openings=[];
+ for(let i=0;i<stream.length;i++)if(stream[i].t==='bar'){
+  const text=stream[i].text;
+  if(text.startsWith(':')){const start=openings.pop()??0,region={start,end:i};ends.set(i,region);if(start>0)starts.set(start-1,region)}
+  if(text.endsWith(':'))openings.push(i+1);
+ }
+ const events=[],bars=[],repeats=[];let last=null,pos=0;
+ const slurStack=[],tup=[],timeChanges=[{at:0,time:'4/4'}];let pendingGrace=[],time='4/4';
+ const breakPhrase=()=>{last=null;pendingGrace=[];slurStack.length=0;tup.length=0};
  const changeTime=value=>{time=value;const last=timeChanges.at(-1);if(last.at===pos)last.time=time;else if(last.time!==time)timeChanges.push({at:pos,time})};
  for(let i=0;i<stream.length;i++){
   const t=stream[i];
   if(t.t==='time'){changeTime(t.value);continue}
-  if(t.t==='bar'){bars.push(pos);if(t.text.endsWith(':')){repeatStart=i+1;repeatTime=time;}
-   if(t.text.startsWith(':')&&!repeated.has(i)){repeated.add(i);changeTime(repeatTime);i=repeatStart-1;last=null;continue}
-   continue}
+  if(t.t==='bar'){
+   bars.push(pos);
+   if(t.text.startsWith(':')){
+    let repeat=repeats.at(-1);
+    if(!repeat||repeat.end!==i){repeat={...ends.get(i),pass:1,time:'4/4'};repeats.push(repeat)}
+    if(repeat.pass===1){repeat.pass=2;changeTime(repeat.time);breakPhrase();i=repeat.start-1;continue}
+    repeats.pop();
+   }
+   if(t.text.endsWith(':')&&starts.has(i))repeats.push({...starts.get(i),pass:1,time});
+   continue;
+  }
+  if(t.t==='volta'){
+   let previous=i-1;while(previous>=0&&['space','time'].includes(stream[previous].t))previous--;
+   // An ending immediately after :| belongs to that completed repeat, not an enclosing one.
+   const afterRepeat=stream[previous]?.t==='bar'&&stream[previous].text.startsWith(':');
+   const repeat=afterRepeat?null:repeats.at(-1);
+   if(repeat&&Number.parseInt(t.text,10)!==repeat.pass){
+    // On pass two, skip ending one to the next ending in this region, or its closing repeat.
+    // Ending two may be on the next line/page, immediately after that closing repeat.
+    let next=repeat.end;
+    for(let j=i+1;j<repeat.end;j++){
+     if(starts.has(j)){j=starts.get(j).end;continue}
+     if(stream[j].t==='volta'){next=j;break}
+    }
+    breakPhrase();i=next-1;
+   }
+   continue;
+  }
   if(t.t==='tupOpen'){let p=1;while(p*2<t.n)p*=2;tup.push(p/t.n);continue}
   if(t.t==='tupClose'){tup.pop();continue}
   if(t.t==='open'){slurStack.push(events.length);continue}
-  if(t.t==='close'){const from=slurStack.pop();
+  if(t.t==='close'){const from=slurStack.pop();if(from===undefined)continue;
    const group=events.slice(from).filter(e=>e.midi!=null&&!e.grace);
    // Two notes of the same pitch under one arc: a tie, so the second only lengthens the first.
    if(group.length===2&&!events.slice(from).some(e=>e.percussion)&&!events.slice(events.indexOf(group[0])+1,events.indexOf(group[1])).some(e=>e.grace)&&group[0].midi===group[1].midi){group[0].beats+=group[1].beats;group[0].fermata=group[0].fermata||group[1].fermata;group[1].tied=true;if(last===group[1])last=group[0]}
@@ -381,4 +415,4 @@ function position(){return playing&&ctx&&playing.dur!=null?{elapsed:Math.min(Mat
 function duration(lines,opts){const s=normalizeSettings(opts);return schedule(lines,{tempo:s.tempo}).total*60/s.tempo}
 window.ScorePlayer={position,duration,normalizeSettings,metronomeGrid,timingWarnings,setPartMute,setBalance,referenceTone,previewTimbre,PREVIEW_PHRASES,TIMBRE_LIST,play,playReady,stop,schedule,isPlaying:()=>!!playing||preparing!=null,PATTERNS,loadSettings,saveSettings,tempoName,patternIcon,meter};
 })();
-// Modified by AI on 2026-10-11 10:46:46
+// Modified by AI on 2026-10-27 14:05:21

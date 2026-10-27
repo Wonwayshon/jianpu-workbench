@@ -46,6 +46,15 @@ hits=[];P.play(gracePiece.lines,{tempo:120,startToken:gracePiece.notes[2]},()=>{
 assert.deepEqual(hits.filter(h=>h.node.buffer?.m).map(h=>h.node.buffer.m),[81,76]);
 assert.equal(hits[0].time,.12);assert.ok(Math.abs(hits[1].time-.18)<1e-8);assert.equal(hits[0].node.buffer.grace,true);assert.ok(hits[0].node.buffer.dur<=.060001);P.stop();
 
+// The actual audio pump takes ending one only once, and can start directly at ending two.
+const voltaPiece=J.parse('|: 1 | [1 2 :| [2 3 | 4 |');
+for(const n of voltaPiece.notes)n.midi=60+[0,2,4,5,7,9,11][n.degree-1];
+hits=[];P.play(voltaPiece.lines,{tempo:60},()=>{});
+for(let t=.5;t<=4.5;t+=.5){contexts.at(-1).currentTime=t;audioPump()}
+assert.deepEqual(hits.filter(h=>h.node.buffer?.m).map(h=>h.node.buffer.m),[60,62,60,64,65]);P.stop();
+hits=[];P.play(voltaPiece.lines,{tempo:60,startToken:voltaPiece.notes[2]},()=>{});
+contexts.at(-1).currentTime=1;audioPump();assert.deepEqual(hits.filter(h=>h.node.buffer?.m).map(h=>h.node.buffer.m),[64,65]);P.stop();
+
 // Automatic meter changes affect both audible clicks and light counts, including repeats and mid-piece starts.
 const changing=J.parse('@time 3/4\n1 2 3 |\n@time 4/4\n4 5 6 7 | 1 - - - |');
 for(const t of changing.notes)t.midi=60+[0,2,4,5,7,9,11][t.degree-1];
@@ -124,4 +133,4 @@ assert.equal(hits.filter(h=>!h.node.buffer?.m).length,1,'no old percussion or cl
 const count=hits.length;raf();raf();assert.equal(hits.length,count,'visual frames never schedule sound');
 P.stop();assert.equal(timerActive,false);audioPump();assert.equal(hits.length,count,'stopped timer callback cannot revive audio');
 console.log('PASS: audio and metronome run with animation suspended; missed notes/clicks are not replayed in a burst; stop releases the audio timer.');
-// Modified by AI on 2026-10-21 10:28:26
+// Modified by AI on 2026-10-27 14:05:59
